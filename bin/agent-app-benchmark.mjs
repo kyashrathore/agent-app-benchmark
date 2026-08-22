@@ -59,6 +59,7 @@ try {
         corpusDirectory: verified.path,
         corpusManifestPath: path.join(verified.path, "manifest.json"),
         corpusDigestSha256: verified.digestSha256,
+        corpusDefinitionDigestSha256: verified.manifest.definitionDigestSha256,
         eventSchemaDigestSha256: verified.manifest.sourceEventFormat.schemaDigestSha256,
         runDirectory: path.resolve(required(options, "runDirectory")),
       },

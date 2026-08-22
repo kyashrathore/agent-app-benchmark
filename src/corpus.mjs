@@ -104,7 +104,6 @@ export function buildSessionDefinitions(definition) {
   const [primaryWorkspace, secondaryWorkspace] = definition.workspaceIds;
   const sessions = [{
     logicalSessionId: "control",
-    nativeSessionId: "ses_bench_control",
     workspaceId: primaryWorkspace,
     role: "control",
     transcriptBytes: definition.transcriptBytes[0],
@@ -119,14 +118,16 @@ export function buildSessionDefinitions(definition) {
       const logicalSessionId = `${lane[0]}-${transcriptBytes}`;
       sessions.push({
         logicalSessionId,
-        nativeSessionId: `ses_bench_${logicalSessionId.replaceAll("-", "_")}`,
         workspaceId: lane[1],
         role: lane[0],
         transcriptBytes,
       });
     }
   }
-  return sessions;
+  return sessions.map((session, index) => ({
+    ...session,
+    nativeSessionId: sortableOpenCodeId("ses", sessionBaseTime(index), session.logicalSessionId),
+  }));
 }
 
 async function writeSession(definition, session, sessionIndex, root) {
@@ -137,7 +138,7 @@ async function writeSession(definition, session, sessionIndex, root) {
   let sequence = 0;
   const writeEvent = async (type, data) => {
     const event = {
-      id: `evt_bench_${sessionIndex.toString(36)}_${sequence.toString(36)}`,
+      id: sortableOpenCodeId("evt", sessionBaseTime(sessionIndex) + sequence, `${session.logicalSessionId}:${sequence}`),
       type,
       seq: sequence,
       aggregateID: session.nativeSessionId,
@@ -149,7 +150,7 @@ async function writeSession(definition, session, sessionIndex, root) {
     if (!stream.write(line)) await new Promise((resolve) => stream.once("drain", resolve));
     sequence += 1;
   };
-  const baseTime = 1_700_000_000_000 + sessionIndex * 1_000_000;
+  const baseTime = sessionBaseTime(sessionIndex);
   await writeEvent("session.created.1", {
     sessionID: session.nativeSessionId,
     info: {
@@ -169,9 +170,10 @@ async function writeSession(definition, session, sessionIndex, root) {
   while (remaining > 0) {
     const contentBytes = Math.min(definition.messageChunkBytes, remaining);
     const text = repeatToBytes(`${definition.seed}|${session.logicalSessionId}|${messageIndex}|`, contentBytes);
-    const messageId = `msg_bench_${sessionIndex.toString(36)}_${messageIndex.toString(36)}`;
-    const partId = `prt_bench_${sessionIndex.toString(36)}_${messageIndex.toString(36)}`;
     const at = baseTime + messageIndex * 10 + 1;
+    const identitySeed = `${definition.seed}:${session.logicalSessionId}:${messageIndex}`;
+    const messageId = sortableOpenCodeId("msg", at, identitySeed);
+    const partId = sortableOpenCodeId("prt", at + 1, identitySeed);
     const role = messageIndex % 2 === 0 ? "user" : "assistant";
     const info = role === "user"
       ? {
@@ -226,6 +228,17 @@ async function writeSession(definition, session, sessionIndex, root) {
     file: relativeFile,
     fileDigestSha256: hash.digest("hex"),
   };
+}
+
+function sessionBaseTime(sessionIndex) {
+  return 1_700_000_000_000 + sessionIndex * 1_000_000;
+}
+
+function sortableOpenCodeId(prefix, timestamp, seed) {
+  const encoded = (BigInt(timestamp) * 0x1000n + 1n) & ((1n << 48n) - 1n);
+  const encodedTime = encoded.toString(16).padStart(12, "0");
+  const deterministicTail = createHash("sha256").update(`${prefix}:${seed}`).digest("hex").slice(0, 14);
+  return `${prefix}_${encodedTime}${deterministicTail}`;
 }
 
 function validateEventIdentity(event, session, expectedSequence) {

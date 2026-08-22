@@ -42,6 +42,9 @@ async function dispatch(method, params) {
     };
   }
   if (method === "prepare") {
+    if (!/^[0-9a-f]{64}$/.test(params.corpusDefinitionDigestSha256 ?? "")) {
+      throw new Error("Mock driver requires corpusDefinitionDigestSha256.");
+    }
     const manifest = JSON.parse(await readFile(params.corpusManifestPath, "utf8"));
     prepared = { params, manifest };
     const mapping = Object.fromEntries(manifest.sessions.map((session) => [session.logicalSessionId, `mock-${session.nativeSessionId}`]));

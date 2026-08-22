@@ -30,6 +30,7 @@ test("mock non-Electron driver completes the public lifecycle", async () => {
       corpusDirectory: generated.path,
       corpusManifestPath: path.join(generated.path, "manifest.json"),
       corpusDigestSha256: generated.digestSha256,
+      corpusDefinitionDigestSha256: generated.manifest.definitionDigestSha256,
       eventSchemaDigestSha256: generated.manifest.sourceEventFormat.schemaDigestSha256,
       scenarioId: "session-switch-v1",
       scenarioDigestSha256: "1".repeat(64),

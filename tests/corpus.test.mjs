@@ -48,6 +48,15 @@ test("streamed OpenCode corpus is byte-for-byte deterministic and verifies", asy
     const verified = await verifyCorpus(first.path);
     assert.equal(verified.digestSha256, first.digestSha256);
     assert.ok(verified.manifest.sessions.every((session) => session.eventCount === 1 + 2 * (session.transcriptBytes / SMALL.messageChunkBytes)));
+    const controlEvents = (await readFile(path.join(first.path, first.manifest.sessions[0].file), "utf8"))
+      .trimEnd()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    const messages = controlEvents
+      .filter((event) => event.type === "message.updated.1")
+      .map((event) => event.data.info);
+    assert.deepEqual(messages.map((message) => message.id).toSorted(), messages.map((message) => message.id));
+    assert.ok(messages.every((message) => /^msg_[0-9a-f]{26}$/.test(message.id)));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
