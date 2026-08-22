@@ -169,7 +169,8 @@ async function writeSession(definition, session, sessionIndex, root) {
   let parentId;
   while (remaining > 0) {
     const contentBytes = Math.min(definition.messageChunkBytes, remaining);
-    const text = repeatToBytes(`${definition.seed}|${session.logicalSessionId}|${messageIndex}|`, contentBytes);
+    const rendererNeutralSeed = `${definition.seed} ${session.logicalSessionId} message ${messageIndex}`.replaceAll(/[^a-zA-Z0-9 ]/g, " ");
+    const text = repeatToBytes(`${rendererNeutralSeed} `, contentBytes);
     const at = baseTime + messageIndex * 10 + 1;
     const identitySeed = `${definition.seed}:${session.logicalSessionId}:${messageIndex}`;
     const messageId = sortableOpenCodeId("msg", at, identitySeed);

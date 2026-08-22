@@ -57,6 +57,10 @@ test("streamed OpenCode corpus is byte-for-byte deterministic and verifies", asy
       .map((event) => event.data.info);
     assert.deepEqual(messages.map((message) => message.id).toSorted(), messages.map((message) => message.id));
     assert.ok(messages.every((message) => /^msg_[0-9a-f]{26}$/.test(message.id)));
+    const textParts = controlEvents
+      .filter((event) => event.type === "message.part.updated.1")
+      .map((event) => event.data.part.text);
+    assert.ok(textParts.every((text) => /^[a-zA-Z0-9 ]+$/.test(text)));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
