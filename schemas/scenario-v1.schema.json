@@ -4,29 +4,31 @@
   "title": "Agent app benchmark scenario v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "title", "description", "kind", "cases", "metrics", "runProfiles"],
+  "required": ["schemaVersion", "id", "title", "description", "kind", "corpusId", "cases", "metrics", "runProfiles"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
-    "title": { "type": "string", "minLength": 1 },
-    "description": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
     "kind": { "enum": ["app-start", "session-switch", "custom"] },
-    "cases": { "type": "object" },
+    "corpusId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
+    "cases": { "type": "object", "minProperties": 1 },
     "metrics": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "unit", "statistics"],
+        "required": ["id", "description", "unit", "betterDirection", "observer", "rawField", "statistics", "reportPlacement"],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_.]*$" },
-          "unit": { "enum": ["ms", "percent", "MiB"] },
-          "statistics": {
-            "type": "array",
-            "items": { "enum": ["average", "maximum", "p95"] },
-            "uniqueItems": true
-          }
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" },
+          "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "unit": { "enum": ["ms", "percent", "MiB", "bytes"] },
+          "betterDirection": { "enum": ["lower", "higher", "neutral"] },
+          "observer": { "enum": ["driver-attested", "framework-observed", "framework-derived"] },
+          "rawField": { "type": "string", "minLength": 1 },
+          "statistics": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["average", "maximum", "p95", "trend"] } },
+          "reportPlacement": { "type": "string", "minLength": 1 }
         }
       }
     },
@@ -34,9 +36,10 @@
     "runProfiles": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["smoke", "publication"],
+      "required": ["smoke", "quick", "publication"],
       "properties": {
         "smoke": { "type": "integer", "minimum": 1 },
+        "quick": { "type": "integer", "minimum": 1 },
         "publication": { "type": "integer", "minimum": 1 }
       }
     }

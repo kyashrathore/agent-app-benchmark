@@ -10,21 +10,26 @@ export function maximum(values) {
 
 export function percentile(values, percentileRank) {
   requireValues(values);
-  if (!Number.isFinite(percentileRank) || percentileRank < 0 || percentileRank > 100) {
-    throw new Error("Percentile rank must be between 0 and 100.");
-  }
+  if (!Number.isFinite(percentileRank) || percentileRank < 0 || percentileRank > 100) throw new Error("Percentile rank must be between 0 and 100.");
   const sorted = values.toSorted((left, right) => left - right);
   const index = Math.max(0, Math.ceil((percentileRank / 100) * sorted.length) - 1);
   return sorted[Math.min(index, sorted.length - 1)];
 }
 
-export function summary(values) {
+export function summary(values, attempted = values.length) {
+  requireValues(values);
+  if (!Number.isInteger(attempted) || attempted < values.length) throw new Error("Attempted count cannot be smaller than valid values.");
   return {
     average: round(average(values)),
     maximum: round(maximum(values)),
     p95: round(percentile(values, 95)),
-    samples: values.length,
+    valid: values.length,
+    attempted,
   };
+}
+
+export function summaryOrUnavailable(values, attempted, reason = "No valid observations.") {
+  return values.length > 0 ? { status: "valid", ...summary(values, attempted) } : { status: "invalid", valid: 0, attempted, reason };
 }
 
 function requireValues(values) {
@@ -33,6 +38,4 @@ function requireValues(values) {
   }
 }
 
-function round(value) {
-  return Math.round(value * 1000) / 1000;
-}
+export const round = (value) => Math.round(value * 1000) / 1000;

@@ -4,5 +4,8 @@
   "name": "Claxedo",
   "repository": "https://github.com/kyashrathore/Claxedo",
   "driverOwnership": "application-repository",
+  "guiFramework": "electron",
+  "sourceEventFormats": ["opencode-event-v1"],
+  "materializationModes": ["native-opencode", "translated"],
   "scenarios": ["app-start-v1", "session-switch-v1"]
 }

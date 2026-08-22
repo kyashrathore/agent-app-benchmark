@@ -20,3 +20,7 @@ export function canonicalJson(value) {
 export function digest(value) {
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
+
+export function digestBytes(value) {
+  return createHash("sha256").update(value).digest("hex");
+}

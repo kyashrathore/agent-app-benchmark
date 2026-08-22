@@ -4,5 +4,8 @@
   "name": "T3 Code",
   "repository": "https://github.com/pingdotgg/t3code",
   "driverOwnership": "application-repository",
+  "guiFramework": "electron",
+  "sourceEventFormats": ["opencode-event-v1"],
+  "materializationModes": ["translated"],
   "scenarios": ["app-start-v1", "session-switch-v1"]
 }

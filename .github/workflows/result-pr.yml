@@ -1,0 +1,41 @@
+name: result-pr
+
+on:
+  pull_request:
+    paths:
+      - "results/**"
+      - "registry/**"
+      - "schemas/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-public-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out untrusted contribution without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run validate
+      - name: Recompute every submitted result
+        shell: bash
+        run: |
+          while IFS= read -r -d '' result; do
+            node bin/agent-app-benchmark.mjs result validate --input "$result"
+          done < <(find results -type f -name result.json -print0)
+      - name: Validate every comparison by building its local site
+        shell: bash
+        run: |
+          while IFS= read -r -d '' comparison; do
+            destination="$(mktemp -d)/site"
+            node bin/agent-app-benchmark.mjs site build --comparison "$comparison" --output "$destination"
+          done < <(find results/comparisons -type f -name comparison.json -print0 2>/dev/null || true)

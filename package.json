@@ -1,7 +1,7 @@
 {
   "name": "agent-app-benchmark",
   "version": "0.1.0",
-  "description": "A public, driver-based benchmark for desktop coding-agent applications",
+  "description": "Reproducible performance benchmarks for multi-harness coding-agent GUI applications",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -9,8 +9,14 @@
   },
   "scripts": {
     "test": "node --test",
+    "test:coverage": "node --experimental-test-coverage --test",
     "validate": "node ./bin/agent-app-benchmark.mjs validate",
-    "generate:corpus": "node ./bin/agent-app-benchmark.mjs generate-corpus --corpus session-size-ramp-v1 --output artifacts/session-size-ramp-v1.json"
+    "generate:corpus": "node ./bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-transcripts-v1 --output artifacts/corpora/opencode-completed-transcripts-v1",
+    "site:build": "node ./bin/agent-app-benchmark.mjs site build --comparison results/comparisons/initial-macos-arm64/comparison.json --output artifacts/sites/initial-macos-arm64",
+    "lint": "node --check bin/agent-app-benchmark.mjs && find src examples tests -type f \\( -name '*.mjs' -o -name '*.js' \\) -print0 | xargs -0 -n1 node --check"
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
   },
   "engines": {
     "node": ">=22"

@@ -1,60 +1,58 @@
-import { average, maximum, percentile, summary } from "./statistics.mjs";
+import { SESSION_LANES } from "./cases.mjs";
+import { average, maximum, percentile, round, summaryOrUnavailable } from "./statistics.mjs";
 
-export function summarizeCases(scenario, cases) {
+export function summarizeObservations(scenario, observations) {
   if (scenario.kind === "app-start") {
-    return Object.fromEntries(scenario.cases.startModes.map((startMode) => [
-      startMode,
-      summary(cases.filter((item) => item.case.startMode === startMode).map((item) => item.durationMs)),
-    ]));
+    return Object.fromEntries(scenario.cases.startModes.map((startMode) => {
+      const attempted = observations.filter((item) => item.case?.startMode === startMode);
+      const valid = attempted.filter(isValid).map((item) => item.durationMs);
+      return [startMode, summaryOrUnavailable(valid, attempted.length)];
+    }));
   }
   const lanes = {};
-  for (const workspaceRelation of scenario.cases.workspaceRelations) {
-    for (const sessionState of scenario.cases.sessionStates) {
-      const key = `${sessionState}-${workspaceRelation}`;
-      const lane = cases.filter((item) => item.case.workspaceRelation === workspaceRelation && item.case.sessionState === sessionState);
-      lanes[key] = {
-        ...summary(lane.map((item) => item.durationMs)),
-        trend: scenario.cases.transcriptBytes.map((transcriptBytes) => ({
-          transcriptBytes,
-          ...summary(lane.filter((item) => item.case.transcriptBytes === transcriptBytes).map((item) => item.durationMs)),
-        })),
-      };
-    }
+  for (const lane of SESSION_LANES) {
+    const attempted = observations.filter((item) => item.case?.workspaceRelation === lane.workspaceRelation && item.case?.sessionState === lane.sessionState && item.case?.workload === "isolated-latency");
+    const valid = attempted.filter(isValid).map((item) => item.durationMs);
+    lanes[lane.id] = {
+      ...summaryOrUnavailable(valid, attempted.length),
+      trend: scenario.cases.transcriptBytes.map((transcriptBytes) => {
+        const atSize = attempted.filter((item) => item.case.transcriptBytes === transcriptBytes);
+        return { transcriptBytes, ...summaryOrUnavailable(atSize.filter(isValid).map((item) => item.durationMs), atSize.length) };
+      }),
+    };
   }
   return lanes;
 }
 
-export function summarizeResources(samples, windows) {
-  const baseline = withinAny(samples, windows.baseline);
-  const active = withinAny(samples, windows.active);
-  const ending = withinAny(samples, windows.ending);
+export function summarizeResources(samples, windows, boundaryPoints) {
+  if (!windows.valid) return { status: "invalid", reason: windows.reason, rawSampleCount: samples.length, trend: boundaryPoints };
+  const baseline = within(samples, windows.baseline);
+  const active = within(samples, windows.active);
+  const ending = within(samples, windows.ending);
+  if (baseline.length === 0 || active.length === 0 || ending.length === 0) {
+    return { status: "invalid", reason: "A required resource window contains no samples.", rawSampleCount: samples.length, trend: boundaryPoints };
+  }
   const baselineIdleAverage = average(baseline.map((sample) => sample.rssBytes)) / MIB;
   const endingIdleAverage = average(ending.map((sample) => sample.rssBytes)) / MIB;
   return {
+    status: "valid",
+    scope: "summed application process-family RSS",
+    cpuDefinition: "cumulative process-family CPU-time delta divided by wall time; 100% equals one logical core",
     baselineIdleAverageRssMiB: round(baselineIdleAverage),
     activeAverageRssMiB: round(average(active.map((sample) => sample.rssBytes)) / MIB),
     activeMaximumRssMiB: round(maximum(active.map((sample) => sample.rssBytes)) / MIB),
     activeP95RssMiB: round(percentile(active.map((sample) => sample.rssBytes), 95) / MIB),
     endingIdleAverageRssMiB: round(endingIdleAverage),
     retainedRssGrowthMiB: round(endingIdleAverage - baselineIdleAverage),
-    trend: windows.cases.map(({ caseId, transcriptBytes, startMs, endMs, switchSequence }) => {
-      const values = within(samples, { startMs, endMs });
-      return {
-        caseId,
-        switchSequence,
-        transcriptBytes,
-        averageRssMiB: round(average(values.map((sample) => sample.rssBytes)) / MIB),
-        maximumRssMiB: round(maximum(values.map((sample) => sample.rssBytes)) / MIB),
-        p95RssMiB: round(percentile(values.map((sample) => sample.rssBytes), 95) / MIB),
-        averageCpuPercent: round(average(values.map((sample) => sample.cpuPercent))),
-        maximumCpuPercent: round(maximum(values.map((sample) => sample.cpuPercent)), 95),
-        p95CpuPercent: round(percentile(values.map((sample) => sample.cpuPercent), 95)),
-      };
-    }),
+    rawSampleCount: samples.length,
+    trend: boundaryPoints.map((point) => ({
+      ...point,
+      rssMiB: round(point.rssBytes / MIB),
+      cpuPercent: round(point.cpuPercent),
+    })),
   };
 }
 
 const MIB = 1024 * 1024;
+const isValid = (observation) => observation.status === "valid" && Number.isFinite(observation.durationMs) && observation.durationMs >= 0;
 const within = (samples, window) => samples.filter((sample) => sample.atMs >= window.startMs && sample.atMs <= window.endMs);
-const withinAny = (samples, windows) => samples.filter((sample) => windows.some((window) => sample.atMs >= window.startMs && sample.atMs <= window.endMs));
-const round = (value) => Math.round(value * 1000) / 1000;

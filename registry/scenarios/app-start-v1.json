@@ -4,18 +4,25 @@
   "title": "Application start",
   "description": "Measure new-process launch to painted and trusted-input-ready application surface.",
   "kind": "app-start",
+  "corpusId": "opencode-completed-transcripts-v1",
   "cases": {
-    "startModes": ["fresh-profile", "repeat-profile"]
+    "startModes": ["new-application-state", "initialized-application-state"]
   },
   "metrics": [
     {
       "id": "start.duration_ms",
+      "description": "Elapsed monotonic time immediately before process spawn until the 1 MiB anchor transcript is correctly painted across two presentation opportunities and the composer accepts trusted input.",
       "unit": "ms",
-      "statistics": ["average", "maximum", "p95"]
+      "betterDirection": "lower",
+      "observer": "driver-attested",
+      "rawField": "durationMs",
+      "statistics": ["average", "maximum", "p95"],
+      "reportPlacement": "app-start-table"
     }
   ],
   "runProfiles": {
     "smoke": 3,
+    "quick": 5,
     "publication": 20
   }
 }

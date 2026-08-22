@@ -1,75 +1,110 @@
 # Agent App Benchmark
 
-A small public benchmark for desktop coding-agent applications. Version 1 deliberately measures only:
+Agent App Benchmark is a public, reproducible performance benchmark for multi-harness coding-agent GUI applications. V1 measures the GUI handling completed historical sessions; it does not run or compare the coding-agent harness itself.
 
-1. Application start: fresh-profile and repeat-profile process launches.
-2. Session switching: cold/warm destinations within/across workspaces, using completed historical transcripts from 1 MiB through 32 MiB.
-3. Whole-process-family CPU and resident memory while the session-switch benchmark runs, plus before/after idle memory.
+The first registered applications are [T3 Code](https://github.com/pingdotgg/t3code) and [Claxedo](https://github.com/kyashrathore/Claxedo). Both happen to use Electron. Electron is not a requirement: native, Tauri, Flutter, Qt, browser-based, and other GUI applications are welcome.
 
-There are no capability profiles, composite scores, streaming scenarios, terminal scenarios, or prose claims that the runner cannot enforce.
+## V1 scenarios
 
-## Public comparison rule
+### Application start
 
-A result is public-comparable only when its scenario and corpus digests match files in [`registry/`](registry/). Custom scenarios can be run locally, but are labeled `custom` and must not be presented as part of the public comparison.
+- **First launch — new application state:** a new app process uses a cloned prepared state that the application has never launched with.
+- **Repeat launch — initialized application state:** a new app process uses a cloned state that completed exactly one earlier unmeasured launch to the same endpoint and then shut down cleanly.
+- Both begin immediately before process spawn and end when the fixed 1 MiB anchor transcript is correct and painted across two presentation opportunities and the composer accepts trusted input.
 
-Adding or changing a public scenario/corpus requires a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Repeat launch is not an existing hidden process, a background-window focus, or a renderer-only reload.
 
-## Canonical scenarios
+### Session switching
 
-### `app-start-v1`
+Four lanes are reported independently:
 
-- **Fresh-profile start:** launch a new process from a prepared profile that the app has never opened.
-- **Repeat-profile start:** launch once without measuring, reach the same ready endpoint, shut down the entire process family, then measure a new process launch from that initialized profile.
-- Timing begins immediately before process spawn and ends when the benchmark landing surface is painted and accepts trusted keyboard input.
+- cold destination within the same workspace;
+- warm destination within the same workspace;
+- cold destination across workspaces;
+- warm destination across workspaces.
 
-### `session-switch-v1`
+Cold means the destination has not become active in the measured app process. Warm means exactly one valid activation preceded the measured revisit. Every lane uses exact completed transcript sizes of 1, 2, 4, 8, 16, and 32 MiB and reports arithmetic average, maximum, nearest-rank p95, and valid/attempted observations.
 
-Four independently reported lanes:
+### Memory and CPU
 
-- cold destination, within the same workspace;
-- warm destination, within the same workspace;
-- cold destination, across workspaces;
-- warm destination, across workspaces.
+Memory is one app-level result—not split by app start or workspace relation.
 
-The deterministic transcript sizes are 1, 2, 4, 8, 16, and 32 MiB. A cold destination has not been opened in the current app process. A warm destination was opened earlier in that same process and is revisited. Each lane reports average, maximum, and p95 latency. Raw points power the latency-versus-transcript-size chart.
+- **Baseline idle:** 60 seconds with the ready 1 MiB control transcript visible and no benchmark input.
+- **Active:** the deterministic session-switch workload progresses completed historical transcripts from 1 MiB through 32 MiB.
+- **Ending idle:** 60 seconds after returning to the same ready 1 MiB control transcript.
 
-## Memory and CPU
+The memory table contains baseline idle average, active average/maximum/p95, ending idle average, and retained RSS growth. CPU and memory growth charts use per-switch resource boundaries. RSS is summed across the driver-declared application process family; CPU percentage uses cumulative CPU-time delta divided by wall time, so 100% means one fully occupied logical core.
 
-No live agent or stream runs during resource measurement. The active window is exactly the complete `session-switch-v1` action sequence while completed historical transcripts progress from 1 MiB to 32 MiB.
+No live session stream, model call, agent run, or terminal activity occurs during these measurements.
 
-The complete memory flow is:
+## Canonical corpus
 
-```text
-launch → load initial 1 MiB session → settle 15 s → baseline idle 60 s
-       → run all session switches → settle 15 s → ending idle 60 s → shutdown
-```
+Every app receives the same deterministic `opencode-completed-transcripts-v1` directory. It streams one NDJSON file per logical session using the pinned OpenCode `EventV2.SerializedEvent` envelope and these durable event types:
 
-The public report contains baseline idle RSS, active average/maximum/p95 RSS, ending idle RSS, and retained growth (`ending idle - baseline idle`). It also contains CPU and RSS trend data by switch sequence and transcript size. Resource values cover the declared application root and all attributable descendants; the benchmark driver and monitor are excluded.
+- `session.created.1`
+- `message.updated.1`
+- `message.part.updated.1`
 
-## Driver boundary
+The source baseline is OpenCode revision `a9f7081d4015b0cc22ed67156e042b482a8d064a`. Transcript size counts only UTF-8 bytes in final completed text-part payloads—not IDs, event envelopes, metadata, indexes, database encoding, or storage overhead.
 
-An app driver is a trusted executable that reads NDJSON requests from stdin and writes only NDJSON responses to stdout. Logs go to stderr. It implements:
+An application with a shipped production OpenCode history path should use it and report `native-opencode`. Other apps may translate the canonical event stream through their ordinary production history path and report `translated`. The website discloses the mode. Drivers are trusted adapters: app-owned tests and review catch mistakes, but the framework does not pretend DOM readback proves driver honesty.
 
-```text
-hello → prepare → launch → run-case → shutdown
-```
+## Non-goals
 
-The runner owns the public registry, schedules, statistics, process observation, result validation, and report. The driver owns app-specific corpus materialization, launch, semantic paint/input readiness, switching actions, and exact child-process cleanup. See [docs/driver-protocol.md](docs/driver-protocol.md).
+V1 does not measure Web Vitals (LCP, INP, CLS, FCP, or TTFB), streaming output, live agent or model execution, embedded terminal coding agents, tool/diff/reasoning rendering, or a composite score. Terminal-agent and rich-content work can be added later as separately reviewed scenario versions.
 
-## Run locally
+## Install and validate
+
+Requirements: Node.js 22 or newer and Rust 1.88 or newer.
 
 ```bash
+npm ci
 npm test
+npm run lint
 npm run validate
+cargo test --manifest-path native/resource-monitor/Cargo.toml
 cargo build --release --manifest-path native/resource-monitor/Cargo.toml
-node bin/agent-app-benchmark.mjs run \
-  --driver /absolute/path/to/app-driver \
-  --app t3 \
-  --scenario session-switch-v1 \
-  --corpus session-size-ramp-v1 \
-  --resource-monitor native/resource-monitor/target/release/agent-app-resource-monitor \
-  --run-profile smoke \
-  --output artifacts/t3-session-switch
 ```
 
-T3 and Claxedo are the first registered applications. Their production drivers remain app-owned so that each application materializes data and reaches readiness through its authoritative implementation; integration contracts are documented under [`drivers/`](drivers/).
+Generate and verify the public corpus:
+
+```bash
+node bin/agent-app-benchmark.mjs corpus generate \
+  --corpus opencode-completed-transcripts-v1 \
+  --output artifacts/corpora/opencode-completed-transcripts-v1
+
+node bin/agent-app-benchmark.mjs corpus verify \
+  --input artifacts/corpora/opencode-completed-transcripts-v1
+```
+
+Run an app-owned driver:
+
+```bash
+node bin/agent-app-benchmark.mjs run \
+  --driver /absolute/path/to/driver-executable \
+  --driver-arg optional-driver-argument \
+  --app t3 \
+  --scenario session-switch-v1 \
+  --run-profile smoke \
+  --resource-monitor native/resource-monitor/target/release/agent-app-resource-monitor \
+  --comparison-run-id my-same-machine-run \
+  --output artifacts/runs/t3-session-switch
+```
+
+The driver protocol is language-neutral NDJSON, so Node, Bun, native binaries, and other runtimes can implement it. See [docs/driver-protocol.md](docs/driver-protocol.md).
+
+## Local comparison website
+
+The website is generated entirely from an explicit immutable comparison manifest:
+
+```bash
+node bin/agent-app-benchmark.mjs site build \
+  --comparison results/comparisons/initial-macos-arm64/comparison.json \
+  --output artifacts/sites/initial-macos-arm64
+```
+
+Open `artifacts/sites/initial-macos-arm64/index.html` directly. It has no server, CDN, remote font, runtime fetch, or browser-side metric calculation. The home page compares every listed app and each `/apps/<app-id>/` path contains an individual report.
+
+## Public contribution rule
+
+Custom scenario files run locally but remain `custom/non-comparable`. Publishing a scenario, corpus, application driver registration, result, or new metric requires a pull request. A metric addition creates a new immutable scenario version so older results are never silently recomputed or filled with zero. See [CONTRIBUTING.md](CONTRIBUTING.md).

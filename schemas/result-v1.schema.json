@@ -1,20 +1,25 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/result-v1.schema.json",
-  "title": "Agent app benchmark result v1",
+  "title": "Agent app benchmark raw result bundle v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "createdAt", "app", "driver", "scenario", "corpus", "runProfile", "cases", "summary", "resources"],
+  "required": ["schemaVersion", "runId", "createdAt", "provenance", "environment", "app", "driver", "sourceEventFormat", "materialization", "scenario", "corpus", "runProfile", "observations", "resources", "derivation"],
   "properties": {
     "schemaVersion": { "const": 1 },
-    "createdAt": { "type": "string" },
-    "app": { "type": "object" },
-    "driver": { "type": "object" },
-    "scenario": { "type": "object" },
-    "corpus": { "type": "object" },
-    "runProfile": { "enum": ["smoke", "publication"] },
-    "cases": { "type": "array" },
-    "summary": { "type": "object" },
-    "resources": { "type": ["object", "null"] }
+    "runId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "provenance": { "type": "object" },
+    "environment": { "type": "object" },
+    "app": { "type": "object", "required": ["id", "name", "version", "buildDigestSha256"] },
+    "driver": { "type": "object", "required": ["name", "version", "sourceCommit", "digestSha256"] },
+    "sourceEventFormat": { "type": "object", "required": ["id", "schemaDigestSha256"] },
+    "materialization": { "type": "object", "required": ["mode", "corpusDigestSha256", "mappingDigestSha256"] },
+    "scenario": { "type": "object", "required": ["id", "kind", "digestSha256", "status"] },
+    "corpus": { "type": "object", "required": ["id", "definitionDigestSha256", "digestSha256", "status"] },
+    "runProfile": { "enum": ["smoke", "quick", "publication"] },
+    "observations": { "type": "array", "items": { "type": "object" } },
+    "resources": { "type": ["object", "null"] },
+    "derivation": { "type": "object", "required": ["version", "summaryDigestSha256", "summary"] }
   }
 }
