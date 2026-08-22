@@ -8,7 +8,10 @@
     "agent-app-benchmark": "./bin/agent-app-benchmark.mjs"
   },
   "exports": {
-    "./driver-sdk": "./src/driver-sdk.mjs"
+    "./driver-sdk": {
+      "types": "./src/driver-sdk.d.ts",
+      "default": "./src/driver-sdk.mjs"
+    }
   },
   "scripts": {
     "test": "node --test",
