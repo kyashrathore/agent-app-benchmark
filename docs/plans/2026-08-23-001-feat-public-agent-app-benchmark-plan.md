@@ -223,7 +223,7 @@ Each lane/size has a distinct destination assigned by the corpus manifest. A col
 - Exclude the runner, driver, automation controller, and native monitor.
 - The trusted driver declares every app-owned process root. The framework validates those roots, tracks their descendants by PID/start-time identity, displays the declaration, and invalidates observed unclassified processes within that declared family. It does not claim host-wide discovery of undeclared unrelated processes.
 - RSS is the sum across the app process family and is labeled as such because shared pages can be counted in multiple multi-process GUI helpers.
-- CPU percentage is process-family cumulative CPU-time delta divided by elapsed wall time; 100% means one fully occupied logical core and multicore totals may exceed 100%.
+- CPU percentage is sampled cumulative CPU-time delta for every descendant observed inside the boundary, divided by elapsed wall time. New descendants count from process birth; exiting descendants count through their final sample, and unobserved later work is not estimated. PID/start-time identity prevents reuse from being treated as continuity. 100% means one fully occupied logical core and multicore totals may exceed 100%.
 - Continuous active samples use the existing native 250 ms cadence; idle uses 1000 ms.
 - Each switch also has resource snapshots immediately before activation and after the semantic endpoint. Per-switch CPU derives from cumulative CPU-time deltas, so a switch faster than 250 ms is not assigned a fabricated zero or missing interior sample.
 - Missing telemetry, identity reuse, excessive cadence gaps, or monitor failure invalidates the resource portion while preserving independently valid latency observations.

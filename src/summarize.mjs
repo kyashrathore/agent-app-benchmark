@@ -37,7 +37,7 @@ export function summarizeResources(samples, windows, boundaryPoints) {
   return {
     status: "valid",
     scope: "summed application process-family RSS",
-    cpuDefinition: "cumulative process-family CPU-time delta divided by wall time; 100% equals one logical core",
+    cpuDefinition: "sampled cumulative CPU delta for descendants observed inside each boundary, divided by wall time; newborn descendants count from birth and exited descendants through their final sample; 100% equals one logical core",
     baselineIdleAverageRssMiB: round(baselineIdleAverage),
     activeAverageRssMiB: round(average(active.map((sample) => sample.rssBytes)) / MIB),
     activeMaximumRssMiB: round(maximum(active.map((sample) => sample.rssBytes)) / MIB),

@@ -33,7 +33,7 @@ Memory is one app-level result—not split by app start or workspace relation.
 - **Active:** the deterministic session-switch workload progresses completed historical transcripts from 1 MiB through 32 MiB.
 - **Ending idle:** 60 seconds after returning to the same ready 1 MiB control transcript.
 
-The memory table contains baseline idle average, active average/maximum/p95, ending idle average, and retained RSS growth. CPU and memory growth charts use per-switch resource boundaries. RSS is summed across the driver-declared application process family; CPU percentage uses cumulative CPU-time delta divided by wall time, so 100% means one fully occupied logical core.
+The memory table contains baseline idle average, active average/maximum/p95, ending idle average, and retained RSS growth. CPU and memory growth charts use per-switch resource boundaries. RSS is summed across the driver-declared application process family. CPU percentage uses sampled cumulative CPU-time deltas for every descendant observed inside the boundary; new descendants count from process birth and exiting descendants count through their final sample. Unobserved work after that final sample is not estimated. 100% means one fully occupied logical core.
 
 No live session stream, model call, agent run, or terminal activity occurs during these measurements.
 

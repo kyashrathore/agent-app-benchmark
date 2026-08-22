@@ -156,7 +156,7 @@ async function runResourceWorkload({ driver, scenario, prepared, observations, s
       observations.push(observation);
       const after = await monitor.sampleNow("after-switch");
       try {
-        boundaryPoints.push(deriveBoundaryPoint(before, after, benchmarkCase, boundaryPoints.length + 1));
+        boundaryPoints.push(deriveBoundaryPoint(before, after, benchmarkCase, boundaryPoints.length + 1, monitor.samples));
       } catch (error) {
         windows.valid = false;
         windows.reason = error.message;

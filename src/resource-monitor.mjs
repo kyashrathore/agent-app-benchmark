@@ -133,18 +133,28 @@ export function normalizeSnapshot(snapshot) {
   };
 }
 
-export function deriveBoundaryPoint(before, after, benchmarkCase, switchSequence) {
+export function deriveBoundaryPoint(before, after, benchmarkCase, switchSequence, samples = [before, after]) {
   if (after.atMs <= before.atMs) throw new Error("Resource boundary timestamps are not increasing.");
   const beforeByIdentity = new Map(before.processes.map((process) => [identity(process), process]));
   const afterByIdentity = new Map(after.processes.map((process) => [identity(process), process]));
-  if (beforeByIdentity.size !== afterByIdentity.size || [...beforeByIdentity.keys()].some((key) => !afterByIdentity.has(key))) {
-    throw new Error("Application process-family membership changed across a resource boundary.");
+  const stableIdentities = [...beforeByIdentity.keys()].filter((key) => afterByIdentity.has(key));
+  if (stableIdentities.length === 0) throw new Error("Application process family has no stable identity across a resource boundary.");
+  const observationsByIdentity = new Map();
+  for (const snapshot of samples.filter((sample) => sample.atMs >= before.atMs && sample.atMs <= after.atMs).toSorted((a, b) => a.atMs - b.atMs)) {
+    for (const process of snapshot.processes) {
+      const key = identity(process);
+      const observations = observationsByIdentity.get(key) ?? [];
+      observations.push(process);
+      observationsByIdentity.set(key, observations);
+    }
   }
   let cpuDeltaMs = 0;
-  for (const [key, prior] of beforeByIdentity) {
-    const next = afterByIdentity.get(key);
-    if (next.cpuTimeMs < prior.cpuTimeMs) throw new Error("Application cumulative CPU time moved backwards.");
-    cpuDeltaMs += next.cpuTimeMs - prior.cpuTimeMs;
+  for (const [key, observations] of observationsByIdentity) {
+    const first = beforeByIdentity.get(key) ?? observations[0];
+    const last = observations.at(-1);
+    const baselineCpuMs = beforeByIdentity.has(key) || !startedWithinBoundary(first, before.atMs, after.atMs) ? first.cpuTimeMs : 0;
+    if (last.cpuTimeMs < baselineCpuMs) throw new Error("Application cumulative CPU time moved backwards.");
+    cpuDeltaMs += last.cpuTimeMs - baselineCpuMs;
   }
   const wallMs = after.atMs - before.atMs;
   return {
@@ -158,6 +168,11 @@ export function deriveBoundaryPoint(before, after, benchmarkCase, switchSequence
     wallMs,
     cpuDeltaMs,
   };
+}
+
+function startedWithinBoundary(process, beforeMs, afterMs) {
+  const precisionToleranceMs = 1_000;
+  return process.startTimeMs >= beforeMs - precisionToleranceMs && process.startTimeMs <= afterMs + precisionToleranceMs;
 }
 
 export function validateCadence(samples, windows, intervalMs, tolerance = 2.5) {
