@@ -7,6 +7,9 @@
   "bin": {
     "agent-app-benchmark": "./bin/agent-app-benchmark.mjs"
   },
+  "exports": {
+    "./driver-sdk": "./src/driver-sdk.mjs"
+  },
   "scripts": {
     "test": "node --test",
     "test:coverage": "node --experimental-test-coverage --test",
