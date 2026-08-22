@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "claxedo",
+  "name": "Claxedo",
+  "repository": "https://github.com/kyashrathore/Claxedo",
+  "driverOwnership": "application-repository",
+  "scenarios": ["app-start-v1", "session-switch-v1"]
+}

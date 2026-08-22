@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "session-size-ramp-v1",
+  "generator": "deterministic-transcript-v1",
+  "seed": "agent-app-benchmark-public-v1",
+  "workspaceIds": ["workspace-a", "workspace-b"],
+  "transcriptBytes": [1048576, 2097152, 4194304, 8388608, 16777216, 33554432],
+  "messageChunkBytes": 8192,
+  "description": "Two workspaces with completed historical transcripts whose canonical UTF-8 content bytes progress from 1 MiB to 32 MiB."
+}

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "t3",
+  "name": "T3 Code",
+  "repository": "https://github.com/pingdotgg/t3code",
+  "driverOwnership": "application-repository",
+  "scenarios": ["app-start-v1", "session-switch-v1"]
+}

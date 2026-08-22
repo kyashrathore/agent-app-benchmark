@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/result-v1.schema.json",
+  "title": "Agent app benchmark result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "createdAt", "app", "driver", "scenario", "corpus", "runProfile", "cases", "summary", "resources"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "createdAt": { "type": "string" },
+    "app": { "type": "object" },
+    "driver": { "type": "object" },
+    "scenario": { "type": "object" },
+    "corpus": { "type": "object" },
+    "runProfile": { "enum": ["smoke", "publication"] },
+    "cases": { "type": "array" },
+    "summary": { "type": "object" },
+    "resources": { "type": ["object", "null"] }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "agent-app-benchmark",
+  "version": "0.1.0",
+  "description": "A public, driver-based benchmark for desktop coding-agent applications",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "agent-app-benchmark": "./bin/agent-app-benchmark.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "validate": "node ./bin/agent-app-benchmark.mjs validate",
+    "generate:corpus": "node ./bin/agent-app-benchmark.mjs generate-corpus --corpus session-size-ramp-v1 --output artifacts/session-size-ramp-v1.json"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

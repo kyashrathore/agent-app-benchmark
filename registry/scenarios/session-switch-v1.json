@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "session-switch-v1",
+  "title": "Historical session switching",
+  "description": "Switch among completed historical transcripts while varying workspace relation, destination state, and logical transcript bytes.",
+  "kind": "session-switch",
+  "cases": {
+    "workspaceRelations": ["within-workspace", "across-workspaces"],
+    "sessionStates": ["cold", "warm"],
+    "transcriptBytes": [1048576, 2097152, 4194304, 8388608, 16777216, 33554432]
+  },
+  "metrics": [
+    {
+      "id": "switch.duration_ms",
+      "unit": "ms",
+      "statistics": ["average", "maximum", "p95"]
+    }
+  ],
+  "resourceMeasurement": {
+    "processScope": "application-family",
+    "activeSampleIntervalMs": 250,
+    "idleSampleIntervalMs": 1000,
+    "settleBeforeIdleMs": 15000,
+    "idleWindowMs": 60000,
+    "memoryMetrics": ["baseline_idle_average_rss_mib", "active_average_rss_mib", "active_maximum_rss_mib", "active_p95_rss_mib", "ending_idle_average_rss_mib", "retained_rss_growth_mib"],
+    "cpuTrend": true,
+    "memoryTrend": true
+  },
+  "runProfiles": {
+    "smoke": 1,
+    "publication": 5
+  }
+}
