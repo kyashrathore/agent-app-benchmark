@@ -91,6 +91,17 @@ node bin/agent-app-benchmark.mjs run \
   --output artifacts/runs/t3-session-switch
 ```
 
+Pass `--corpus-directory` to reuse a previously verified corpus instead of regenerating roughly 253 MiB for every scenario.
+
+For a fair same-machine comparison, use the framework-owned paired runner rather than invoking the four results independently. Copy `examples/comparison-run.example.json`, replace its absolute paths and framework commit, then run:
+
+```bash
+node bin/agent-app-benchmark.mjs comparison run \
+  --config /absolute/path/to/comparison-run.json
+```
+
+It verifies or generates the corpus once, then uses the recorded mirrored order `T3 app-start → Claxedo app-start → Claxedo session-switch → T3 session-switch`. Every result contains the same schedule digest and its own ordinal.
+
 The driver protocol is language-neutral NDJSON, so Node, Bun, native binaries, and other runtimes can implement it. See [docs/driver-protocol.md](docs/driver-protocol.md).
 
 ## Local comparison website
@@ -103,8 +114,12 @@ node bin/agent-app-benchmark.mjs site build \
   --output artifacts/sites/initial-macos-arm64
 ```
 
+Result paths are relative to the comparison manifest. A manifest under `results/comparisons/<id>/` may reference sibling content under `results/runs/`, but the loader rejects paths that escape `results/`.
+
 Open `artifacts/sites/initial-macos-arm64/index.html` directly. It has no server, CDN, remote font, runtime fetch, or browser-side metric calculation. The home page compares every listed app and each `/apps/<app-id>/` path contains an individual report.
 
 ## Public contribution rule
 
 Custom scenario files run locally but remain `custom/non-comparable`. Publishing a scenario, corpus, application driver registration, result, or new metric requires a pull request. A metric addition creates a new immutable scenario version so older results are never silently recomputed or filled with zero. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Public registry, schema, and result paths are append-only in pull requests. Corrections therefore use a new version or run path; CI rejects silent edits and deletions of already published artifacts.

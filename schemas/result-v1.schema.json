@@ -4,22 +4,293 @@
   "title": "Agent app benchmark raw result bundle v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "runId", "createdAt", "provenance", "environment", "app", "driver", "sourceEventFormat", "materialization", "scenario", "corpus", "runProfile", "observations", "resources", "derivation"],
+  "required": ["schemaVersion", "runId", "createdAt", "provenance", "environment", "app", "driver", "sourceEventFormat", "materialization", "scenario", "corpus", "runProfile", "observations", "resources", "resourceTrace", "derivation"],
   "properties": {
     "schemaVersion": { "const": 1 },
-    "runId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "runId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "maxLength": 200 },
     "createdAt": { "type": "string", "format": "date-time" },
-    "provenance": { "type": "object" },
-    "environment": { "type": "object" },
-    "app": { "type": "object", "required": ["id", "name", "version", "buildDigestSha256"] },
-    "driver": { "type": "object", "required": ["name", "version", "sourceCommit", "digestSha256"] },
-    "sourceEventFormat": { "type": "object", "required": ["id", "schemaDigestSha256"] },
-    "materialization": { "type": "object", "required": ["mode", "corpusDigestSha256", "mappingDigestSha256"] },
-    "scenario": { "type": "object", "required": ["id", "kind", "digestSha256", "status"] },
-    "corpus": { "type": "object", "required": ["id", "definitionDigestSha256", "digestSha256", "status"] },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "comparisonRunId", "frameworkRevision", "comparisonScheduleDigestSha256", "scheduleOrdinal"],
+      "properties": {
+        "kind": { "enum": ["maintainer-observed", "community-self-attested"] },
+        "comparisonRunId": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]*$", "maxLength": 200 },
+        "frameworkRevision": { "type": "string", "pattern": "^(?:[0-9a-f]{40}|working-tree)$" },
+        "comparisonScheduleDigestSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "scheduleOrdinal": { "type": ["integer", "null"], "minimum": 1, "maximum": 1000 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "comparisonRunId": { "type": "string" } }, "required": ["comparisonRunId"] },
+          "then": { "properties": { "comparisonScheduleDigestSha256": { "type": "string" }, "scheduleOrdinal": { "type": "integer" } } },
+          "else": { "properties": { "comparisonScheduleDigestSha256": { "type": "null" }, "scheduleOrdinal": { "type": "null" } } }
+        }
+      ]
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "architecture", "osRelease", "logicalCpuCount", "cpuModel", "totalMemoryBytes", "nodeVersion"],
+      "properties": {
+        "platform": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "architecture": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "osRelease": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "logicalCpuCount": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "cpuModel": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "totalMemoryBytes": { "type": "integer", "minimum": 1 },
+        "nodeVersion": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "guiFramework": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
+    },
+    "app": { "$ref": "#/$defs/application" },
+    "driver": { "$ref": "#/$defs/driver" },
+    "sourceEventFormat": { "$ref": "#/$defs/sourceEventFormat" },
+    "materialization": { "$ref": "#/$defs/materialization" },
+    "scenario": { "$ref": "#/$defs/scenarioIdentity" },
+    "corpus": { "$ref": "#/$defs/corpusIdentity" },
     "runProfile": { "enum": ["smoke", "quick", "publication"] },
-    "observations": { "type": "array", "items": { "type": "object" } },
-    "resources": { "type": ["object", "null"] },
-    "derivation": { "type": "object", "required": ["version", "summaryDigestSha256", "summary"] }
+    "observations": { "type": "array", "minItems": 1, "maxItems": 5000, "items": { "$ref": "#/$defs/observation" } },
+    "resources": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/validResources" }, { "$ref": "#/$defs/invalidResources" }] },
+    "resourceTrace": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/resourceTrace" }] },
+    "derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "summaryDigestSha256", "summary"],
+      "properties": {
+        "version": { "const": 1 },
+        "summaryDigestSha256": { "$ref": "#/$defs/sha256" },
+        "summary": { "type": "object", "minProperties": 1, "maxProperties": 4 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "scenario": { "type": "object", "properties": { "kind": { "const": "app-start" } }, "required": ["kind"] } } },
+      "then": { "properties": { "resources": { "type": "null" }, "resourceTrace": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "scenario": { "type": "object", "properties": { "kind": { "const": "session-switch" } }, "required": ["kind"] } } },
+      "then": { "properties": { "resources": { "type": "object" }, "resourceTrace": { "$ref": "#/$defs/resourceTrace" } } }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "nonnegative": { "type": "number", "minimum": 0 },
+    "application": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "version", "buildDigestSha256"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "version": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "buildDigestSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "driver": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "version", "sourceCommit", "digestSha256"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "version": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "sourceCommit": { "$ref": "#/$defs/commit" },
+        "digestSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "sourceEventFormat": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "sourceRevision", "schemaDigestSha256"],
+      "properties": {
+        "id": { "const": "opencode-event-v1" },
+        "sourceRevision": { "$ref": "#/$defs/commit" },
+        "schemaDigestSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "materialization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "corpusDigestSha256", "mappingDigestSha256"],
+      "properties": {
+        "mode": { "enum": ["native-opencode", "translated"] },
+        "corpusDigestSha256": { "$ref": "#/$defs/sha256" },
+        "mappingDigestSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "scenarioIdentity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "digestSha256", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
+        "kind": { "enum": ["app-start", "session-switch"] },
+        "digestSha256": { "$ref": "#/$defs/sha256" },
+        "status": { "enum": ["public-comparable", "custom/non-comparable"] }
+      }
+    },
+    "corpusIdentity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "definitionDigestSha256", "digestSha256", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
+        "definitionDigestSha256": { "$ref": "#/$defs/sha256" },
+        "digestSha256": { "$ref": "#/$defs/sha256" },
+        "status": { "enum": ["public-comparable", "custom/non-comparable"] }
+      }
+    },
+    "case": {
+      "type": "object", "additionalProperties": false, "required": ["caseId"],
+      "properties": {
+        "caseId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "maxLength": 240 },
+        "repetition": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "startMode": { "enum": ["new-application-state", "initialized-application-state"] },
+        "stateHandle": { "enum": ["P0", "P1"] },
+        "workload": { "enum": ["isolated-latency", "progressive-resource", "resource-control"] },
+        "workspaceRelation": { "enum": ["within-workspace", "across-workspaces"] },
+        "sessionState": { "enum": ["cold", "warm"] },
+        "transcriptBytes": { "type": "integer", "minimum": 1, "maximum": 67108864 },
+        "sourceSessionId": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "destinationSessionId": { "type": "string", "minLength": 1, "maxLength": 240 }
+      }
+    },
+    "readiness": {
+      "type": "object", "additionalProperties": false, "required": ["endpoint", "checks"],
+      "properties": {
+        "endpoint": { "const": "correct-content-painted-and-input-ready" },
+        "checks": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            { "$ref": "#/$defs/contentCheck" }, { "$ref": "#/$defs/paintCheck" },
+            { "$ref": "#/$defs/presentationsCheck" }, { "$ref": "#/$defs/inputCheck" }
+          ],
+          "items": false
+        }
+      }
+    },
+    "contentCheck": { "type": "object", "additionalProperties": false, "required": ["id", "passed"], "properties": { "id": { "const": "content-identity" }, "passed": { "type": "boolean" } } },
+    "paintCheck": { "type": "object", "additionalProperties": false, "required": ["id", "passed"], "properties": { "id": { "const": "first-fold-painted" }, "passed": { "type": "boolean" } } },
+    "presentationsCheck": { "type": "object", "additionalProperties": false, "required": ["id", "passed"], "properties": { "id": { "const": "two-presentations" }, "passed": { "type": "boolean" } } },
+    "inputCheck": { "type": "object", "additionalProperties": false, "required": ["id", "passed"], "properties": { "id": { "const": "trusted-input" }, "passed": { "type": "boolean" } } },
+    "clock": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "clock", "start", "end"],
+      "properties": {
+        "kind": { "const": "single-monotonic-clock" },
+        "clock": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "start": { "$ref": "#/$defs/nonnegative" }, "end": { "$ref": "#/$defs/nonnegative" }
+      }
+    },
+    "observation": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["case", "receivedAt", "status", "durationMs", "readiness", "clock"],
+          "properties": {
+            "case": { "$ref": "#/$defs/case" }, "receivedAt": { "type": "string", "format": "date-time" },
+            "status": { "const": "valid" }, "durationMs": { "$ref": "#/$defs/nonnegative" },
+            "readiness": { "$ref": "#/$defs/readiness" }, "clock": { "$ref": "#/$defs/clock" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["case", "receivedAt", "status", "reason"],
+          "properties": {
+            "case": { "$ref": "#/$defs/case" }, "receivedAt": { "type": "string", "format": "date-time" },
+            "status": { "const": "invalid" }, "reason": { "type": "string", "minLength": 1, "maxLength": 512 },
+            "durationMs": { "$ref": "#/$defs/nonnegative" }, "readiness": { "$ref": "#/$defs/readiness" }, "clock": { "$ref": "#/$defs/clock" }
+          }
+        }
+      ]
+    },
+    "process": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pid", "startTimeMs", "cpuTimeMs", "rssBytes", "name"],
+      "properties": {
+        "pid": { "type": "integer", "minimum": 1 }, "startTimeMs": { "$ref": "#/$defs/nonnegative" },
+        "cpuTimeMs": { "$ref": "#/$defs/nonnegative" }, "rssBytes": { "$ref": "#/$defs/nonnegative" },
+        "name": { "type": "string", "maxLength": 256 }
+      }
+    },
+    "sample": {
+      "type": "object", "additionalProperties": false,
+      "required": ["atMs", "collectionDurationMicros", "rssBytes", "cumulativeCpuTimeMs", "inaccessibleProcessCount", "rootProcessFound", "missingExternalProcessCount", "processes"],
+      "properties": {
+        "atMs": { "$ref": "#/$defs/nonnegative" }, "collectionDurationMicros": { "$ref": "#/$defs/nonnegative" },
+        "rssBytes": { "$ref": "#/$defs/nonnegative" }, "cumulativeCpuTimeMs": { "$ref": "#/$defs/nonnegative" },
+        "inaccessibleProcessCount": { "type": "integer", "minimum": 0 }, "rootProcessFound": { "type": "boolean" },
+        "missingExternalProcessCount": { "type": "integer", "minimum": 0 },
+        "processes": { "type": "array", "maxItems": 512, "items": { "$ref": "#/$defs/process" } }
+      }
+    },
+    "window": {
+      "type": "object", "additionalProperties": false, "required": ["startMs", "endMs"],
+      "properties": { "startMs": { "$ref": "#/$defs/nonnegative" }, "endMs": { "$ref": "#/$defs/nonnegative" } }
+    },
+    "boundary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["case", "switchSequence", "beforeSampleIndex", "afterSampleIndex"],
+      "properties": {
+        "case": { "$ref": "#/$defs/case" }, "switchSequence": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "beforeSampleIndex": { "type": "integer", "minimum": 0 }, "afterSampleIndex": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "resourceTrace": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "samples", "windows", "boundaries", "monitorErrors", "failure"],
+      "properties": {
+        "version": { "const": 1 },
+        "samples": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/sample" } },
+        "windows": {
+          "type": "object", "additionalProperties": false, "required": ["baseline", "active", "ending"],
+          "properties": {
+            "baseline": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/window" }] },
+            "active": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/window" }] },
+            "ending": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/window" }] }
+          }
+        },
+        "boundaries": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/boundary" } },
+        "monitorErrors": {
+          "type": "array", "maxItems": 1000,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["code", "message"],
+            "properties": { "code": { "type": "string", "minLength": 1, "maxLength": 80 }, "message": { "type": "string", "minLength": 1, "maxLength": 512 } }
+          }
+        },
+        "failure": { "type": ["string", "null"], "minLength": 1, "maxLength": 512 }
+      }
+    },
+    "resourcePoint": {
+      "type": "object", "additionalProperties": false,
+      "required": ["caseId", "switchSequence", "lane", "transcriptBytes", "atMs", "rssBytes", "cpuPercent", "wallMs", "cpuDeltaMs"],
+      "properties": {
+        "caseId": { "type": "string", "minLength": 1, "maxLength": 240 }, "switchSequence": { "type": "integer", "minimum": 1 },
+        "lane": { "type": "string", "minLength": 1, "maxLength": 120 }, "transcriptBytes": { "type": "integer", "minimum": 1 },
+        "atMs": { "$ref": "#/$defs/nonnegative" }, "rssBytes": { "$ref": "#/$defs/nonnegative" },
+        "cpuPercent": { "$ref": "#/$defs/nonnegative" }, "wallMs": { "type": "number", "exclusiveMinimum": 0 },
+        "cpuDeltaMs": { "$ref": "#/$defs/nonnegative" }, "rssMiB": { "$ref": "#/$defs/nonnegative" }
+      }
+    },
+    "validResources": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "scope", "cpuDefinition", "baselineIdleAverageRssMiB", "activeAverageRssMiB", "activeMaximumRssMiB", "activeP95RssMiB", "endingIdleAverageRssMiB", "retainedRssGrowthMiB", "rawSampleCount", "trend"],
+      "properties": {
+        "status": { "const": "valid" }, "scope": { "const": "summed application process-family RSS" },
+        "cpuDefinition": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "baselineIdleAverageRssMiB": { "$ref": "#/$defs/nonnegative" }, "activeAverageRssMiB": { "$ref": "#/$defs/nonnegative" },
+        "activeMaximumRssMiB": { "$ref": "#/$defs/nonnegative" }, "activeP95RssMiB": { "$ref": "#/$defs/nonnegative" },
+        "endingIdleAverageRssMiB": { "$ref": "#/$defs/nonnegative" }, "retainedRssGrowthMiB": { "type": "number" },
+        "rawSampleCount": { "type": "integer", "minimum": 1 },
+        "trend": { "type": "array", "minItems": 1, "maxItems": 10000, "items": { "$ref": "#/$defs/resourcePoint" } }
+      }
+    },
+    "invalidResources": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "reason", "rawSampleCount", "trend"],
+      "properties": {
+        "status": { "const": "invalid" }, "reason": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "rawSampleCount": { "type": "integer", "minimum": 0 },
+        "trend": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/resourcePoint" } }
+      }
+    }
   }
 }

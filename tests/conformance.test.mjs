@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -50,6 +50,42 @@ test("CLI conformance sends the complete canonical prepare identity", async () =
       path.join(root, "run"),
     ]);
     assert.equal(stdout.trim(), "claxedo\ttranslated");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("CLI runs a local custom scenario and marks it non-comparable", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-custom-scenario-"));
+  try {
+    const corpusDefinition = { ...SMALL, id: "custom-corpus-v1", transcriptBytes: [2048], messageChunkBytes: 1024 };
+    const scenario = {
+      schemaVersion: 1,
+      id: "custom-start-v1",
+      title: "Custom local start",
+      description: "A local scenario that uses the V1 app-start lifecycle.",
+      kind: "app-start",
+      corpusId: corpusDefinition.id,
+      cases: { startModes: ["new-application-state", "initialized-application-state"] },
+      metrics: [{ id: "start.duration_ms", description: "Launch duration.", unit: "ms" }],
+      runProfiles: { smoke: 1, quick: 1, publication: 1 },
+    };
+    const corpusFile = path.join(root, "corpus.json");
+    const scenarioFile = path.join(root, "scenario.json");
+    await writeFile(corpusFile, JSON.stringify(corpusDefinition));
+    await writeFile(scenarioFile, JSON.stringify(scenario));
+    const generated = await writeCorpus(corpusDefinition, path.join(root, "corpus"));
+    const output = path.join(root, "result");
+    await execute(process.execPath, [
+      CLI, "run", "--driver", process.execPath, "--driver-arg", DRIVER,
+      "--driver-env", "BENCHMARK_MOCK_SCENARIO_ID=custom-start-v1",
+      "--driver-env", "BENCHMARK_MOCK_APP_ID=t3",
+      "--app", "t3", "--scenario", scenarioFile, "--corpus", corpusFile,
+      "--corpus-directory", generated.path, "--run-profile", "smoke", "--output", output,
+    ]);
+    const result = JSON.parse(await readFile(path.join(output, "result.json"), "utf8"));
+    assert.equal(result.scenario.status, "custom/non-comparable");
+    assert.equal(result.corpus.status, "custom/non-comparable");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

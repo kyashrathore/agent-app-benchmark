@@ -35,7 +35,7 @@ async function dispatch(method, params) {
       protocolVersion: 1,
       application: { id: process.env.BENCHMARK_MOCK_APP_ID ?? "mock-native", name: "Mock Native GUI", version: "1.0.0", buildDigestSha256: SHA },
       driver: { name: "mock-native-driver", version: "1.0.0", sourceCommit: COMMIT, digestSha256: SHA },
-      scenarios: ["app-start-v1", "session-switch-v1"],
+      scenarios: ["app-start-v1", "session-switch-v1", ...(process.env.BENCHMARK_MOCK_SCENARIO_ID ? [process.env.BENCHMARK_MOCK_SCENARIO_ID] : [])],
       sourceEventFormats: ["opencode-event-v1"],
       materializationModes: ["translated"],
       guiFramework: "mock-native",
@@ -64,7 +64,8 @@ async function dispatch(method, params) {
   }
   if (method === "execute") {
     requirePrepared();
-    if (params.scenarioId === "app-start-v1") await startApplication();
+    if (process.env.BENCHMARK_MOCK_MODE === "sensitive-error") throw new Error("failed at /Users/example/private/session.json token=super-secret-value");
+    if (params.case.startMode) await startApplication();
     if (!application) throw new Error("Mock application is not running.");
     const durationMs = params.case.transcriptBytes ? 4 + Math.log2(params.case.transcriptBytes / 1048576 + 1) : params.case.startMode === "new-application-state" ? 40 : 25;
     return {

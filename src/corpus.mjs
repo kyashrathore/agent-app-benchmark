@@ -4,11 +4,13 @@ import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { finished } from "node:stream/promises";
-import { digest, digestBytes } from "./canonical-json.mjs";
+import { digest } from "./canonical-json.mjs";
 import { assertContract } from "./contracts.mjs";
-import { REPOSITORY_ROOT, resolveInside } from "./paths.mjs";
+import { REPOSITORY_ROOT, resolveInside, resolveRealFileInside } from "./paths.mjs";
 
 const MARKER = ".agent-app-benchmark-corpus";
+const MAX_MANIFEST_BYTES = 1024 * 1024;
+const MAX_SESSION_BYTES = 64 * 1024 * 1024;
 const EVENT_SCHEMA = JSON.parse(await readFile(path.join(REPOSITORY_ROOT, "schemas", "opencode-event-v1.schema.json"), "utf8"));
 export const OPENCODE_EVENT_SCHEMA_DIGEST = digest(EVENT_SCHEMA);
 
@@ -43,6 +45,7 @@ export async function writeCorpus(definition, outputDirectory) {
     };
     const corpusDigestSha256 = digest(manifestCore);
     const manifest = { ...manifestCore, corpusDigestSha256 };
+    assertContract("corpusManifest", manifest, "generated corpus manifest");
     await writeFile(path.join(temporary, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
     await writeFile(path.join(temporary, MARKER), `${corpusDigestSha256}\n`, { mode: 0o600 });
     await rename(temporary, output);
@@ -57,7 +60,12 @@ export async function verifyCorpus(corpusDirectory) {
   const root = path.resolve(corpusDirectory);
   const marker = await lstat(path.join(root, MARKER));
   if (!marker.isFile() || marker.isSymbolicLink()) throw new Error("Corpus marker is invalid.");
-  const manifest = JSON.parse(await readFile(path.join(root, "manifest.json"), "utf8"));
+  const manifestFile = path.join(root, "manifest.json");
+  const manifestStat = await lstat(manifestFile);
+  if (!manifestStat.isFile() || manifestStat.isSymbolicLink()) throw new Error("Corpus manifest must be a regular file.");
+  if (manifestStat.size > MAX_MANIFEST_BYTES) throw new Error("Corpus manifest exceeds the public size limit.");
+  const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
+  assertContract("corpusManifest", manifest, "corpus manifest");
   const expectedSessionCount = 1 + 4 * (manifest.topology?.transcriptBytes?.length ?? 0);
   if (manifest.schemaVersion !== 1 || !Array.isArray(manifest.sessions) || manifest.sessions.length !== expectedSessionCount) {
     throw new Error("Corpus manifest topology is invalid.");
@@ -68,9 +76,10 @@ export async function verifyCorpus(corpusDirectory) {
   for (const session of manifest.sessions) {
     if (seenSessionIds.has(session.logicalSessionId)) throw new Error(`Duplicate session ${session.logicalSessionId}.`);
     seenSessionIds.add(session.logicalSessionId);
-    const file = resolveInside(root, session.file, "corpus session file");
+    const file = await resolveRealFileInside(root, session.file, "corpus session file");
     const stat = await lstat(file);
     if (!stat.isFile() || stat.isSymbolicLink()) throw new Error(`${session.file} must be a regular file.`);
+    if (stat.size > MAX_SESSION_BYTES) throw new Error(`${session.file} exceeds the public corpus session size limit.`);
     const hash = createHash("sha256");
     let expectedSequence = 0;
     let transcriptBytes = 0;
@@ -267,8 +276,4 @@ async function assertTargetDoesNotExist(target) {
     throw error;
   }
   throw new Error(`Corpus output already exists: ${target}.`);
-}
-
-export function digestCorpusText(text) {
-  return digestBytes(Buffer.from(text, "utf8"));
 }

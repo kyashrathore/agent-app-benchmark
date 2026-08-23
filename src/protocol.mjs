@@ -1,4 +1,5 @@
 const SHA256 = /^[0-9a-f]{64}$/;
+const REQUIRED_READINESS_CHECKS = ["content-identity", "first-fold-painted", "two-presentations", "trusted-input"];
 
 export function assertHello(result, expected) {
   if (!result || result.protocolVersion !== 1) throw new Error("Driver hello has an unsupported protocol version.");
@@ -13,6 +14,7 @@ export function assertHello(result, expected) {
 
 export function assertPrepared(result, expected) {
   if (!result || !["native-opencode", "translated"].includes(result.materializationMode)) throw new Error("Driver prepare result has no valid materialization mode.");
+  if (!expected.materializationModes?.includes(result.materializationMode)) throw new Error(`Driver prepare result uses unadvertised materialization mode ${result.materializationMode}.`);
   if (result.corpusDigestSha256 !== expected.corpusDigestSha256) throw new Error("Driver attested to the wrong corpus digest.");
   if (result.eventSchemaDigestSha256 !== expected.eventSchemaDigestSha256) throw new Error("Driver attested to the wrong event schema digest.");
   if (!SHA256.test(result.mappingDigestSha256 ?? "")) throw new Error("Driver prepare result has no mapping digest.");
@@ -41,6 +43,9 @@ export function normalizeExecution(result, benchmarkCase) {
     if (!result.clock || result.clock.kind !== "single-monotonic-clock" || !Number.isFinite(result.clock.start) || !Number.isFinite(result.clock.end) || result.clock.end < result.clock.start) {
       return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver returned invalid one-clock timing evidence.", readiness: result.readiness };
     }
+    if (Math.abs((result.clock.end - result.clock.start) - result.durationMs) > 0.5) {
+      return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver duration does not match its monotonic clock interval.", readiness: result.readiness, clock: result.clock };
+    }
   } catch (error) {
     return { ...base, status: "invalid", durationMs: result.durationMs, reason: error.message };
   }
@@ -64,7 +69,10 @@ function assertIdentity(value, fields, label) {
 }
 
 function assertReceipt(receipt, label) {
-  if (!receipt || typeof receipt.endpoint !== "string" || !Array.isArray(receipt.checks) || receipt.checks.length === 0) throw new Error(`Driver ${label} receipt is missing.`);
+  if (!receipt || receipt.endpoint !== "correct-content-painted-and-input-ready" || !Array.isArray(receipt.checks)) throw new Error(`Driver ${label} receipt is missing.`);
+  if (receipt.checks.length !== REQUIRED_READINESS_CHECKS.length || receipt.checks.some((check, index) => check?.id !== REQUIRED_READINESS_CHECKS[index])) {
+    throw new Error(`Driver ${label} receipt does not contain the exact required checks.`);
+  }
   for (const check of receipt.checks) {
     if (typeof check.id !== "string" || typeof check.passed !== "boolean") throw new Error(`Driver ${label} check is invalid.`);
   }

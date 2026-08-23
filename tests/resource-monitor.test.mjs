@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { deriveBoundaryPoint, normalizeSnapshot, validateCadence } from "../src/resource-monitor.mjs";
+import { ResourceMonitor, deriveBoundaryPoint, normalizeSnapshot, validateCadence } from "../src/resource-monitor.mjs";
 
 const raw = (atMs, cpuTimeMs, residentBytes = 100) => ({
   sampledAtUnixMs: atMs,
@@ -77,4 +77,35 @@ test("cadence validation reports missing and excessive gaps", () => {
   assert.deepEqual(validateCadence(samples, [{ startMs: 1000, endMs: 1300 }], 250), { valid: true });
   assert.equal(validateCadence(samples, [{ startMs: 1000, endMs: 2100 }], 250).valid, false);
   assert.equal(validateCadence([], [{ startMs: 1000, endMs: 1100 }], 250).valid, false);
+});
+
+test("malformed snapshots are recorded and reject pending samples without throwing", async () => {
+  const monitor = Object.create(ResourceMonitor.prototype);
+  monitor.samples = [];
+  monitor.errors = [];
+  monitor.pendingSnapshots = new Map();
+  let rejectSnapshot;
+  const snapshot = new Promise((_, reject) => { rejectSnapshot = reject; });
+  const rejected = assert.rejects(snapshot, /malformed snapshot/);
+  monitor.pendingSnapshots.set("sample-1", { resolve: () => {}, reject: rejectSnapshot, timer: setTimeout(() => {}, 60_000) });
+  assert.doesNotThrow(() => monitor.onLine(JSON.stringify({ type: "snapshot", requestId: "sample-1", sampledAtUnixMs: 1, collectionDurationMicros: 1, processes: null })));
+  await rejected;
+  assert.deepEqual(monitor.samples, []);
+  assert.deepEqual(monitor.errors, [{ code: "invalid-snapshot", message: "Resource monitor returned a malformed snapshot." }]);
+  assert.equal(monitor.pendingSnapshots.size, 0);
+});
+
+test("snapshot normalization rejects non-finite process measurements", () => {
+  assert.throws(() => normalizeSnapshot({ ...raw(1000, 20), processes: [{ ...raw(1000, 20).processes[0], residentBytes: "100" }] }), /residentBytes/);
+});
+
+test("snapshot normalization preserves process-family completeness evidence", () => {
+  const snapshot = normalizeSnapshot({
+    ...raw(1000, 20),
+    inaccessibleProcessCount: 1,
+    externalProcesses: [],
+  }, { rootPid: 10, expectedExternalProcessCount: 1 });
+  assert.equal(snapshot.rootProcessFound, true);
+  assert.equal(snapshot.inaccessibleProcessCount, 1);
+  assert.equal(snapshot.missingExternalProcessCount, 1);
 });

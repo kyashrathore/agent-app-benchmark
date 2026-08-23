@@ -10,38 +10,83 @@
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
     "title": { "type": "string", "minLength": 1, "maxLength": 160 },
     "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
-    "kind": { "enum": ["app-start", "session-switch", "custom"] },
+    "kind": { "enum": ["app-start", "session-switch"] },
     "corpusId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
-    "cases": { "type": "object", "minProperties": 1 },
+    "cases": { "type": "object" },
     "metrics": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "description", "unit", "betterDirection", "observer", "rawField", "statistics", "reportPlacement"],
+        "required": ["id", "description", "unit"],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" },
           "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
-          "unit": { "enum": ["ms", "percent", "MiB", "bytes"] },
-          "betterDirection": { "enum": ["lower", "higher", "neutral"] },
-          "observer": { "enum": ["driver-attested", "framework-observed", "framework-derived"] },
-          "rawField": { "type": "string", "minLength": 1 },
-          "statistics": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["average", "maximum", "p95", "trend"] } },
-          "reportPlacement": { "type": "string", "minLength": 1 }
+          "unit": { "enum": ["ms", "percent", "MiB", "bytes"] }
         }
       }
     },
-    "resourceMeasurement": { "type": "object" },
+    "resourceMeasurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["processScope", "activeSampleIntervalMs", "idleSampleIntervalMs", "settleBeforeIdleMs", "idleWindowMs"],
+      "properties": {
+        "processScope": { "const": "application-family" },
+        "activeSampleIntervalMs": { "type": "integer", "minimum": 50, "maximum": 5000 },
+        "idleSampleIntervalMs": { "type": "integer", "minimum": 50, "maximum": 5000 },
+        "settleBeforeIdleMs": { "type": "integer", "minimum": 0, "maximum": 300000 },
+        "idleWindowMs": { "type": "integer", "minimum": 1000, "maximum": 600000 }
+      }
+    },
     "runProfiles": {
       "type": "object",
       "additionalProperties": false,
       "required": ["smoke", "quick", "publication"],
       "properties": {
-        "smoke": { "type": "integer", "minimum": 1 },
-        "quick": { "type": "integer", "minimum": 1 },
-        "publication": { "type": "integer", "minimum": 1 }
+        "smoke": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "quick": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "publication": { "type": "integer", "minimum": 1, "maximum": 100 }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "app-start" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["startModes"],
+            "properties": { "startModes": { "const": ["new-application-state", "initialized-application-state"] } }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "session-switch" } }, "required": ["kind"] },
+      "then": {
+        "required": ["resourceMeasurement"],
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workspaceRelations", "sessionStates", "transcriptBytes"],
+            "properties": {
+              "workspaceRelations": { "const": ["within-workspace", "across-workspaces"] },
+              "sessionStates": { "const": ["cold", "warm"] },
+              "transcriptBytes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": { "type": "integer", "minimum": 1, "maximum": 67108864 }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

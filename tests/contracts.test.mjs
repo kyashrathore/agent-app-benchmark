@@ -4,12 +4,13 @@ import { assertContract, contractSchemas } from "../src/contracts.mjs";
 import { readRegistered, validateDefinition, validateRegistry } from "../src/registry.mjs";
 
 test("all public registry entries satisfy strict schemas and cross references", async () => {
-  assert.deepEqual(contractSchemas(), ["app", "comparison", "corpus", "driverMessage", "opencodeEvent", "result", "scenario"]);
+  assert.deepEqual(contractSchemas(), ["app", "comparison", "corpus", "corpusArtifact", "corpusManifest", "driverMessage", "opencodeEvent", "result", "scenario"]);
   const entries = await validateRegistry();
   assert.deepEqual(entries.map(({ kind, id }) => `${kind}:${id}`), [
     "scenario:app-start-v1",
     "scenario:session-switch-v1",
     "corpus:opencode-completed-transcripts-v1",
+    "corpusArtifact:opencode-completed-transcripts-v1",
     "app:claxedo",
     "app:t3",
   ]);

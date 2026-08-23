@@ -3,33 +3,46 @@ import path from "node:path";
 import process from "node:process";
 import { digestBytes } from "../src/canonical-json.mjs";
 import { runDriverConformance } from "../src/conformance.mjs";
+import { runComparison } from "../src/comparison-run.mjs";
 import { verifyCorpus, writeCorpus } from "../src/corpus.mjs";
 import { readDefinition, readRegistered, validateRegistry } from "../src/registry.mjs";
 import { runBenchmark, validateResultFile } from "../src/runner.mjs";
 import { buildSite } from "../src/report/site.mjs";
+import { validateAppendOnly } from "../src/publication.mjs";
 
 const argv = process.argv.slice(2);
 const command = argv.shift();
-const subcommand = ["corpus", "result", "site"].includes(command) ? argv.shift() : undefined;
+const subcommand = ["comparison", "corpus", "publication", "result", "site"].includes(command) ? argv.shift() : undefined;
 const options = parseOptions(argv);
 
 try {
   if (command === "validate") {
     const entries = await validateRegistry();
     for (const entry of entries) process.stdout.write(`${entry.kind}\t${entry.id}\t${entry.digest}\n`);
+  } else if (command === "comparison" && subcommand === "run") {
+    const comparison = await runComparison(required(options, "config"));
+    process.stdout.write(`${path.join(comparison.outputRoot, "comparison.json")}\n`);
   } else if (command === "corpus" && subcommand === "generate") {
     const corpus = await readDefinition("corpus", required(options, "corpus"));
     const generated = await writeCorpus(corpus.value, path.resolve(required(options, "output")));
     process.stdout.write(`${generated.digestSha256}\n`);
   } else if (command === "corpus" && subcommand === "verify") {
     const verified = await verifyCorpus(path.resolve(required(options, "input")));
+    try {
+      const artifact = await readRegistered("corpusArtifact", verified.manifest.corpusId);
+      if (artifact.value.corpusDigestSha256 !== verified.digestSha256
+        || artifact.value.definitionDigestSha256 !== verified.manifest.definitionDigestSha256
+        || artifact.value.eventSchemaDigestSha256 !== verified.manifest.sourceEventFormat.schemaDigestSha256) throw new Error("Corpus does not match its registered canonical artifact identity.");
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
     process.stdout.write(`${verified.digestSha256}\n`);
   } else if (command === "run") {
     const scenario = await readDefinition("scenario", required(options, "scenario"));
     const corpus = await readDefinition("corpus", options.first("corpus") ?? scenario.value.corpusId);
     const app = await readRegistered("app", required(options, "app"));
     if (scenario.value.corpusId !== corpus.value.id) throw new Error(`${scenario.value.id} requires corpus ${scenario.value.corpusId}.`);
-    if (!app.value.scenarios.includes(scenario.value.id)) throw new Error(`${app.value.name} is not registered for ${scenario.value.id}.`);
+    if (scenario.status === "public-comparable" && !app.value.scenarios.includes(scenario.value.id)) throw new Error(`${app.value.name} is not registered for ${scenario.value.id}.`);
     if (scenario.value.kind === "session-switch" && !options.first("resourceMonitor")) throw new Error("session-switch-v1 requires --resource-monitor.");
     const output = path.resolve(required(options, "output"));
     await runBenchmark({
@@ -39,6 +52,7 @@ try {
       corpus,
       runProfile: options.first("runProfile") ?? "smoke",
       resourceMonitor: options.first("resourceMonitor"),
+      corpusDirectory: options.first("corpusDirectory") ? path.resolve(options.first("corpusDirectory")) : undefined,
       output,
       runId: options.first("runId"),
       comparisonRunId: options.first("comparisonRunId"),
@@ -53,6 +67,8 @@ try {
     const result = await runDriverConformance({
       driver: driverOptions(options),
       expected: { appId: app.value.id, scenarioId: scenario.value.id, sourceEventFormatId: verified.manifest.sourceEventFormat.id },
+      scenario: scenario.value,
+      seed: verified.manifest.seed,
       prepare: {
         scenarioId: scenario.value.id,
         scenarioDigestSha256: scenario.digest,
@@ -69,6 +85,9 @@ try {
     const file = path.resolve(required(options, "input"));
     await validateResultFile(file);
     process.stdout.write(`${digestBytes(await import("node:fs/promises").then(({ readFile }) => readFile(file)))}\n`);
+  } else if (command === "publication" && subcommand === "validate-append-only") {
+    const entries = await validateAppendOnly(required(options, "base"));
+    process.stdout.write(`${entries.length} changed path entr${entries.length === 1 ? "y" : "ies"} validated.\n`);
   } else if (command === "site" && subcommand === "build") {
     const built = await buildSite(path.resolve(required(options, "comparison")), path.resolve(required(options, "output")));
     process.stdout.write(`${path.join(built.output, "index.html")}\n`);
@@ -111,5 +130,5 @@ function driverOptions(options) {
 }
 
 function usage() {
-  return "Usage: agent-app-benchmark <validate|corpus generate|corpus verify|run|conformance|result validate|site build> [options]";
+  return "Usage: agent-app-benchmark <validate|comparison run|corpus generate|corpus verify|run|conformance|publication validate-append-only|result validate|site build> [options]";
 }

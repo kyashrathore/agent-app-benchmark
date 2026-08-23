@@ -11,11 +11,11 @@ test("driver SDK dispatches one strict response per NDJSON request", async () =>
   output.on("data", (chunk) => { bytes += chunk; });
   const handlers = Object.fromEntries(["hello", "prepare", "launch", "execute", "shutdown"].map((method) => [method, async (params) => ({ method, params })]));
   const serving = serveDriver(handlers, { input, output });
-  input.end(`${JSON.stringify({ protocolVersion: 1, kind: "request", correlationId: "request-0", method: "hello", params: { value: 1 } })}\n`);
+  input.end(`${JSON.stringify({ protocolVersion: 1, kind: "request", correlationId: "request-0", method: "hello", params: { frameworkVersion: 1 } })}\n`);
   await serving;
   const response = JSON.parse(bytes);
   assert.equal(response.ok, true);
-  assert.deepEqual(response.result, { method: "hello", params: { value: 1 } });
+  assert.deepEqual(response.result, { method: "hello", params: { frameworkVersion: 1 } });
 });
 
 test("driver SDK converts handler failures to bounded protocol errors", async () => {
@@ -26,7 +26,7 @@ test("driver SDK converts handler failures to bounded protocol errors", async ()
   output.on("data", (chunk) => { bytes += chunk; });
   const handlers = Object.fromEntries(["hello", "prepare", "launch", "execute", "shutdown"].map((method) => [method, async () => { throw new Error("failure"); }]));
   const serving = serveDriver(handlers, { input, output });
-  input.end(`${JSON.stringify({ protocolVersion: 1, kind: "request", correlationId: "request-0", method: "prepare", params: {} })}\n`);
+  input.end(`${JSON.stringify({ protocolVersion: 1, kind: "request", correlationId: "request-0", method: "hello", params: { frameworkVersion: 1 } })}\n`);
   await serving;
   const response = JSON.parse(bytes);
   assert.equal(response.ok, false);

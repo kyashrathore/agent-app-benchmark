@@ -1,9 +1,9 @@
 # Public Multi-Harness Coding-Agent GUI Benchmark V1
 
-**Status:** Active implementation  
-**Date:** 2026-08-23  
-**Target repository:** `kyashrathore/agent-app-benchmark`  
-**Initial applications:** T3 and Claxedo  
+**Status:** Active implementation
+**Date:** 2026-08-23
+**Target repository:** `kyashrathore/agent-app-benchmark`
+**Initial applications:** T3 and Claxedo
 **Scope:** Multi-harness coding-agent GUI apps; app start, session switching, and whole-app CPU/RSS during the session-switch workload
 
 ## 1. Outcome

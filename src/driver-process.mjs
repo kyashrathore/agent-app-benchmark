@@ -52,8 +52,7 @@ export class DriverProcess {
     assertContract("driverMessage", message, "driver request");
     const response = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        this.pending.delete(correlationId);
-        reject(new Error(`Driver request ${method} timed out after ${timeoutMs} ms.`));
+        this.protocolFailure(`Driver request ${method} timed out after ${timeoutMs} ms.`);
       }, timeoutMs);
       timeout.unref();
       this.pending.set(correlationId, { method, resolve, reject, timeout });

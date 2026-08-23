@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "opencode-completed-transcripts-v1",
+  "corpusId": "opencode-completed-transcripts-v1",
+  "definitionDigestSha256": "c580afe5e63d3ab0661d1d88d69b81e60644659bd80cc9b0eb4314aa4dd5b363",
+  "eventSchemaDigestSha256": "40c0eefcafd0738fec89df06d8b6cf268e8accd5431f252ddf5b5d599293eb13",
+  "corpusDigestSha256": "979d15dfeb87f2c539b39915c7324470a54f431a23c668f10ef484ab194b9e5e"
+}

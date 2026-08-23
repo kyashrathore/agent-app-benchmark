@@ -13,7 +13,14 @@
         "correlationId": { "type": "string", "pattern": "^request-[0-9]+$" },
         "method": { "enum": ["hello", "prepare", "launch", "execute", "shutdown"] },
         "params": { "type": "object" }
-      }
+      },
+      "allOf": [
+        { "if": { "properties": { "method": { "const": "hello" } }, "required": ["method"] }, "then": { "properties": { "params": { "$ref": "#/$defs/helloParams" } } } },
+        { "if": { "properties": { "method": { "const": "prepare" } }, "required": ["method"] }, "then": { "properties": { "params": { "$ref": "#/$defs/prepareParams" } } } },
+        { "if": { "properties": { "method": { "const": "launch" } }, "required": ["method"] }, "then": { "properties": { "params": { "$ref": "#/$defs/launchParams" } } } },
+        { "if": { "properties": { "method": { "const": "execute" } }, "required": ["method"] }, "then": { "properties": { "params": { "$ref": "#/$defs/executeParams" } } } },
+        { "if": { "properties": { "method": { "const": "shutdown" } }, "required": ["method"] }, "then": { "properties": { "params": { "$ref": "#/$defs/shutdownParams" } } } }
+      ]
     },
     {
       "type": "object",
@@ -41,5 +48,45 @@
         { "if": { "properties": { "ok": { "const": false } } }, "then": { "properties": { "error": {} }, "required": ["error"], "not": { "properties": { "result": {} }, "required": ["result"] } } }
       ]
     }
-  ]
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "scenarioId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
+    "helloParams": {
+      "type": "object", "additionalProperties": false, "required": ["frameworkVersion"],
+      "properties": { "frameworkVersion": { "const": 1 } }
+    },
+    "prepareParams": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scenarioId", "scenarioDigestSha256", "corpusDirectory", "corpusManifestPath", "corpusDigestSha256", "corpusDefinitionDigestSha256", "eventSchemaDigestSha256", "runDirectory"],
+      "properties": {
+        "scenarioId": { "$ref": "#/$defs/scenarioId" },
+        "scenarioDigestSha256": { "$ref": "#/$defs/sha256" },
+        "corpusDirectory": { "type": "string", "minLength": 1 },
+        "corpusManifestPath": { "type": "string", "minLength": 1 },
+        "corpusDigestSha256": { "$ref": "#/$defs/sha256" },
+        "corpusDefinitionDigestSha256": { "$ref": "#/$defs/sha256" },
+        "eventSchemaDigestSha256": { "$ref": "#/$defs/sha256" },
+        "runDirectory": { "type": "string", "minLength": 1 }
+      }
+    },
+    "launchParams": {
+      "type": "object", "additionalProperties": false, "required": ["scenarioId", "stateHandle", "initialSessionId", "groupId"],
+      "properties": {
+        "scenarioId": { "$ref": "#/$defs/scenarioId" }, "stateHandle": { "type": "string", "minLength": 1 },
+        "initialSessionId": { "type": "string", "minLength": 1 }, "groupId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "executeParams": {
+      "type": "object", "additionalProperties": false, "required": ["scenarioId", "case"],
+      "properties": {
+        "scenarioId": { "$ref": "#/$defs/scenarioId" }, "stateHandle": { "type": "string", "minLength": 1 },
+        "case": { "type": "object", "required": ["caseId"], "properties": { "caseId": { "type": "string", "minLength": 1 } } }
+      }
+    },
+    "shutdownParams": {
+      "type": "object", "additionalProperties": false, "required": ["reason"],
+      "properties": { "reason": { "type": "string", "minLength": 1, "maxLength": 300 } }
+    }
+  }
 }

@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { digest, digestBytes } from "../src/canonical-json.mjs";
+import { buildResourceSequence, expandCases } from "../src/cases.mjs";
+import { loadComparison } from "../src/comparison.mjs";
 import { OPENCODE_EVENT_SCHEMA_DIGEST } from "../src/corpus.mjs";
 import { readRegistered } from "../src/registry.mjs";
 import { buildSite } from "../src/report/site.mjs";
+import { deriveResourcesFromTrace } from "../src/runner.mjs";
 import { summarizeObservations } from "../src/summarize.mjs";
 
 test("static site builds comparison and stable individual app pages from raw results", async () => {
@@ -20,6 +23,15 @@ test("static site builds comparison and stable individual app pages from raw res
     const index = await readFile(path.join(output, "index.html"), "utf8");
     assert.match(index, /Warm session switch — within the same workspace/);
     assert.match(index, /CPU growth with session switching/);
+    const switchTables = [...index.matchAll(/<section class="panel"><h3>(?:Warm|Cold) session switch[^<]*<\/h3>[\s\S]*?<\/section>/g)];
+    assert.equal(switchTables.length, 4);
+    for (const [table] of switchTables) {
+      assert.match(table, /Average/);
+      assert.match(table, /Maximum/);
+      assert.match(table, /p95/);
+      assert.match(table, /Valid \/ attempted/);
+      assert.equal((table.match(/<tbody>[\s\S]*<\/tbody>/)?.[0].match(/<tr>/g) ?? []).length, 6);
+    }
     assert.match(index, /No Web Vitals/);
     assert.doesNotMatch(index, /<script/i);
     assert.doesNotMatch(index, /cdn|fonts\.google|runtime fetch/i);
@@ -27,6 +39,79 @@ test("static site builds comparison and stable individual app pages from raw res
     await writeFile(path.join(output, "stale.html"), "stale");
     await buildSite(comparisonFile, output);
     await assert.rejects(stat(path.join(output, "stale.html")), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("comparison rejects result provenance that disagrees with its manifest", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-provenance-"));
+  try {
+    const comparisonFile = await writeComparisonFixture(root);
+    await rewriteResult(comparisonFile, (entry) => entry.appId === "t3", (result) => { result.provenance.kind = "community-self-attested"; });
+    await assert.rejects(loadComparison(comparisonFile), /provenance does not match/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("comparison bounds entry count before loading result files", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-count-"));
+  try {
+    const comparisonFile = await writeComparisonFixture(root);
+    const manifest = JSON.parse(await readFile(comparisonFile, "utf8"));
+    manifest.results = Array.from({ length: 65 }, (_, index) => ({ appId: `app${index}`, scenarioId: "app-start-v1", path: `missing-${index}.json`, digestSha256: "a".repeat(64) }));
+    await writeFile(comparisonFile, `${JSON.stringify(manifest, null, 2)}\n`);
+    await assert.rejects(loadComparison(comparisonFile), /more than 64 results/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("single-member scenarios are unpaired and are not rendered side by side", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-unpaired-"));
+  try {
+    const comparisonFile = await writeComparisonFixture(root);
+    const manifest = JSON.parse(await readFile(comparisonFile, "utf8"));
+    manifest.results = manifest.results.filter((entry) => entry.scenarioId !== "app-start-v1" || entry.appId === "t3");
+    await writeFile(comparisonFile, `${JSON.stringify(manifest, null, 2)}\n`);
+    const comparison = await loadComparison(comparisonFile);
+    assert.equal(comparison.compatibility["app-start-v1"].status, "unpaired");
+    const output = path.join(root, "site");
+    await buildSite(comparisonFile, output);
+    const index = await readFile(path.join(output, "index.html"), "utf8");
+    assert.match(index, /unpaired:/);
+    assert.match(index, /At least two results are required/);
+    assert.match(index, /Claxedo/);
+    assert.match(index, /unsafe-app/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("incompatible scenarios and invalid resource measurements are explicit", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-status-"));
+  try {
+    const incompatibleFile = await writeComparisonFixture(root);
+    await rewriteResult(incompatibleFile, (entry) => entry.appId === "t3" && entry.scenarioId === "app-start-v1", (result) => { result.provenance.frameworkRevision = "1".repeat(40); });
+    const incompatibleOutput = path.join(root, "incompatible-site");
+    await buildSite(incompatibleFile, incompatibleOutput);
+    const incompatible = await readFile(path.join(incompatibleOutput, "index.html"), "utf8");
+    assert.match(incompatible, /incompatible:/);
+    assert.match(incompatible, /Results do not share/);
+
+    const resourceRoot = path.join(root, "resources");
+    const resourceFile = await writeComparisonFixture(resourceRoot);
+    await rewriteResult(resourceFile, (entry) => entry.appId === "t3" && entry.scenarioId === "session-switch-v1", (result) => {
+      result.resourceTrace.failure = "T3 monitor rejected malformed data.";
+      result.resources = { status: "invalid", reason: "T3 monitor rejected malformed data.", rawSampleCount: result.resourceTrace.samples.length, trend: [] };
+    });
+    const resourceOutput = path.join(root, "resource-site");
+    await buildSite(resourceFile, resourceOutput);
+    const resourcePage = await readFile(path.join(resourceOutput, "index.html"), "utf8");
+    assert.match(resourcePage, /T3 monitor rejected malformed data/);
+    assert.match(resourcePage, /Claxedo/);
+    assert.match(resourcePage, /CPU growth with session switching/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -46,85 +131,136 @@ test("site refuses to replace a directory it did not generate", async () => {
   }
 });
 
+test("comparison paths may reach sibling runs but cannot escape the results root", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-paths-"));
+  try {
+    const comparisonFile = await writeComparisonFixture(root);
+    const manifest = JSON.parse(await readFile(comparisonFile, "utf8"));
+    const source = path.join(root, "results", "runs", "t3-app-start-v1.json");
+    const outside = path.join(root, "outside.json");
+    await writeFile(outside, await readFile(source));
+    manifest.results[0].path = "../../../outside.json";
+    await writeFile(comparisonFile, `${JSON.stringify(manifest, null, 2)}\n`);
+    await assert.rejects(loadComparison(comparisonFile), /escapes its allowed root/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 async function writeComparisonFixture(root) {
+  const resultDirectory = path.join(root, "results", "runs");
+  const comparisonDirectory = path.join(root, "results", "comparisons", "fixture-comparison");
+  await mkdir(resultDirectory, { recursive: true });
+  await mkdir(comparisonDirectory, { recursive: true });
   const entries = [];
-  for (const app of [{ id: "t3", name: "<unsafe-app>" }, { id: "claxedo", name: "Claxedo" }]) {
-    for (const scenarioId of ["app-start-v1", "session-switch-v1"]) {
-      const result = await resultFixture(app, scenarioId);
+  const steps = [
+    { app: { id: "t3", name: "<unsafe-app>" }, scenarioId: "app-start-v1" },
+    { app: { id: "claxedo", name: "Claxedo" }, scenarioId: "app-start-v1" },
+    { app: { id: "claxedo", name: "Claxedo" }, scenarioId: "session-switch-v1" },
+    { app: { id: "t3", name: "<unsafe-app>" }, scenarioId: "session-switch-v1" },
+  ];
+  const schedule = { version: 1, policy: "balanced-mirrored-v1", steps: steps.map((step, index) => ({ ordinal: index + 1, appId: step.app.id, scenarioId: step.scenarioId })) };
+  const scheduleDigest = digest(schedule);
+  for (let index = 0; index < steps.length; index += 1) {
+      const { app, scenarioId } = steps[index];
+      const result = await resultFixture(app, scenarioId, index + 1, scheduleDigest);
       const file = `${app.id}-${scenarioId}.json`;
       const bytes = Buffer.from(`${JSON.stringify(result, null, 2)}\n`);
-      await writeFile(path.join(root, file), bytes);
-      entries.push({ appId: app.id, scenarioId, path: file, digestSha256: digestBytes(bytes) });
-    }
+      await writeFile(path.join(resultDirectory, file), bytes);
+      entries.push({ appId: app.id, scenarioId, path: `../../runs/${file}`, digestSha256: digestBytes(bytes) });
   }
   const manifest = { schemaVersion: 1, id: "fixture-comparison", title: "Fixture comparison", description: "Deterministic test comparison.", provenance: "maintainer-observed", results: entries };
-  const file = path.join(root, "comparison.json");
+  const file = path.join(comparisonDirectory, "comparison.json");
   await writeFile(file, `${JSON.stringify(manifest, null, 2)}\n`);
   return file;
 }
 
-async function resultFixture(app, scenarioId) {
+async function rewriteResult(comparisonFile, matches, mutate) {
+  const manifest = JSON.parse(await readFile(comparisonFile, "utf8"));
+  const root = path.dirname(comparisonFile);
+  for (const entry of manifest.results.filter(matches)) {
+    const file = path.resolve(root, entry.path);
+    const result = JSON.parse(await readFile(file, "utf8"));
+    mutate(result);
+    const bytes = Buffer.from(`${JSON.stringify(result, null, 2)}\n`);
+    await writeFile(file, bytes);
+    entry.digestSha256 = digestBytes(bytes);
+  }
+  await writeFile(comparisonFile, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+async function resultFixture(app, scenarioId, scheduleOrdinal, scheduleDigest) {
   const scenario = await readRegistered("scenario", scenarioId);
   const corpus = await readRegistered("corpus", "opencode-completed-transcripts-v1");
-  const observations = scenario.value.kind === "app-start" ? startObservations() : switchObservations(scenario.value);
+  const observations = scenario.value.kind === "app-start" ? observationsFor(expandCases(scenario.value, "smoke")) : switchObservations(scenario.value);
   const summary = summarizeObservations(scenario.value, observations);
+  const resourceTrace = scenario.value.kind === "session-switch" ? resourceTraceFixture(scenario.value) : null;
+  const resources = resourceTrace ? deriveResourcesFromTrace(resourceTrace, scenario.value, observations) : null;
   return {
     schemaVersion: 1,
     runId: `${app.id}-${scenarioId}`,
     createdAt: "2026-08-23T00:00:00.000Z",
-    provenance: { kind: "maintainer-observed", comparisonRunId: "fixture-run", frameworkRevision: "fixture-framework" },
+    provenance: { kind: "maintainer-observed", comparisonRunId: "fixture-comparison", frameworkRevision: "f".repeat(40), comparisonScheduleDigestSha256: scheduleDigest, scheduleOrdinal },
     environment: { platform: "darwin", architecture: "arm64", osRelease: "fixture", logicalCpuCount: 10, cpuModel: "fixture", totalMemoryBytes: 1, nodeVersion: "fixture", guiFramework: "electron" },
     app: { id: app.id, name: app.name, version: "1.0.0", buildDigestSha256: "a".repeat(64) },
     driver: { name: `${app.id}-driver`, version: "1.0.0", sourceCommit: "b".repeat(40), digestSha256: "c".repeat(64) },
     sourceEventFormat: { id: "opencode-event-v1", sourceRevision: "a9f7081d4015b0cc22ed67156e042b482a8d064a", schemaDigestSha256: OPENCODE_EVENT_SCHEMA_DIGEST },
-    materialization: { mode: app.id === "claxedo" ? "native-opencode" : "translated", corpusDigestSha256: "d".repeat(64), mappingDigestSha256: "e".repeat(64) },
+    materialization: { mode: app.id === "claxedo" ? "native-opencode" : "translated", corpusDigestSha256: CANONICAL_CORPUS_DIGEST, mappingDigestSha256: "e".repeat(64) },
     scenario: { id: scenarioId, kind: scenario.value.kind, digestSha256: scenario.digest, status: "public-comparable" },
-    corpus: { id: corpus.value.id, definitionDigestSha256: corpus.digest, digestSha256: "d".repeat(64), status: "public-comparable" },
+    corpus: { id: corpus.value.id, definitionDigestSha256: corpus.digest, digestSha256: CANONICAL_CORPUS_DIGEST, status: "public-comparable" },
     runProfile: "smoke",
     observations,
-    resources: scenario.value.kind === "session-switch" ? resourceFixture() : null,
+    resources,
+    resourceTrace,
     derivation: { version: 1, summaryDigestSha256: digest(summary), summary },
   };
 }
 
-function startObservations() {
-  return ["new-application-state", "initialized-application-state"].flatMap((startMode, modeIndex) => Array.from({ length: 3 }, (_, repetition) => ({
-    case: { caseId: `${startMode}-${repetition}`, repetition, startMode },
-    status: "valid",
-    durationMs: 20 + modeIndex * 5 + repetition,
-    receivedAt: "2026-08-23T00:00:00.000Z",
-  })));
-}
-
 function switchObservations(scenario) {
-  const output = [];
-  for (const workspaceRelation of scenario.cases.workspaceRelations) {
-    for (const sessionState of scenario.cases.sessionStates) {
-      for (const transcriptBytes of scenario.cases.transcriptBytes) {
-        for (let repetition = 0; repetition < 3; repetition += 1) output.push({
-          case: { caseId: `${workspaceRelation}-${sessionState}-${transcriptBytes}-${repetition}`, workload: "isolated-latency", workspaceRelation, sessionState, transcriptBytes, repetition },
-          status: "valid",
-          durationMs: transcriptBytes / 1048576 + repetition,
-          receivedAt: "2026-08-23T00:00:00.000Z",
-        });
-      }
-    }
-  }
-  return output;
+  return observationsFor([
+    ...expandCases(scenario, "smoke", "agent-app-benchmark-public-v1"),
+    ...buildResourceSequence(scenario, "agent-app-benchmark-public-v1"),
+    { caseId: "progressive-resource-return-control", workload: "resource-control", destinationSessionId: "control" },
+  ]);
 }
 
-function resourceFixture() {
-  return {
+function observationsFor(cases) {
+  return cases.map((benchmarkCase, index) => {
+    const durationMs = 20 + index;
+    const start = 1000 + index * 100;
+    return ({
+    case: benchmarkCase,
     status: "valid",
-    scope: "summed application process-family RSS",
-    cpuDefinition: "fixture",
-    baselineIdleAverageRssMiB: 100,
-    activeAverageRssMiB: 120,
-    activeMaximumRssMiB: 150,
-    activeP95RssMiB: 145,
-    endingIdleAverageRssMiB: 110,
-    retainedRssGrowthMiB: 10,
-    rawSampleCount: 100,
-    trend: Array.from({ length: 24 }, (_, index) => ({ switchSequence: index + 1, transcriptBytes: 1048576 * (1 << Math.floor(index / 4)), rssMiB: 100 + index, cpuPercent: 10 + index })),
+    durationMs,
+    readiness: {
+      endpoint: "correct-content-painted-and-input-ready",
+      checks: ["content-identity", "first-fold-painted", "two-presentations", "trusted-input"].map((id) => ({ id, passed: true })),
+    },
+    clock: { kind: "single-monotonic-clock", clock: "fixture-monotonic", start, end: start + durationMs },
+    receivedAt: "2026-08-23T00:00:00.000Z",
+  });
+  });
+}
+
+function resourceTraceFixture(scenario) {
+  const baseline = Array.from({ length: 61 }, (_, index) => sample(index * 1000, 100 + index, index * 5));
+  const active = Array.from({ length: 25 }, (_, index) => sample(70000 + index * 250, 170 + index, 400 + index * 5));
+  const ending = Array.from({ length: 61 }, (_, index) => sample(80000 + index * 1000, 112 + index / 100, 600 + index * 5));
+  const samples = [...baseline, ...active, ...ending];
+  const activeOffset = baseline.length;
+  return {
+    version: 1,
+    samples,
+    windows: { baseline: { startMs: 0, endMs: 60000 }, active: { startMs: 70000, endMs: 76000 }, ending: { startMs: 80000, endMs: 140000 } },
+    boundaries: buildResourceSequence(scenario).map((benchmarkCase, index) => ({ case: benchmarkCase, switchSequence: index + 1, beforeSampleIndex: activeOffset + index, afterSampleIndex: activeOffset + index + 1 })),
+    monitorErrors: [],
+    failure: null,
   };
 }
+
+function sample(atMs, rssMiB, cpuTimeMs) {
+  const rssBytes = Math.round(rssMiB * 1048576);
+  return { atMs, collectionDurationMicros: 100, rssBytes, cumulativeCpuTimeMs: cpuTimeMs, inaccessibleProcessCount: 0, rootProcessFound: true, missingExternalProcessCount: 0, processes: [{ pid: 10, startTimeMs: 0, cpuTimeMs, rssBytes, name: "fixture" }] };
+}
+
+const CANONICAL_CORPUS_DIGEST = "979d15dfeb87f2c539b39915c7324470a54f431a23c668f10ef484ab194b9e5e";

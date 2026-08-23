@@ -7,6 +7,8 @@ const FILES = {
   app: "app-v1.schema.json",
   comparison: "comparison-v1.schema.json",
   corpus: "corpus-v1.schema.json",
+  corpusArtifact: "corpus-artifact-v1.schema.json",
+  corpusManifest: "corpus-manifest-v1.schema.json",
   driverMessage: "driver-message-v1.schema.json",
   opencodeEvent: "opencode-event-v1.schema.json",
   result: "result-v1.schema.json",

@@ -4,8 +4,8 @@ import { digest } from "./canonical-json.mjs";
 import { assertContract } from "./contracts.mjs";
 import { REPOSITORY_ROOT } from "./paths.mjs";
 
-const REGISTRY_DIRECTORIES = { app: "apps", corpus: "corpora", scenario: "scenarios" };
-const CONTRACT_KINDS = { app: "app", corpus: "corpus", scenario: "scenario" };
+const REGISTRY_DIRECTORIES = { app: "apps", corpus: "corpora", corpusArtifact: "corpus-artifacts", scenario: "scenarios" };
+const CONTRACT_KINDS = { app: "app", corpus: "corpus", corpusArtifact: "corpusArtifact", scenario: "scenario" };
 
 export async function readRegistered(kind, id) {
   validateId(kind, id);
@@ -46,7 +46,7 @@ export function validateDefinition(kind, value) {
 export async function validateRegistry() {
   const entries = [];
   const identities = new Set();
-  for (const kind of ["scenario", "corpus", "app"]) {
+  for (const kind of ["scenario", "corpus", "corpusArtifact", "app"]) {
     const directory = path.join(REPOSITORY_ROOT, "registry", REGISTRY_DIRECTORIES[kind]);
     const files = (await readdir(directory)).filter((file) => file.endsWith(".json")).toSorted();
     for (const file of files) {
@@ -66,6 +66,13 @@ export async function validateRegistry() {
   for (const scenarioId of scenarios) {
     const scenario = await readRegistered("scenario", scenarioId);
     if (!corpora.has(scenario.value.corpusId)) throw new Error(`${scenarioId} references unknown corpus ${scenario.value.corpusId}.`);
+  }
+  for (const artifactId of entries.filter((entry) => entry.kind === "corpusArtifact").map((entry) => entry.id)) {
+    const artifact = await readRegistered("corpusArtifact", artifactId);
+    const corpus = await readRegistered("corpus", artifact.value.corpusId);
+    const { OPENCODE_EVENT_SCHEMA_DIGEST } = await import("./corpus.mjs");
+    if (artifact.value.definitionDigestSha256 !== corpus.digest) throw new Error(`${artifactId} has a stale corpus definition digest.`);
+    if (artifact.value.eventSchemaDigestSha256 !== OPENCODE_EVENT_SCHEMA_DIGEST) throw new Error(`${artifactId} has a stale event schema digest.`);
   }
   for (const appId of entries.filter((entry) => entry.kind === "app").map((entry) => entry.id)) {
     const app = await readRegistered("app", appId);
@@ -112,6 +119,9 @@ function validateScenario(value) {
 function validateCorpus(value) {
   assertAscendingIntegers(value.transcriptBytes, "Corpus transcript sizes");
   if (value.workspaceIds.length !== 2) throw new Error("V1 corpus requires exactly two logical workspaces.");
+  const canonicalBytes = value.transcriptBytes.reduce((total, bytes) => total + bytes * 4, value.transcriptBytes[0]);
+  const eventCount = 2 * canonicalBytes / value.messageChunkBytes + 1 + value.transcriptBytes.length * 4;
+  if (canonicalBytes > 512 * 1024 * 1024 || eventCount > 250_000) throw new Error("Corpus definition exceeds the V1 generation budget.");
   if (value.transcriptBytes.some((bytes) => bytes % value.messageChunkBytes !== 0)) {
     throw new Error("Every V1 transcript size must be divisible by messageChunkBytes.");
   }

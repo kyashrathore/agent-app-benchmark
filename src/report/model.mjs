@@ -12,6 +12,13 @@ export function buildSiteModel(comparison) {
       sourceEventFormat: first.sourceEventFormat,
       materializationModes: [...new Set(entries.map((entry) => entry.result.materialization.mode))],
       environment: first.environment,
+      scenarioProvenance: entries.map(({ result }) => ({
+        scenarioId: result.scenario.id,
+        driver: result.driver,
+        frameworkRevision: result.provenance.frameworkRevision,
+        scheduleOrdinal: result.provenance.scheduleOrdinal,
+        materializationMode: result.materialization.mode,
+      })).toSorted((left, right) => left.scenarioId.localeCompare(right.scenarioId)),
       appStart: entries.find((entry) => entry.result.scenario.kind === "app-start")?.result,
       sessionSwitch: entries.find((entry) => entry.result.scenario.kind === "session-switch")?.result,
     });

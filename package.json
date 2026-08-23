@@ -15,7 +15,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "test:coverage": "node --experimental-test-coverage --test",
+    "test:resource-monitor-integration": "RESOURCE_MONITOR_BIN=./native/resource-monitor/target/release/agent-app-resource-monitor node --test tests/resource-monitor.integration.test.mjs",
     "validate": "node ./bin/agent-app-benchmark.mjs validate",
     "generate:corpus": "node ./bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-transcripts-v1 --output artifacts/corpora/opencode-completed-transcripts-v1",
     "site:build": "node ./bin/agent-app-benchmark.mjs site build --comparison results/comparisons/initial-macos-arm64/comparison.json --output artifacts/sites/initial-macos-arm64",

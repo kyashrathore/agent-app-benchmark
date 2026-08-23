@@ -25,7 +25,7 @@ Receives exact scenario/corpus/event-schema digests, the generated corpus direct
 
 Starts a new app process from the supplied state handle, opens the control session, reaches the common readiness endpoint, and returns every app-owned process root as `{pid,startTimeMs,owner,category}`.
 
-The readiness receipt must show:
+The readiness receipt endpoint is exactly `correct-content-painted-and-input-ready`, with these four checks in order:
 
 1. correct canonical content identity;
 2. no blank or skeleton-only first fold;
@@ -36,7 +36,7 @@ The readiness receipt must show:
 
 Performs exactly one manifest-defined action and returns one raw observation. For app start, process spawn occurs inside this method because spawn is the start timestamp. For session switching, the app is already launched.
 
-The response contains the exact case ID, duration, a single-monotonic-clock interval, and the readiness receipt. A warm switch includes exactly one unmeasured valid activation before its measured revisit. Drivers never return average, maximum, p95, or report HTML.
+The response contains the exact case ID, duration, a single-monotonic-clock interval, and the readiness receipt. The framework requires `durationMs` to equal `clock.end - clock.start` within 0.5 ms. A warm switch includes exactly one unmeasured valid activation before its measured revisit. Drivers never return average, maximum, p95, or report HTML.
 
 ## `shutdown`
 

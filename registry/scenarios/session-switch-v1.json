@@ -14,12 +14,7 @@
     {
       "id": "switch.duration_ms",
       "description": "Elapsed monotonic time from trusted destination activation until the requested content is correct, the first fold has no blank virtualization gap, two presentation opportunities have completed, and trusted input is accepted.",
-      "unit": "ms",
-      "betterDirection": "lower",
-      "observer": "driver-attested",
-      "rawField": "durationMs",
-      "statistics": ["average", "maximum", "p95"],
-      "reportPlacement": "session-switch-lane-tables"
+      "unit": "ms"
     }
   ],
   "resourceMeasurement": {
@@ -27,10 +22,7 @@
     "activeSampleIntervalMs": 250,
     "idleSampleIntervalMs": 1000,
     "settleBeforeIdleMs": 15000,
-    "idleWindowMs": 60000,
-    "memoryMetrics": ["baseline_idle_average_rss_mib", "active_average_rss_mib", "active_maximum_rss_mib", "active_p95_rss_mib", "ending_idle_average_rss_mib", "retained_rss_growth_mib"],
-    "cpuTrend": true,
-    "memoryTrend": true
+    "idleWindowMs": 60000
   },
   "runProfiles": {
     "smoke": 3,

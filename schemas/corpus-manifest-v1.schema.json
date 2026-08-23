@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/corpus-manifest-v1.schema.json",
+  "title": "Generated agent app benchmark corpus manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "corpusId", "definitionDigestSha256", "sourceEventFormat", "seed", "transcriptByteDefinition", "topology", "sessions", "corpusDigestSha256"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "corpusId": { "$ref": "#/$defs/versionedId" },
+    "definitionDigestSha256": { "$ref": "#/$defs/sha256" },
+    "sourceEventFormat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceRevision", "envelope", "eventTypes", "schemaDigestSha256"],
+      "properties": {
+        "id": { "const": "opencode-event-v1" },
+        "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "envelope": { "const": "EventV2.SerializedEvent" },
+        "eventTypes": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "session.created.1" },
+            { "const": "message.updated.1" },
+            { "const": "message.part.updated.1" }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "schemaDigestSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "seed": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "transcriptByteDefinition": { "const": "UTF-8 bytes of final completed text-part payloads only" },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspaceCount", "sessionCount", "controlSessionId", "transcriptBytes"],
+      "properties": {
+        "workspaceCount": { "const": 2 },
+        "sessionCount": { "type": "integer", "minimum": 5, "maximum": 65 },
+        "controlSessionId": { "const": "control" },
+        "transcriptBytes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": { "type": "integer", "minimum": 1, "maximum": 67108864 }
+        }
+      }
+    },
+    "sessions": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 65,
+      "items": { "$ref": "#/$defs/session" }
+    },
+    "corpusDigestSha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "versionedId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logicalSessionId", "nativeSessionId", "workspaceId", "role", "transcriptBytes", "eventCount", "file", "fileDigestSha256"],
+      "properties": {
+        "logicalSessionId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "maxLength": 160 },
+        "nativeSessionId": { "type": "string", "pattern": "^ses_[0-9a-f]{26}$" },
+        "workspaceId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "maxLength": 100 },
+        "role": { "enum": ["control", "within-workspace-cold", "within-workspace-warm", "across-workspaces-cold", "across-workspaces-warm"] },
+        "transcriptBytes": { "type": "integer", "minimum": 1, "maximum": 67108864 },
+        "eventCount": { "type": "integer", "minimum": 1, "maximum": 250000 },
+        "file": { "type": "string", "pattern": "^sessions/[a-z0-9][a-z0-9-]*\\.ndjson$" },
+        "fileDigestSha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

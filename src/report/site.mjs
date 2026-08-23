@@ -33,20 +33,28 @@ export async function buildSite(comparisonFile, outputDirectory) {
 
 function renderIndex(model) {
   const cards = model.apps.map((app) => `<a class="app-card" href="apps/${app.id}/index.html"><span>${escapeHtml(app.name)}</span><small>${escapeHtml(app.version)} · ${escapeHtml(app.materializationModes.join(", "))}</small></a>`).join("");
+  const startStatus = model.compatibility["app-start-v1"] ?? { status: "unpaired", reason: "No app-start results were supplied." };
+  const switchStatus = model.compatibility["session-switch-v1"] ?? { status: "unpaired", reason: "No session-switch results were supplied." };
   const startRows = model.apps.flatMap((app) => app.appStart ? [
     { label: `${app.name} — first launch`, metric: app.appStart.derivation.summary["new-application-state"] },
     { label: `${app.name} — repeat launch`, metric: app.appStart.derivation.summary["initialized-application-state"] },
   ] : []);
+  const appStart = startStatus.status === "valid"
+    ? metricTable("Application start", startRows, "New-process application start results")
+    : comparisonUnavailable("Application start", startStatus, model.apps, "appStart");
   const laneSections = [
     ["Warm session switch — within the same workspace", "within-workspace-warm"],
     ["Cold session switch — within the same workspace", "within-workspace-cold"],
     ["Warm session switch — across workspaces", "across-workspaces-warm"],
     ["Cold session switch — across workspaces", "across-workspaces-cold"],
-  ].map(([title, key]) => metricTable(title, model.apps.filter((app) => app.sessionSwitch).map((app) => ({ label: app.name, metric: app.sessionSwitch.derivation.summary[key] })))).join("");
+  ].map(([title, key]) => switchTable(title, model.apps.filter((app) => app.sessionSwitch), key)).join("");
   const latencySeries = model.apps.flatMap((app) => app.sessionSwitch ? Object.entries(app.sessionSwitch.derivation.summary).map(([lane, metric]) => ({ label: `${app.name} · ${lane}`, points: metric.trend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.p95 })) })) : []);
   const cpuSeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.cpuPercent })) }));
   const memorySeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.rssMiB })) }));
-  const body = `<section class="hero"><p class="eyebrow">Public comparison · ${escapeHtml(model.provenance)}</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="notice">This corpus uses pinned OpenCode events. Apps with production OpenCode history support should use it; translations are allowed and disclosed. The current entries are Electron apps, but other GUI frameworks are welcome.</div></section><nav class="app-grid" aria-label="Application reports">${cards}</nav>${metricTable("Application start", startRows, "New-process application start results")}${laneSections}${chart("Session-switch latency growth", latencySeries, "Transcript size (MiB)", "p95 latency (ms)")}${chart("CPU growth with session switching", cpuSeries, "Switch sequence", "CPU (%)")}${chart("Memory growth with session switching", memorySeries, "Switch sequence", "RSS (MiB)")}<section class="panel"><h2>What this benchmark does not measure</h2><p>It does not measure Web Vitals, model or harness speed, streaming output, tool or diff rendering, or terminal coding agents. Those require separately reviewed scenarios.</p><p>Have another useful metric? Propose its definition and scenario version in a pull request.</p></section>`;
+  const sessionComparison = switchStatus.status === "valid"
+    ? `${laneSections}${chart("Session-switch latency growth", latencySeries, "Transcript size (MiB)", "p95 latency (ms)")}${resourceStatus(model.apps)}${chart("CPU growth with session switching", cpuSeries, "Switch sequence", "CPU (%)")}${chart("Memory growth with session switching", memorySeries, "Switch sequence", "RSS (MiB)")}`
+    : comparisonUnavailable("Session switching", switchStatus, model.apps, "sessionSwitch");
+  const body = `<section class="hero"><p class="eyebrow">Public comparison · ${escapeHtml(model.provenance)}</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="notice">This corpus uses pinned OpenCode events. Apps with production OpenCode history support should use it; translations are allowed and disclosed. The current entries are Electron apps, but other GUI frameworks are welcome.</div></section><nav class="app-grid" aria-label="Application reports">${cards}</nav>${appStart}${sessionComparison}<section class="panel"><h2>What this benchmark does not measure</h2><p>It does not measure Web Vitals, model or harness speed, streaming output, tool or diff rendering, or terminal coding agents. Those require separately reviewed scenarios.</p><p>Have another useful metric? Propose its definition and scenario version in a pull request.</p></section>`;
   return page({ title: model.title, current: "index", body });
 }
 
@@ -61,7 +69,7 @@ function renderApp(model, app) {
   if (app.sessionSwitch) {
     const summary = app.sessionSwitch.derivation.summary;
     for (const [title, key] of [["Warm within workspace", "within-workspace-warm"], ["Cold within workspace", "within-workspace-cold"], ["Warm across workspaces", "across-workspaces-warm"], ["Cold across workspaces", "across-workspaces-cold"]]) {
-      sections.push(metricTable(title, [{ label: app.name, metric: summary[key] }]));
+      sections.push(switchTable(title, [app], key));
     }
     sections.push(chart("Latency by transcript size", Object.entries(summary).map(([lane, metric]) => ({ label: lane, points: metric.trend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.p95 })) })), "Transcript size (MiB)", "p95 latency (ms)"));
     sections.push(memoryTable(app.sessionSwitch.resources));
@@ -72,6 +80,37 @@ function renderApp(model, app) {
   }
   const body = `<section class="hero compact"><p class="eyebrow"><a href="../../index.html">← All applications</a></p><h1>${escapeHtml(app.name)}</h1><p>Individual result page for ${escapeHtml(model.title)}.</p></section>${sections.join("")}<section class="panel"><h2>Definitions</h2><p><strong>Active memory</strong> is measured while completed historical sessions progress from 1 MiB through 32 MiB. <strong>Idle</strong> means the fixed 1 MiB control transcript is fully ready with no benchmark input for 60 seconds. No live session stream is running.</p></section>`;
   return page({ title: `${app.name} · ${model.title}`, current: app.id, body });
+}
+
+function switchTable(title, apps, key) {
+  const sizes = [...new Set(apps.flatMap((app) => app.sessionSwitch.derivation.summary[key].trend.map((point) => point.transcriptBytes)))].toSorted((left, right) => left - right);
+  const appHeaders = apps.map((app) => `<th scope="colgroup" colspan="4">${escapeHtml(app.name)}</th>`).join("");
+  const metricHeaders = apps.map(() => "<th scope=\"col\">Average</th><th scope=\"col\">Maximum</th><th scope=\"col\">p95</th><th scope=\"col\">Valid / attempted</th>").join("");
+  const rows = sizes.map((size) => `<tr><th scope="row">${formatBytes(size)}</th>${apps.map((app) => switchMetricCells(app.sessionSwitch.derivation.summary[key].trend.find((point) => point.transcriptBytes === size))).join("")}</tr>`).join("");
+  return `<section class="panel"><h3>${escapeHtml(title)}</h3><div class="table-scroll"><table><caption>${escapeHtml(title)} at each exact completed transcript size</caption><thead><tr><th scope="col" rowspan="2">Transcript size</th>${appHeaders}</tr><tr>${metricHeaders}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
+}
+
+function switchMetricCells(metric) {
+  if (!metric || metric.status !== "valid") return `<td colspan="3" class="status invalid">${escapeHtml(metric?.reason ?? "Unavailable")}</td><td>${metric?.valid ?? 0} / ${metric?.attempted ?? 0}</td>`;
+  return `<td>${format(metric.average)} ms</td><td>${format(metric.maximum)} ms</td><td>${format(metric.p95)} ms</td><td>${metric.valid} / ${metric.attempted}</td>`;
+}
+
+function comparisonUnavailable(title, compatibility, apps, property) {
+  const rows = apps.map((app) => `<tr><th scope="row"><a href="apps/${escapeHtml(app.id)}/index.html">${escapeHtml(app.name)}</a></th><td>${app[property] ? "Available as an individual result" : "No result supplied"}</td></tr>`).join("");
+  return `<section class="panel"><h2>${escapeHtml(title)}</h2><p class="status invalid"><strong>${escapeHtml(compatibility.status)}:</strong> ${escapeHtml(compatibility.reason)}</p><div class="table-scroll"><table><caption>Individual result availability</caption><thead><tr><th scope="col">Application</th><th scope="col">Status</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+}
+
+function resourceStatus(apps) {
+  const rows = apps.map((app) => {
+    const resources = app.sessionSwitch?.resources;
+    const status = resources?.status === "valid" ? "Valid" : `Invalid: ${resources?.reason ?? "not measured"}`;
+    return `<tr><th scope="row">${escapeHtml(app.name)}</th><td class="${resources?.status === "valid" ? "" : "status invalid"}">${escapeHtml(status)}</td></tr>`;
+  }).join("");
+  return `<section class="panel"><h3>CPU and memory measurement status</h3><div class="table-scroll"><table><caption>Resource result availability for every application</caption><thead><tr><th scope="col">Application</th><th scope="col">Status</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+}
+
+function formatBytes(bytes) {
+  return Number.isFinite(bytes) && bytes % 1048576 === 0 ? `${bytes / 1048576} MiB (${bytes} bytes)` : `${bytes} bytes`;
 }
 
 function memoryTable(resources) {

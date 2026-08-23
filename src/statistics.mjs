@@ -29,7 +29,15 @@ export function summary(values, attempted = values.length) {
 }
 
 export function summaryOrUnavailable(values, attempted, reason = "No valid observations.") {
-  return values.length > 0 ? { status: "valid", ...summary(values, attempted) } : { status: "invalid", valid: 0, attempted, reason };
+  if (values.length !== attempted) {
+    return {
+      status: "invalid",
+      valid: values.length,
+      attempted,
+      reason: values.length === 0 ? reason : `Only ${values.length} of ${attempted} required observations were valid.`,
+    };
+  }
+  return { status: "valid", ...summary(values, attempted) };
 }
 
 function requireValues(values) {

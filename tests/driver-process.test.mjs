@@ -35,9 +35,9 @@ test("mock non-Electron driver completes the public lifecycle", async () => {
       scenarioId: "session-switch-v1",
       scenarioDigestSha256: "1".repeat(64),
       runDirectory: root,
-    }), { corpusDigestSha256: generated.digestSha256, eventSchemaDigestSha256: generated.manifest.sourceEventFormat.schemaDigestSha256 });
+    }), { corpusDigestSha256: generated.digestSha256, eventSchemaDigestSha256: generated.manifest.sourceEventFormat.schemaDigestSha256, materializationModes: ["translated"] });
     assert.equal(prepared.materializationMode, "translated");
-    const launched = await driver.request("launch", { scenarioId: "session-switch-v1", stateHandle: prepared.stateHandles.P1, initialSessionId: "control" });
+    const launched = await driver.request("launch", { scenarioId: "session-switch-v1", stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: "driver-test" });
     assert.equal(launched.ready, true);
     const benchmarkCase = { caseId: "case-1", workload: "isolated-latency", transcriptBytes: 16, workspaceRelation: "within-workspace", sessionState: "cold" };
     const observation = normalizeExecution(await driver.request("execute", { scenarioId: "session-switch-v1", case: benchmarkCase }), benchmarkCase);
@@ -47,6 +47,20 @@ test("mock non-Electron driver completes the public lifecycle", async () => {
     await driver.close();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("prepare rejects a materialization mode the driver did not advertise", () => {
+  assert.throws(() => assertPrepared({
+    materializationMode: "translated",
+    corpusDigestSha256: "a".repeat(64),
+    eventSchemaDigestSha256: "b".repeat(64),
+    mappingDigestSha256: "c".repeat(64),
+    stateHandles: { P0: "p0", P1: "p1" },
+  }, {
+    corpusDigestSha256: "a".repeat(64),
+    eventSchemaDigestSha256: "b".repeat(64),
+    materializationModes: ["native-opencode"],
+  }), /unadvertised materialization mode/);
 });
 
 for (const mode of ["malformed", "crash", "duplicate"]) {
@@ -74,7 +88,15 @@ test("wrong-content readiness remains a preserved invalid observation", async ()
       caseId: benchmarkCase.caseId,
       durationMs: 1,
       clock: { kind: "single-monotonic-clock", start: 1, end: 2 },
-      readiness: { endpoint: "ready", checks: [{ id: "content-identity", passed: false }] },
+      readiness: {
+        endpoint: "correct-content-painted-and-input-ready",
+        checks: [
+          { id: "content-identity", passed: false },
+          { id: "first-fold-painted", passed: true },
+          { id: "two-presentations", passed: true },
+          { id: "trusted-input", passed: true },
+        ],
+      },
     }, benchmarkCase);
     assert.equal(observation.status, "invalid");
     assert.match(observation.reason, /readiness checks/);

@@ -44,7 +44,8 @@ export function chart(title, series, xLabel, yLabel) {
 }
 
 export function disclosures(app) {
-  return `<dl class="disclosures"><div><dt>Application</dt><dd>${escapeHtml(app.name)} ${escapeHtml(app.version)}</dd></div><div><dt>Driver</dt><dd>${escapeHtml(app.driver.name)} ${escapeHtml(app.driver.version)}</dd></div><div><dt>Source events</dt><dd>${escapeHtml(app.sourceEventFormat.id)}</dd></div><div><dt>Materialization</dt><dd>${app.materializationModes.map(escapeHtml).join(", ")}</dd></div><div><dt>GUI framework</dt><dd>${escapeHtml(app.environment.guiFramework ?? "disclosed by app registry")}</dd></div></dl>`;
+  const provenanceRows = app.scenarioProvenance.map((run) => `<tr><th scope="row">${escapeHtml(run.scenarioId)}</th><td>${escapeHtml(run.driver.name)} ${escapeHtml(run.driver.version)}</td><td>${escapeHtml(run.materializationMode)}</td><td>${escapeHtml(run.frameworkRevision)}</td><td>${run.scheduleOrdinal ?? "—"}</td></tr>`).join("");
+  return `<dl class="disclosures"><div><dt>Application</dt><dd>${escapeHtml(app.name)} ${escapeHtml(app.version)}</dd></div><div><dt>Source events</dt><dd>${escapeHtml(app.sourceEventFormat.id)}</dd></div><div><dt>GUI framework</dt><dd>${escapeHtml(app.environment.guiFramework ?? "disclosed by app registry")}</dd></div></dl><section class="panel"><h2>Scenario provenance</h2><div class="table-scroll"><table><caption>Exact driver and framework revision for each scenario run</caption><thead><tr><th scope="col">Scenario</th><th scope="col">Driver</th><th scope="col">Materialization</th><th scope="col">Framework revision</th><th scope="col">Schedule order</th></tr></thead><tbody>${provenanceRows}</tbody></table></div></section>`;
 }
 
 export function escapeHtml(value) {

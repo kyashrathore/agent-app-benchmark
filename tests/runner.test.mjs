@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -99,6 +99,35 @@ test("invalid readiness is retained and never summarized as zero", async () => {
   }
 });
 
+test("driver failures are sanitized before publication and validation rejects sensitive edits", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-runner-private-"));
+  try {
+    const output = path.join(root, "result");
+    const result = await runBenchmark({ ...baseInput(output, START_SCENARIO), driver: { executable: process.execPath, args: [DRIVER], env: { BENCHMARK_MOCK_MODE: "sensitive-error" } } });
+    const reasons = result.observations.map((item) => item.reason ?? "");
+    assert.ok(reasons.every((reason) => !reason.includes("/Users/example") && !reason.includes("super-secret-value")));
+    const file = path.join(output, "result.json");
+    const edited = JSON.parse(await readFile(file, "utf8"));
+    edited.observations[0].reason = "C:\\Users\\example\\private\\result.json";
+    await writeFile(file, `${JSON.stringify(edited, null, 2)}\n`);
+    await assert.rejects(validateResultFile(file), /absolute path/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("tracked reports match deterministic regeneration", async (context) => {
+  const comparisonFile = path.resolve("results/comparisons/initial-macos-arm64/comparison.json");
+  try {
+    await access(comparisonFile);
+  } catch {
+    context.skip("No tracked comparison has been generated yet.");
+    return;
+  }
+  const manifest = JSON.parse(await readFile(comparisonFile, "utf8"));
+  for (const entry of manifest.results) await validateResultFile(path.resolve(path.dirname(comparisonFile), entry.path));
+});
+
 function baseInput(output, scenario) {
   return {
     driver: { executable: process.execPath, args: [DRIVER] },
@@ -140,8 +169,12 @@ function fakeMonitor(getClock, setClock) {
 function snapshot(atMs, cpuTimeMs, rssBytes) {
   return {
     atMs,
+    collectionDurationMicros: 100,
     rssBytes,
     cumulativeCpuTimeMs: cpuTimeMs,
+    inaccessibleProcessCount: 0,
+    rootProcessFound: true,
+    missingExternalProcessCount: 0,
     processes: [{ pid: 1, startTimeMs: 1, cpuTimeMs, rssBytes, name: "mock" }],
   };
 }

@@ -1,0 +1,25 @@
+{
+  "id": "my-same-machine-run",
+  "title": "T3 Code and Claxedo on one machine",
+  "description": "Smoke-profile comparison of completed historical GUI sessions.",
+  "provenance": "community-self-attested",
+  "frameworkRevision": "0000000000000000000000000000000000000000",
+  "runProfile": "smoke",
+  "resourceMonitor": "/absolute/path/to/agent-app-resource-monitor",
+  "corpusDirectory": "/absolute/path/to/opencode-completed-transcripts-v1",
+  "outputRoot": "/absolute/path/to/comparison-output",
+  "apps": [
+    {
+      "id": "t3",
+      "driver": "/absolute/path/to/bun",
+      "args": ["/absolute/path/to/t3-driver.ts"],
+      "cwd": "/absolute/path/to/t3"
+    },
+    {
+      "id": "claxedo",
+      "driver": "/absolute/path/to/bun",
+      "args": ["/absolute/path/to/claxedo-driver.ts"],
+      "cwd": "/absolute/path/to/claxedo"
+    }
+  ]
+}

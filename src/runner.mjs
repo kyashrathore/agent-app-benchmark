@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { digest } from "./canonical-json.mjs";
@@ -11,13 +11,19 @@ import { renderReport } from "./report.mjs";
 import { deriveBoundaryPoint, ResourceMonitor, validateCadence } from "./resource-monitor.mjs";
 import { summarizeObservations, summarizeResources } from "./summarize.mjs";
 
+const MAX_RESULT_BYTES = 64 * 1024 * 1024;
+const MAX_PUBLIC_ERROR_LENGTH = 512;
+
 export async function runBenchmark(input, dependencies = {}) {
   const output = path.resolve(input.output);
   await mkdir(path.dirname(output), { recursive: true, mode: 0o700 });
   await mkdir(output, { mode: 0o700 });
   await writeFile(path.join(output, ".agent-app-benchmark-run"), "v1\n", { mode: 0o600 });
-  const corpus = await writeCorpus(input.corpus.value, path.join(output, "corpus"));
-  await verifyCorpus(corpus.path);
+  const corpus = input.corpusDirectory
+    ? await verifyCorpus(input.corpusDirectory)
+    : await writeCorpus(input.corpus.value, path.join(output, "corpus"));
+  assertCorpusIdentity(corpus, input.corpus);
+  if (input.corpus.status === "public-comparable") await assertPublicCorpusArtifact(corpus, input.corpus.value.id);
   const spawnDriver = dependencies.spawnDriver ?? DriverProcess.spawn;
   const driver = await spawnDriver({ ...input.driver, cwd: input.driver.cwd ?? output });
   const delay = dependencies.delay ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
@@ -27,6 +33,7 @@ export async function runBenchmark(input, dependencies = {}) {
   let hello;
   let prepared;
   let resources = null;
+  let resourceTrace = null;
   try {
     hello = assertHello(await driver.request("hello", { frameworkVersion: 1 }), {
       appId: input.app.id,
@@ -45,13 +52,14 @@ export async function runBenchmark(input, dependencies = {}) {
     }, 10 * 60_000), {
       corpusDigestSha256: corpus.digestSha256,
       eventSchemaDigestSha256: corpus.manifest.sourceEventFormat.schemaDigestSha256,
+      materializationModes: hello.materializationModes,
     });
     if (!input.app.materializationModes.includes(prepared.materializationMode)) throw new Error(`${input.app.id} is not registered for ${prepared.materializationMode} materialization.`);
     if (input.scenario.value.kind === "app-start") {
       await runAppStart({ driver, scenario: input.scenario.value, runProfile: input.runProfile, prepared, observations });
     } else {
       await runSessionLatency({ driver, scenario: input.scenario.value, runProfile: input.runProfile, prepared, observations, seed: input.corpus.value.seed });
-      resources = await runResourceWorkload({
+      const resourceRun = await runResourceWorkload({
         driver,
         scenario: input.scenario.value,
         prepared,
@@ -62,6 +70,8 @@ export async function runBenchmark(input, dependencies = {}) {
         delay,
         now,
       });
+      resources = resourceRun.resources;
+      resourceTrace = resourceRun.trace;
     }
   } finally {
     await driver.close();
@@ -75,6 +85,8 @@ export async function runBenchmark(input, dependencies = {}) {
       kind: input.provenance ?? "community-self-attested",
       comparisonRunId: input.comparisonRunId ?? null,
       frameworkRevision: input.frameworkRevision ?? "working-tree",
+      comparisonScheduleDigestSha256: input.comparisonScheduleDigestSha256 ?? null,
+      scheduleOrdinal: input.scheduleOrdinal ?? null,
     },
     environment: input.environment ?? collectEnvironment(),
     app: hello.application,
@@ -94,6 +106,7 @@ export async function runBenchmark(input, dependencies = {}) {
     runProfile: input.runProfile,
     observations,
     resources,
+    resourceTrace,
     derivation: { version: 1, summaryDigestSha256: digest(summary), summary },
   };
   assertContract("result", result, "result bundle");
@@ -104,20 +117,41 @@ export async function runBenchmark(input, dependencies = {}) {
   return result;
 }
 
+function assertCorpusIdentity(generated, definition) {
+  if (generated.manifest.corpusId !== definition.value.id
+    || generated.manifest.definitionDigestSha256 !== definition.digest
+    || generated.manifest.sourceEventFormat.id !== definition.value.sourceEventFormat.id
+    || generated.manifest.sourceEventFormat.sourceRevision !== definition.value.sourceEventFormat.sourceRevision) {
+    throw new Error("Prepared corpus does not match the selected corpus definition.");
+  }
+}
+
+async function assertPublicCorpusArtifact(generated, corpusId) {
+  const { readRegistered } = await import("./registry.mjs");
+  const artifact = await readRegistered("corpusArtifact", corpusId);
+  if (artifact.value.corpusDigestSha256 !== generated.digestSha256
+    || artifact.value.definitionDigestSha256 !== generated.manifest.definitionDigestSha256
+    || artifact.value.eventSchemaDigestSha256 !== generated.manifest.sourceEventFormat.schemaDigestSha256) {
+    throw new Error("Generated public corpus does not match its registered canonical artifact identity.");
+  }
+}
+
 async function runAppStart({ driver, scenario, runProfile, prepared, observations }) {
   for (const benchmarkCase of expandCases(scenario, runProfile)) {
-    observations.push(await executeSafely(driver, scenario.id, benchmarkCase, { stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] }));
-    await shutdownSafely(driver, observations, benchmarkCase.caseId);
+    const index = observations.push(await executeSafely(driver, scenario.id, benchmarkCase, { stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] })) - 1;
+    const cleanup = await shutdownSafely(driver, benchmarkCase.caseId);
+    if (!cleanup.valid) observations[index] = invalidateForCleanup(observations[index], cleanup.reason);
   }
 }
 
 async function runSessionLatency({ driver, scenario, runProfile, prepared, observations, seed }) {
   for (const group of buildLatencyGroups(scenario, runProfile, seed)) {
-    let launched = false;
+    let launchAttempted = false;
     let completed = 0;
+    const firstObservation = observations.length;
     try {
+      launchAttempted = true;
       assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: group.groupId }, 5 * 60_000));
-      launched = true;
       for (const benchmarkCase of group.cases) {
         observations.push(await executeSafely(driver, scenario.id, benchmarkCase));
         completed += 1;
@@ -127,22 +161,29 @@ async function runSessionLatency({ driver, scenario, runProfile, prepared, obser
         observations.push(invalidObservation(benchmarkCase, error));
       }
     } finally {
-      if (launched) await shutdownSafely(driver, observations, group.groupId);
+      if (launchAttempted) {
+        const cleanup = await shutdownSafely(driver, group.groupId);
+        if (!cleanup.valid) {
+          for (let index = firstObservation; index < observations.length; index += 1) observations[index] = invalidateForCleanup(observations[index], cleanup.reason);
+        }
+      }
     }
   }
 }
 
 async function runResourceWorkload({ driver, scenario, prepared, observations, seed, resourceMonitor, startMonitor, delay, now }) {
-  if (!resourceMonitor) return { status: "invalid", reason: "No framework resource monitor executable was supplied.", rawSampleCount: 0, trend: [] };
   const resource = scenario.resourceMeasurement;
   const sequence = buildResourceSequence(scenario, seed);
   let monitor;
-  let launched = false;
-  const windows = { baseline: undefined, active: undefined, ending: undefined, valid: true };
-  const boundaryPoints = [];
+  let launchAttempted = false;
+  let failure = resourceMonitor ? null : "No framework resource monitor executable was supplied.";
+  const windows = { baseline: null, active: null, ending: null };
+  const boundaries = [];
+  const firstObservation = observations.length;
   try {
+    if (!resourceMonitor) throw new Error(failure);
+    launchAttempted = true;
     const launch = assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: "progressive-resource" }, 5 * 60_000));
-    launched = true;
     monitor = await startMonitor(path.resolve(resourceMonitor), launch.processes, resource.idleSampleIntervalMs);
     await delay(resource.settleBeforeIdleMs);
     windows.baseline = { startMs: now(), endMs: 0 };
@@ -155,49 +196,88 @@ async function runResourceWorkload({ driver, scenario, prepared, observations, s
       const observation = await executeSafely(driver, scenario.id, benchmarkCase);
       observations.push(observation);
       const after = await monitor.sampleNow("after-switch");
-      try {
-        boundaryPoints.push(deriveBoundaryPoint(before, after, benchmarkCase, boundaryPoints.length + 1, monitor.samples));
-      } catch (error) {
-        windows.valid = false;
-        windows.reason = error.message;
-      }
-      if (observation.status !== "valid") {
-        windows.valid = false;
-        windows.reason = "One or more progressive resource actions were invalid.";
-      }
+      boundaries.push({
+        case: benchmarkCase,
+        switchSequence: boundaries.length + 1,
+        beforeSampleIndex: monitor.samples.indexOf(before),
+        afterSampleIndex: monitor.samples.indexOf(after),
+      });
     }
     const controlCase = { caseId: "progressive-resource-return-control", workload: "resource-control", destinationSessionId: "control" };
     const controlObservation = await executeSafely(driver, scenario.id, controlCase);
     observations.push(controlObservation);
-    if (controlObservation.status !== "valid") {
-      windows.valid = false;
-      windows.reason = "The workload could not return to the control transcript.";
-    }
     windows.active.endMs = now();
     monitor.setSampleInterval(resource.idleSampleIntervalMs);
     await delay(resource.settleBeforeIdleMs);
     windows.ending = { startMs: now(), endMs: 0 };
     await delay(resource.idleWindowMs);
     windows.ending.endMs = now();
-    const baselineCadence = validateCadence(monitor.samples, [windows.baseline], resource.idleSampleIntervalMs);
-    const activeCadence = validateCadence(monitor.samples, [windows.active], resource.activeSampleIntervalMs);
-    const endingCadence = validateCadence(monitor.samples, [windows.ending], resource.idleSampleIntervalMs);
-    const cadence = [baselineCadence, activeCadence, endingCadence].find((item) => !item.valid);
-    if (cadence) {
-      windows.valid = false;
-      windows.reason = cadence.reason;
-    }
-    if (monitor.errors.length > 0) {
-      windows.valid = false;
-      windows.reason = "The resource monitor reported an error.";
-    }
-    return summarizeResources(monitor.samples, windows, boundaryPoints);
   } catch (error) {
-    return { status: "invalid", reason: error.message, rawSampleCount: monitor?.samples.length ?? 0, trend: boundaryPoints };
+    failure = publicError(error);
   } finally {
-    if (monitor) await monitor.stop();
-    if (launched) await shutdownSafely(driver, observations, "progressive-resource");
+    if (monitor) {
+      try {
+        await monitor.stop();
+      } catch (error) {
+        failure = `Resource monitor cleanup failed: ${publicError(error)}`;
+      }
+    }
+    if (launchAttempted) {
+      const cleanup = await shutdownSafely(driver, "progressive-resource");
+      if (!cleanup.valid) {
+        failure = `Application cleanup failed: ${cleanup.reason}`;
+        for (let index = firstObservation; index < observations.length; index += 1) observations[index] = invalidateForCleanup(observations[index], cleanup.reason);
+      }
+    }
   }
+  const trace = {
+    version: 1,
+    samples: monitor?.samples ?? [],
+    windows,
+    boundaries,
+    monitorErrors: (monitor?.errors ?? []).map((error) => ({ code: String(error.code ?? "monitor-error").slice(0, 80), message: publicError(error.message ?? error) })),
+    failure,
+  };
+  return { trace, resources: deriveResourcesFromTrace(trace, scenario, observations) };
+}
+
+export function deriveResourcesFromTrace(trace, scenario, observations) {
+  if (!trace || trace.version !== 1) return { status: "invalid", reason: "Raw resource trace is missing.", rawSampleCount: 0, trend: [] };
+  const boundaryPoints = [];
+  let reason = trace.failure;
+  if (!reason) {
+    for (const boundary of trace.boundaries) {
+      try {
+        const before = trace.samples[boundary.beforeSampleIndex];
+        const after = trace.samples[boundary.afterSampleIndex];
+        if (!before || !after) throw new Error("A resource boundary references a missing sample.");
+        boundaryPoints.push(deriveBoundaryPoint(before, after, boundary.case, boundary.switchSequence, trace.samples));
+      } catch (error) {
+        reason = publicError(error);
+        break;
+      }
+    }
+  }
+  const progressive = observations.filter((observation) => observation.case?.workload === "progressive-resource");
+  const control = observations.find((observation) => observation.case?.workload === "resource-control");
+  if (!reason && progressive.some((observation) => observation.status !== "valid")) reason = "One or more progressive resource actions were invalid.";
+  if (!reason && control?.status !== "valid") reason = "The workload could not return to the control transcript.";
+  if (!reason && (!trace.windows.baseline || !trace.windows.active || !trace.windows.ending)) reason = "A required resource window is missing.";
+  if (!reason) {
+    const resource = scenario.resourceMeasurement;
+    const cadence = [
+      validateCadence(trace.samples, [trace.windows.baseline], resource.idleSampleIntervalMs),
+      validateCadence(trace.samples, [trace.windows.active], resource.activeSampleIntervalMs),
+      validateCadence(trace.samples, [trace.windows.ending], resource.idleSampleIntervalMs),
+    ].find((item) => !item.valid);
+    if (cadence) reason = cadence.reason;
+  }
+  if (!reason && trace.monitorErrors.length > 0) reason = "The resource monitor reported an error.";
+  if (!reason && trace.samples.some((sample) => sample.inaccessibleProcessCount > 0 || !sample.rootProcessFound || sample.missingExternalProcessCount > 0)) {
+    reason = "The resource monitor could not observe the complete declared application process family.";
+  }
+  const windows = { ...trace.windows, valid: !reason, ...(reason ? { reason } : {}) };
+  return summarizeResources(trace.samples, windows, boundaryPoints);
 }
 
 async function executeSafely(driver, scenarioId, benchmarkCase, extra = {}) {
@@ -209,16 +289,21 @@ async function executeSafely(driver, scenarioId, benchmarkCase, extra = {}) {
   }
 }
 
-async function shutdownSafely(driver, observations, context) {
+async function shutdownSafely(driver, context) {
   try {
     assertShutdown(await driver.request("shutdown", { reason: context }, 120_000));
+    return { valid: true };
   } catch (error) {
-    observations.push({ case: { caseId: `shutdown-${context}`, workload: "cleanup" }, status: "invalid", reason: error.message, receivedAt: new Date().toISOString() });
+    return { valid: false, reason: publicError(error) };
   }
 }
 
+function invalidateForCleanup(observation, reason) {
+  return { ...observation, status: "invalid", reason: `Application cleanup failed: ${reason}` };
+}
+
 function invalidObservation(benchmarkCase, error) {
-  return { case: benchmarkCase, status: "invalid", reason: error instanceof Error ? error.message : String(error), receivedAt: new Date().toISOString() };
+  return { case: benchmarkCase, status: "invalid", reason: publicError(error), receivedAt: new Date().toISOString() };
 }
 
 function collectEnvironment() {
@@ -235,11 +320,44 @@ function collectEnvironment() {
 }
 
 function assertShareable(serialized) {
-  const forbidden = [process.env.HOME, process.env.USERPROFILE].filter((value) => typeof value === "string" && value.length > 3);
-  for (const value of forbidden) {
-    if (serialized.includes(value)) throw new Error("Public result contains an absolute user path.");
+  const value = JSON.parse(serialized);
+  visitStrings(value, "", (text, key) => {
+    if (hasAbsolutePath(text)) throw new Error("Public result contains an absolute path.");
+    if ((/(?:token|secret|password|authorization|api[-_]?key)/i.test(key) && text.length >= 8)
+      || /\bBearer\s+[A-Za-z0-9._~+\/-]{8,}/i.test(text)
+      || /\b(?:token|secret|password|authorization|api[-_]?key)\s*[=:]\s*[^\s,;}]{8,}/i.test(text)) {
+      throw new Error("Public result contains a credential-like value.");
+    }
+  });
+}
+
+function publicError(error) {
+  let message = error instanceof Error ? error.message : String(error);
+  message = message.replace(/\s+stderr:[\s\S]*$/i, "");
+  message = message.replace(/\b[A-Za-z]:[\\/][^\s"'`]+/g, "[path]");
+  message = message.replace(/(^|[\s("'`=:])\/(?:[^\s/"'`]+\/)*[^\s,"'`;)]*/gm, "$1[path]");
+  message = message.replace(/\bBearer\s+[A-Za-z0-9._~+\/-]{8,}/gi, "Bearer [credential]");
+  message = message.replace(/\b(token|secret|password|authorization|api[-_]?key)\s*[=:]\s*[^\s,;}]{8,}/gi, "[credential redacted]");
+  return (message.trim() || "Driver operation failed.").slice(0, MAX_PUBLIC_ERROR_LENGTH);
+}
+
+function hasAbsolutePath(value) {
+  return /\b[A-Za-z]:[\\/][^\s"'`]+/.test(value)
+    || /(^|[\s("'`=:])\/(?:[^\s/"'`]+\/)*[^\s,"'`;)]*/m.test(value);
+}
+
+function visitStrings(value, key, visit) {
+  if (typeof value === "string") {
+    visit(value, key);
+    return;
   }
-  if (/(?:token|secret|password|authorization)["'=:\s]+[^,}\s]{8,}/i.test(serialized)) throw new Error("Public result contains a credential-like value.");
+  if (Array.isArray(value)) {
+    for (const item of value) visitStrings(item, key, visit);
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const [childKey, child] of Object.entries(value)) visitStrings(child, childKey, visit);
+  }
 }
 
 async function atomicWrite(file, content) {
@@ -249,17 +367,74 @@ async function atomicWrite(file, content) {
 }
 
 export async function validateResultFile(file) {
+  const resultStat = await lstat(file);
+  if (!resultStat.isFile() || resultStat.isSymbolicLink()) throw new Error("Result must be a regular file.");
+  if (resultStat.size > MAX_RESULT_BYTES) throw new Error("Result exceeds the public size limit.");
   const bytes = await readFile(file);
-  const result = JSON.parse(bytes.toString("utf8"));
+  const serialized = bytes.toString("utf8");
+  const result = JSON.parse(serialized);
   assertContract("result", result, file);
-  const summary = summarizeObservations(await scenarioFromResult(result), result.observations);
+  assertShareable(serialized);
+  const context = await registeredContextFromResult(result);
+  validateObservationSchedule(context.scenario.value, result.runProfile, context.corpus.value.seed, result.observations);
+  const summary = summarizeObservations(context.scenario.value, result.observations);
   if (digest(summary) !== result.derivation.summaryDigestSha256) throw new Error("Result summary digest does not match raw observations.");
+  if (digest(summary) !== digest(result.derivation.summary)) throw new Error("Stored result summary does not match raw observations.");
+  const resources = context.scenario.value.kind === "session-switch"
+    ? deriveResourcesFromTrace(result.resourceTrace, context.scenario.value, result.observations)
+    : null;
+  if (digest(resources) !== digest(result.resources)) throw new Error("Stored resource summary does not match the raw resource trace.");
+  if (path.basename(file) === "result.json") await validateAdjacentReport(file, result);
   return result;
 }
 
-async function scenarioFromResult(result) {
+async function validateAdjacentReport(resultFile, result) {
+  const reportFile = path.join(path.dirname(resultFile), "report.md");
+  let reportStat;
+  try {
+    reportStat = await lstat(reportFile);
+  } catch (error) {
+    if (error?.code === "ENOENT") return;
+    throw error;
+  }
+  if (!reportStat.isFile() || reportStat.isSymbolicLink()) throw new Error("Adjacent report must be a regular file.");
+  if (await readFile(reportFile, "utf8") !== renderReport(result)) throw new Error("Adjacent report.md does not match deterministic regeneration.");
+}
+
+async function registeredContextFromResult(result) {
   const { readRegistered } = await import("./registry.mjs");
   const scenario = await readRegistered("scenario", result.scenario.id);
   if (scenario.digest !== result.scenario.digestSha256) throw new Error("Result scenario digest is not registered.");
-  return scenario.value;
+  if (result.scenario.status !== scenario.status) throw new Error("Result scenario status is not registered.");
+  const corpus = await readRegistered("corpus", result.corpus.id);
+  if (scenario.value.corpusId !== corpus.value.id || corpus.digest !== result.corpus.definitionDigestSha256) throw new Error("Result corpus definition is not registered for its scenario.");
+  if (result.corpus.status !== corpus.status) throw new Error("Result corpus status is not registered.");
+  if (result.sourceEventFormat.id !== corpus.value.sourceEventFormat.id
+    || result.sourceEventFormat.sourceRevision !== corpus.value.sourceEventFormat.sourceRevision) throw new Error("Result source-event identity is not registered.");
+  const { OPENCODE_EVENT_SCHEMA_DIGEST } = await import("./corpus.mjs");
+  if (result.sourceEventFormat.schemaDigestSha256 !== OPENCODE_EVENT_SCHEMA_DIGEST) throw new Error("Result source-event schema digest is not registered.");
+  const artifact = await readRegistered("corpusArtifact", result.corpus.id);
+  if (artifact.value.definitionDigestSha256 !== result.corpus.definitionDigestSha256
+    || artifact.value.eventSchemaDigestSha256 !== result.sourceEventFormat.schemaDigestSha256
+    || artifact.value.corpusDigestSha256 !== result.corpus.digestSha256
+    || artifact.value.corpusDigestSha256 !== result.materialization.corpusDigestSha256) {
+    throw new Error("Result corpus artifact identity is not canonical.");
+  }
+  const app = await readRegistered("app", result.app.id);
+  if (!app.value.scenarios.includes(scenario.value.id)
+    || !app.value.sourceEventFormats.includes(result.sourceEventFormat.id)
+    || !app.value.materializationModes.includes(result.materialization.mode)) throw new Error("Result app identity is not registered for this scenario and materialization.");
+  return { scenario, corpus, app };
+}
+
+function validateObservationSchedule(scenario, runProfile, seed, observations) {
+  const expected = expandCases(scenario, runProfile, seed);
+  if (scenario.kind === "session-switch") {
+    expected.push(...buildResourceSequence(scenario, seed));
+    expected.push({ caseId: "progressive-resource-return-control", workload: "resource-control", destinationSessionId: "control" });
+  }
+  if (observations.length !== expected.length) throw new Error(`Result contains ${observations.length} observations; ${expected.length} are required.`);
+  for (let index = 0; index < expected.length; index += 1) {
+    if (digest(observations[index]?.case) !== digest(expected[index])) throw new Error(`Result observation ${index} does not match the required schedule.`);
+  }
 }

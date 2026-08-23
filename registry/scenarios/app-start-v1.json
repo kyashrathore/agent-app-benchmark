@@ -12,12 +12,7 @@
     {
       "id": "start.duration_ms",
       "description": "Elapsed monotonic time immediately before process spawn until the 1 MiB anchor transcript is correctly painted across two presentation opportunities and the composer accepts trusted input.",
-      "unit": "ms",
-      "betterDirection": "lower",
-      "observer": "driver-attested",
-      "rawField": "durationMs",
-      "statistics": ["average", "maximum", "p95"],
-      "reportPlacement": "app-start-table"
+      "unit": "ms"
     }
   ],
   "runProfiles": {

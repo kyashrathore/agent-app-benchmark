@@ -4,9 +4,7 @@ use std::io::{self, BufRead, BufWriter, Write};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use sysinfo::{
-    MINIMUM_CPU_UPDATE_INTERVAL, Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind,
-};
+use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
 const PROTOCOL_VERSION: u32 = 2;
 const MIN_SAMPLE_INTERVAL_MS: u64 = 250;
@@ -29,7 +27,6 @@ struct ExternalProcess {
     #[serde(default)]
     start_time_ms: Option<u64>,
 }
-
 impl ExternalProcess {
     fn estimated_history_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
@@ -321,7 +318,6 @@ impl HistoryRecorder {
 struct Collector {
     system: System,
     sequence: u64,
-    cpu_baseline_refreshed_at: Option<Instant>,
 }
 
 impl Collector {
@@ -329,32 +325,16 @@ impl Collector {
         Self {
             system: System::new(),
             sequence: 0,
-            cpu_baseline_refreshed_at: None,
         }
-    }
-
-    fn prime_cpu_usage(&mut self) {
-        self.system.refresh_processes_specifics(
-            ProcessesToUpdate::All,
-            true,
-            process_refresh_kind(),
-        );
-        self.cpu_baseline_refreshed_at = Some(Instant::now());
     }
 
     fn sample(&mut self, config: &CollectorConfig, request_id: Option<String>) -> SnapshotEvent {
-        if let Some(delay) =
-            remaining_cpu_measurement_delay(self.cpu_baseline_refreshed_at.take(), Instant::now())
-        {
-            thread::sleep(delay);
-        }
         let collection_started = Instant::now();
         self.system.refresh_processes_specifics(
             ProcessesToUpdate::All,
             true,
             process_refresh_kind(),
         );
-        self.cpu_baseline_refreshed_at = Some(Instant::now());
 
         let rows = self
             .system
@@ -461,15 +441,6 @@ fn process_refresh_kind() -> ProcessRefreshKind {
 
 fn inaccessible_process_count(selected: usize, materialized: usize) -> usize {
     selected.saturating_sub(materialized)
-}
-
-fn remaining_cpu_measurement_delay(
-    baseline_refreshed_at: Option<Instant>,
-    now: Instant,
-) -> Option<Duration> {
-    baseline_refreshed_at
-        .and_then(|baseline| MINIMUM_CPU_UPDATE_INTERVAL.checked_sub(now.duration_since(baseline)))
-        .filter(|delay| !delay.is_zero())
 }
 
 fn matches_external_identity(
@@ -683,7 +654,7 @@ fn main() -> io::Result<()> {
             arch: std::env::consts::ARCH,
             capabilities: Capabilities {
                 cumulative_cpu_time: true,
-                current_cpu_percent: true,
+                current_cpu_percent: false,
                 resident_memory: true,
                 virtual_memory: true,
                 io_bytes: true,
@@ -759,7 +730,6 @@ fn main() -> io::Result<()> {
                                 .map(|process| (process.pid, process.start_time_ms))
                                 .collect(),
                         });
-                        collector.prime_cpu_usage();
                         next_sample_at = sample_interval.map(|_| Instant::now());
                     }
                     Command::SetExternalProcesses { processes, .. } => {
@@ -955,21 +925,6 @@ mod tests {
     fn counts_selected_processes_that_could_not_be_materialized() {
         assert_eq!(inaccessible_process_count(5, 3), 2);
         assert_eq!(inaccessible_process_count(3, 5), 0);
-    }
-
-    #[test]
-    fn waits_for_a_cpu_measurement_window_after_priming() {
-        let baseline = Instant::now();
-
-        assert_eq!(
-            remaining_cpu_measurement_delay(Some(baseline), baseline),
-            Some(MINIMUM_CPU_UPDATE_INTERVAL)
-        );
-        assert_eq!(
-            remaining_cpu_measurement_delay(Some(baseline), baseline + MINIMUM_CPU_UPDATE_INTERVAL),
-            None
-        );
-        assert_eq!(remaining_cpu_measurement_delay(None, baseline), None);
     }
 
     #[test]
@@ -1183,4 +1138,3 @@ mod tests {
         );
     }
 }
-

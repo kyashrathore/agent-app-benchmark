@@ -22,7 +22,7 @@ export function renderReport(result) {
     "Latency and readiness are driver-attested. CPU and RSS are observed by the framework over driver-declared application processes. All summaries are framework-derived from preserved raw observations.",
     "",
   );
-  return `${lines.join("\n")}\n`;
+  return `${lines.join("\n").trimEnd()}\n`;
 }
 
 function renderAppStart(lines, summary) {
@@ -51,17 +51,13 @@ function renderSessionSwitch(lines, summary, resources) {
     lines.push(
       `### ${title}`,
       "",
-      "| Average (ms) | Maximum (ms) | p95 (ms) | Valid / attempted |",
-      "|---:|---:|---:|---:|",
-      metricValues(summary[key]),
+      "| Transcript size | Average (ms) | Maximum (ms) | p95 (ms) | Valid / attempted |",
+      "|---:|---:|---:|---:|---:|",
+      ...summary[key].trend.map((metric) => metricRow(formatBytes(metric.transcriptBytes), metric)),
       "",
     );
   }
   lines.push(
-    "### Latency growth with exact transcript size",
-    "",
-    trendTable(summary),
-    "",
     "Cold means the destination has never been active in the measured app process. Warm means exactly one valid activation occurred before the measured revisit. Transcript size is final completed UTF-8 text payload bytes, not database or event-envelope bytes.",
     "",
   );
@@ -95,22 +91,11 @@ function metricRow(label, metric) {
   return `| ${label} | ${metricCells(metric)} |`;
 }
 
-function metricValues(metric) {
-  return `| ${metricCells(metric)} |`;
-}
-
 function metricCells(metric) {
   if (!metric || metric.status !== "valid") return `— | — | — | ${metric?.valid ?? 0} / ${metric?.attempted ?? 0}`;
   return `${number(metric.average)} | ${number(metric.maximum)} | ${number(metric.p95)} | ${metric.valid} / ${metric.attempted}`;
 }
 
-function trendTable(summary) {
-  const keys = ["within-workspace-warm", "within-workspace-cold", "across-workspaces-warm", "across-workspaces-cold"];
-  const labels = ["Warm within", "Cold within", "Warm across", "Cold across"];
-  const sizes = summary[keys[0]].trend.map((item) => item.transcriptBytes);
-  return [
-    `| Transcript bytes | ${labels.join(" p95 (ms) | ")} p95 (ms) |`,
-    `|---:|${labels.map(() => "---:").join("|")}|`,
-    ...sizes.map((size, index) => `| ${size} | ${keys.map((key) => number(summary[key].trend[index].p95)).join(" | ")} |`),
-  ].join("\n");
+function formatBytes(bytes) {
+  return Number.isFinite(bytes) && bytes % 1048576 === 0 ? `${bytes / 1048576} MiB (${bytes} bytes)` : `${bytes} bytes`;
 }

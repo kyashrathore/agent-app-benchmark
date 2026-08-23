@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/corpus-artifact-v1.schema.json",
+  "title": "Canonical generated corpus identity v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "corpusId", "definitionDigestSha256", "eventSchemaDigestSha256", "corpusDigestSha256"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
+    "corpusId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
+    "definitionDigestSha256": { "$ref": "#/$defs/sha256" },
+    "eventSchemaDigestSha256": { "$ref": "#/$defs/sha256" },
+    "corpusDigestSha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+}
