@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildLatencyGroups, buildResourceSequence, expandCases, repetitionsFor, SESSION_LANES } from "../src/cases.mjs";
+import { buildLatencyGroups, buildResourceSequence, buildResourceSequences, expandCases, repetitionsFor, SESSION_LANES } from "../src/cases.mjs";
 import { readRegistered } from "../src/registry.mjs";
 
 test("publication schedule emits 2 observations per lane at the fixed standard size", async () => {
@@ -45,4 +45,20 @@ test("app start schedules both exact process-launch states", async () => {
   assert.equal(cases.length, 2);
   assert.equal(cases.filter((item) => item.stateHandle === "P0").length, 1);
   assert.equal(cases.filter((item) => item.stateHandle === "P1").length, 1);
+});
+
+test("V3 uses stabilized process pools, counterbalanced size order, and repeated fresh resource runs", async () => {
+  const { value: scenario } = await readRegistered("scenario", "session-switch-v3");
+  const groups = buildLatencyGroups(scenario, "quick", "v3-seed");
+  assert.equal(groups.length, 2);
+  assert.ok(groups.every((group) => group.cases.filter((item) => item.workload === "isolated-latency").length === 40));
+  for (const lane of SESSION_LANES) {
+    assert.equal(groups.flatMap((group) => group.cases).filter((item) => item.workload === "isolated-latency" && item.workspaceRelation === lane.workspaceRelation && item.sessionState === lane.sessionState).length, 20);
+  }
+  const sizeOrders = groups.map((group) => group.cases.filter((item) => item.workload === "transcript-size-latency").map((item) => item.transcriptBytes));
+  assert.notDeepEqual(sizeOrders[0], sizeOrders[1]);
+  const resourceRuns = buildResourceSequences(scenario, 2);
+  assert.equal(resourceRuns.length, 2);
+  assert.deepEqual(resourceRuns[0].cases.map((item) => item.transcriptBytes), scenario.cases.transcriptBytes);
+  assert.ok(resourceRuns.flatMap((run) => run.cases).every((item) => item.destinationSessionId.startsWith("progressive-resource-")));
 });

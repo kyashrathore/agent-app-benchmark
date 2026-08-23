@@ -15,3 +15,14 @@ test("statistics reject missing and invalid observations", () => {
   assert.throws(() => summary([1, Number.NaN]), /at least one/);
   assert.throws(() => summary([1], 0), /Attempted/);
 });
+
+test("p95 is explicitly unavailable below the V3 minimum sample count", () => {
+  assert.deepEqual(summary([1, 2], 2, { minimumP95Samples: 20 }), {
+    average: 1.5,
+    maximum: 2,
+    p95: null,
+    p95Status: "requires-20-valid-observations",
+    valid: 2,
+    attempted: 2,
+  });
+});

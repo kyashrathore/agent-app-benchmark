@@ -6,7 +6,7 @@
 - Scenario digest: `07cabad835ae62dbaf1d45829361caad45208b305b3cb05f1875a85cebd4f503`
 - Corpus digest: `979d15dfeb87f2c539b39915c7324470a54f431a23c668f10ef484ab194b9e5e`
 - Run profile: `publication`
-- Repetitions per case: `2`
+- Configured repetitions: `2`
 
 ## Application start
 

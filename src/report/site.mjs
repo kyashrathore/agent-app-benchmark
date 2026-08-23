@@ -33,8 +33,10 @@ export async function buildSite(comparisonFile, outputDirectory) {
 
 function renderIndex(model) {
   const cards = model.apps.map((app) => `<a class="app-card" href="apps/${app.id}/index.html"><span>${escapeHtml(app.name)}</span><small>${escapeHtml(app.version)} · ${escapeHtml(app.guiFramework)} · ${escapeHtml(app.materializationModes.join(", "))}</small></a>`).join("");
-  const startStatus = model.compatibility["app-start-v1"] ?? { status: "unpaired", reason: "No app-start results were supplied." };
-  const switchStatus = model.compatibility["session-switch-v1"] ?? { status: "unpaired", reason: "No session-switch results were supplied." };
+  const startScenarioId = model.apps.find((app) => app.appStart)?.appStart.scenario.id;
+  const switchScenarioId = model.apps.find((app) => app.sessionSwitch)?.sessionSwitch.scenario.id;
+  const startStatus = model.compatibility[startScenarioId] ?? { status: "unpaired", reason: "No app-start results were supplied." };
+  const switchStatus = model.compatibility[switchScenarioId] ?? { status: "unpaired", reason: "No session-switch results were supplied." };
   const startRows = model.apps.flatMap((app) => app.appStart ? [
     { label: `${app.name} — first launch`, metric: app.appStart.derivation.summary["new-application-state"] },
     { label: `${app.name} — repeat launch`, metric: app.appStart.derivation.summary["initialized-application-state"] },
@@ -48,13 +50,13 @@ function renderIndex(model) {
     ["Warm session switch — across workspaces", "across-workspaces-warm"],
     ["Cold session switch — across workspaces", "across-workspaces-cold"],
   ].map(([title, key]) => switchTable(title, model.apps.filter((app) => app.sessionSwitch), key)).join("");
-  const latencySeries = model.apps.flatMap((app) => app.sessionSwitch ? [{ label: app.name, points: app.sessionSwitch.derivation.summary.transcriptSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.p95 })) }] : []);
-  const cpuSeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.cpuPercent })) }));
-  const memorySeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.rssMiB })) }));
+  const latencySeries = model.apps.flatMap((app) => app.sessionSwitch ? [{ label: app.name, points: app.sessionSwitch.derivation.summary.transcriptSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.average })) }] : []);
+  const cpuSeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: averageRepeatedPoints(app.sessionSwitch.resources.trend, "cpuPercent") }));
+  const memorySeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: averageRepeatedPoints(app.sessionSwitch.resources.trend, "rssMiB") }));
   const sessionComparison = switchStatus.status === "valid"
-    ? `${laneSections}${chart("Session-switch latency growth", latencySeries, "Transcript size (MiB)", "p95 latency (ms)")}${resourceStatus(model.apps)}${chart("CPU growth with session switching", cpuSeries, "Switch sequence", "CPU (%)")}${chart("Memory growth with session switching", memorySeries, "Switch sequence", "RSS (MiB)")}`
+    ? `${laneSections}${chart("Session-switch latency growth", latencySeries, "Transcript size (MiB)", "Average latency (ms)")}${resourceStatus(model.apps)}${chart("CPU growth with session switching", cpuSeries, "Switch sequence", "CPU (%)")}${chart("Memory growth with session switching", memorySeries, "Switch sequence", "RSS (MiB)")}`
     : comparisonUnavailable("Session switching", switchStatus, model.apps, "sessionSwitch");
-  const body = `<section class="hero"><p class="eyebrow">Public comparison · ${escapeHtml(model.provenance)}</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="notice">This corpus uses pinned OpenCode events. Apps with production OpenCode history support should use it; translations are allowed and disclosed. The current entries are Electron apps, but other GUI frameworks are welcome.</div></section><nav class="app-grid" aria-label="Application reports">${cards}</nav>${appStart}${sessionComparison}<section class="panel"><h2>What this benchmark does not measure</h2><p>It does not measure Web Vitals, model or harness speed, streaming output, tool or diff rendering, or terminal coding agents. Those require separately reviewed scenarios.</p><p>Have another useful metric? Propose its definition and scenario version in a pull request.</p></section>`;
+  const body = `<section class="hero"><p class="eyebrow">Public comparison · ${escapeHtml(model.provenance)}</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="notice">This corpus uses pinned OpenCode events. Apps with production OpenCode history support should use it; translations are allowed and disclosed. The current entries are Electron apps, but other GUI frameworks are welcome.</div></section><nav class="app-grid" aria-label="Application reports">${cards}</nav>${appStart}${sessionComparison}<section class="panel"><h2>What this benchmark does not measure</h2><p>It does not measure Web Vitals, model or harness speed, live streaming output, live tool execution, or terminal coding agents. Those require separately reviewed scenarios.</p><p>Have another useful metric? Propose its definition and scenario version in a pull request.</p></section>`;
   return page({ title: model.title, current: "index", body });
 }
 
@@ -71,14 +73,16 @@ function renderApp(model, app) {
     for (const [title, key] of [["Warm within workspace", "within-workspace-warm"], ["Cold within workspace", "within-workspace-cold"], ["Warm across workspaces", "across-workspaces-warm"], ["Cold across workspaces", "across-workspaces-cold"]]) {
       sections.push(switchTable(title, [app], key));
     }
-    sections.push(chart("Latency by transcript size", [{ label: "Within workspace — cold", points: summary.transcriptSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.p95 })) }], "Transcript size (MiB)", "p95 latency (ms)"));
+    sections.push(chart("Latency by transcript size", [{ label: "Within workspace — cold", points: summary.transcriptSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.average })) }], "Transcript size (MiB)", "Average latency (ms)"));
     sections.push(memoryTable(app.sessionSwitch.resources));
     if (app.sessionSwitch.resources?.status === "valid") {
-      sections.push(chart("CPU growth with session switching", [{ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.cpuPercent })) }], "Switch sequence", "CPU (%)"));
-      sections.push(chart("Memory growth with session switching", [{ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.rssMiB })) }], "Switch sequence", "RSS (MiB)"));
+      sections.push(chart("CPU growth with session switching", [{ label: app.name, points: averageRepeatedPoints(app.sessionSwitch.resources.trend, "cpuPercent") }], "Switch sequence", "CPU (%)"));
+      sections.push(chart("Memory growth with session switching", [{ label: app.name, points: averageRepeatedPoints(app.sessionSwitch.resources.trend, "rssMiB") }], "Switch sequence", "RSS (MiB)"));
     }
   }
-  const body = `<section class="hero compact"><p class="eyebrow"><a href="../../index.html">← All applications</a></p><h1>${escapeHtml(app.name)}</h1><p>Individual result page for ${escapeHtml(model.title)}.</p></section>${sections.join("")}<section class="panel"><h2>Definitions</h2><p><strong>Active memory</strong> is measured while completed historical sessions progress from 1 MiB through 32 MiB. <strong>Idle</strong> means the fixed 1 MiB control transcript is fully ready with no benchmark input for 5 seconds. No live session stream is running.</p></section>`;
+  const maximumMiB = app.sessionSwitch?.derivation.summary.transcriptSizeTrend.at(-1)?.transcriptBytes / 1048576;
+  const activeRange = Number.isFinite(maximumMiB) ? `1 MiB through ${format(maximumMiB)} MiB` : "the configured session sizes";
+  const body = `<section class="hero compact"><p class="eyebrow"><a href="../../index.html">← All applications</a></p><h1>${escapeHtml(app.name)}</h1><p>Individual result page for ${escapeHtml(model.title)}.</p></section>${sections.join("")}<section class="panel"><h2>Definitions</h2><p><strong>Active memory</strong> is measured while completed historical sessions progress across ${activeRange}. <strong>Idle</strong> means the fixed 1 MiB control transcript is fully ready with no benchmark input for the scenario's configured idle window. No live session stream is running.</p></section>`;
   return page({ title: `${app.name} · ${model.title}`, current: app.id, body });
 }
 
@@ -116,14 +120,22 @@ function formatBytes(bytes) {
 function memoryTable(resources) {
   if (!resources || resources.status !== "valid") return `<section class="panel"><h3>Memory consumption</h3><p class="status invalid">${escapeHtml(resources?.reason ?? "Unavailable")}</p></section>`;
   const rows = [
-    ["Baseline idle average", resources.baselineIdleAverageRssMiB, "5 seconds on the ready 1 MiB control transcript before switching"],
-    ["Active average", resources.activeAverageRssMiB, "Average during the progressive 1–32 MiB switch workload"],
-    ["Active maximum", resources.activeMaximumRssMiB, "Largest active process-family RSS sample"],
+    ["Baseline idle average", resources.baselineIdleAverageRssMiB, "Configured idle window on the ready 1 MiB control transcript before switching"],
+    ["Active average", resources.activeAverageRssMiB, "Average during the progressive session-switch workload"],
+    ["Active sampled maximum", resources.activeMaximumRssMiB, "Largest observed active process-family RSS sample; not an operating-system true peak"],
     ["Active p95", resources.activeP95RssMiB, "Nearest-rank p95 of active samples"],
-    ["Ending idle average", resources.endingIdleAverageRssMiB, "5 seconds after returning to the same control transcript"],
+    ["Ending idle average", resources.endingIdleAverageRssMiB, "Configured idle window after returning to the same control transcript"],
     ["Retained RSS growth", resources.retainedRssGrowthMiB, "Ending idle average minus baseline idle average"],
   ];
   return `<section class="panel"><h3>Memory consumption</h3><div class="table-scroll"><table><caption>Whole-application memory result</caption><thead><tr><th scope="col">Metric</th><th scope="col">Summed RSS</th><th scope="col">Definition</th></tr></thead><tbody>${rows.map(([label, value, description]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${format(value)} MiB</td><td>${escapeHtml(description)}</td></tr>`).join("")}</tbody></table></div></section>`;
+}
+
+function averageRepeatedPoints(points, valueKey) {
+  const grouped = Map.groupBy(points, (point) => point.switchSequence);
+  return [...grouped].toSorted(([left], [right]) => left - right).map(([x, values]) => ({
+    x,
+    y: values.reduce((total, point) => total + point[valueKey], 0) / values.length,
+  }));
 }
 
 async function replaceGeneratedDirectory(output, temporary) {

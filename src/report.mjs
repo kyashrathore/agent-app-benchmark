@@ -10,7 +10,7 @@ export function renderReport(result) {
     `- Scenario digest: \`${result.scenario.digestSha256}\``,
     `- Corpus digest: \`${result.corpus.digestSha256}\``,
     `- Run profile: \`${result.runProfile}\``,
-    `- Repetitions per case: \`${result.repetitions}\``,
+    `- Configured repetitions: \`${result.repetitions}\``,
     "",
   ];
   if (result.scenario.kind === "app-start") renderAppStart(lines, result.derivation.summary);
@@ -59,7 +59,15 @@ function renderSessionSwitch(lines, summary, resources) {
     );
   }
   lines.push(
-    "Cold means the destination has never been active in the measured app process. Warm means exactly one valid activation occurred before the measured revisit. Transcript size is final completed UTF-8 text payload bytes, not database or event-envelope bytes.",
+    "Cold means the unique destination has never been active in the measured app process. Warm means exactly one valid activation occurred before returning to control and measuring the revisit. Transcript bytes count completed text, reasoning, serialized tool input, and tool output—not database or event-envelope bytes.",
+    "",
+    "### Latency growth by transcript size",
+    "",
+    "| Transcript size | Average (ms) | Maximum (ms) | p95 (ms) | Valid / attempted |",
+    "|---:|---:|---:|---:|---:|",
+    ...summary.transcriptSizeTrend.map((point) => metricRow(formatBytes(point.transcriptBytes), point)),
+    "",
+    "The size sweep is within-workspace/cold and counterbalanced separately from the ascending resource-retention workload.",
     "",
   );
   renderResources(lines, resources);
@@ -72,15 +80,15 @@ function renderResources(lines, resources) {
     return;
   }
   lines.push(
-    "Active means the progressive session-switch workload in which completed chat transcripts move from exactly 1 MiB through 32 MiB. No session stream or live agent is running.",
+    "Active means the progressive session-switch workload in which completed historical sessions move through every configured size. No session stream or live agent is running.",
     "",
     "| Metric | Summed process-family RSS (MiB) | Description |",
     "|---|---:|---|",
-    `| Baseline idle average | ${number(resources.baselineIdleAverageRssMiB)} | Average during 5 seconds on the fixed 1 MiB control transcript before switching. |`,
+    `| Baseline idle average | ${number(resources.baselineIdleAverageRssMiB)} | Average during the configured idle window on the fixed 1 MiB control transcript before switching. |`,
     `| Active average | ${number(resources.activeAverageRssMiB)} | Average of 250 ms samples during the full progressive switch workload. |`,
-    `| Active maximum | ${number(resources.activeMaximumRssMiB)} | Largest sample during the active workload. |`,
+    `| Active sampled maximum | ${number(resources.activeMaximumRssMiB)} | Largest observed sample during the active workload; not an operating-system true peak. |`,
     `| Active p95 | ${number(resources.activeP95RssMiB)} | Nearest-rank p95 across active samples. |`,
-    `| Ending idle average | ${number(resources.endingIdleAverageRssMiB)} | Average during 5 seconds after returning to the same 1 MiB control transcript. |`,
+    `| Ending idle average | ${number(resources.endingIdleAverageRssMiB)} | Average during the configured idle window after returning to the same 1 MiB control transcript. |`,
     `| Retained RSS growth | ${number(resources.retainedRssGrowthMiB)} | Ending idle average minus baseline idle average; negative values remain visible. |`,
     "",
     "CPU growth and memory growth use the preserved per-switch boundary points in `result.json`.",

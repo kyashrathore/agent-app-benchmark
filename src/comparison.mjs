@@ -51,17 +51,26 @@ export async function loadComparison(manifestFile) {
 function validatePairedSchedule(results) {
   assertSharedComparisonRepetitions(results);
   const scenarioCounts = Map.groupBy(results, (item) => item.result.scenario.id);
-  if (["app-start-v1", "session-switch-v1"].some((id) => (scenarioCounts.get(id)?.length ?? 0) < 2)) return;
+  const startId = results.find((item) => item.result.scenario.kind === "app-start")?.result.scenario.id;
+  const switchId = results.find((item) => item.result.scenario.kind === "session-switch")?.result.scenario.id;
+  if (!startId || !switchId || [startId, switchId].some((id) => (scenarioCounts.get(id)?.length ?? 0) < 2)) return;
+  if (results.some((item) => item.result.scenario.kind === "app-start" && item.result.scenario.id !== startId)
+    || results.some((item) => item.result.scenario.kind === "session-switch" && item.result.scenario.id !== switchId)) {
+    throw new Error("Comparison cannot mix scenario versions for the same scenario kind.");
+  }
   const ordered = [...results].toSorted((left, right) => left.result.provenance.scheduleOrdinal - right.result.provenance.scheduleOrdinal);
   const steps = ordered.map((item, index) => ({ ordinal: index + 1, appId: item.result.app.id, scenarioId: item.result.scenario.id }));
   if (ordered.some((item, index) => item.result.provenance.scheduleOrdinal !== index + 1)) throw new Error("Comparison schedule ordinals must be unique and contiguous.");
-  const apps = [...new Set(steps.filter((step) => step.scenarioId === "app-start-v1").map((step) => step.appId))];
+  const apps = [...new Set(steps.filter((step) => step.scenarioId === startId).map((step) => step.appId))];
   const expected = [
-    ...apps.map((appId, index) => ({ ordinal: index + 1, appId, scenarioId: "app-start-v1" })),
-    ...[...apps].reverse().map((appId, index) => ({ ordinal: apps.length + index + 1, appId, scenarioId: "session-switch-v1" })),
+    ...apps.map((appId, index) => ({ ordinal: index + 1, appId, scenarioId: startId })),
+    ...[...apps].reverse().map((appId, index) => ({ ordinal: apps.length + index + 1, appId, scenarioId: switchId })),
   ];
-  if (digest(steps) !== digest(expected)) throw new Error("Comparison does not follow the balanced mirrored V1 schedule.");
-  const schedule = { version: 1, policy: "balanced-mirrored-v1", steps };
+  if (digest(steps) !== digest(expected)) throw new Error("Comparison does not follow the balanced mirrored schedule.");
+  const startVersion = Number(startId.match(/-v(\d+)$/)?.[1] ?? 1);
+  const switchVersion = Number(switchId.match(/-v(\d+)$/)?.[1] ?? 1);
+  const version = startVersion === switchVersion ? startVersion : 1;
+  const schedule = { version, policy: `balanced-mirrored-v${version}`, steps };
   const scheduleDigest = digest(schedule);
   if (ordered.some((item) => item.result.provenance.comparisonScheduleDigestSha256 !== scheduleDigest)) throw new Error("Comparison schedule digest does not match its results.");
 }
@@ -101,6 +110,17 @@ function compatibilityKey(result) {
     sourceEventSchema: result.sourceEventFormat.schemaDigestSha256,
     runProfile: result.runProfile,
     repetitions: result.repetitions,
-    environment: result.environment,
+    environment: {
+      platform: result.environment.platform,
+      architecture: result.environment.architecture,
+      osRelease: result.environment.osRelease,
+      logicalCpuCount: result.environment.logicalCpuCount,
+      cpuModel: result.environment.cpuModel,
+      totalMemoryBytes: result.environment.totalMemoryBytes,
+      nodeVersion: result.environment.nodeVersion,
+      guiFramework: result.environment.guiFramework,
+      powerSource: result.environment.powerSource,
+      lowPowerMode: result.environment.lowPowerMode,
+    },
   });
 }

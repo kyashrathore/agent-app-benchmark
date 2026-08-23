@@ -17,9 +17,9 @@
     "test": "node --test",
     "test:resource-monitor-integration": "RESOURCE_MONITOR_BIN=./native/resource-monitor/target/release/agent-app-resource-monitor node --test tests/resource-monitor.integration.test.mjs",
     "validate": "node ./bin/agent-app-benchmark.mjs validate",
-    "generate:corpus": "node ./bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-transcripts-v1 --output artifacts/corpora/opencode-completed-transcripts-v1",
+    "generate:corpus": "node ./bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-sessions-v3 --output artifacts/corpora/opencode-completed-sessions-v3",
     "site:build": "node ./bin/agent-app-benchmark.mjs site build --comparison results/comparisons/initial-macos-arm64/comparison.json --output artifacts/sites/initial-macos-arm64",
-    "lint": "node --check bin/agent-app-benchmark.mjs && find src examples tests -type f \\( -name '*.mjs' -o -name '*.js' \\) -print0 | xargs -0 -n1 node --check"
+    "lint": "node --check bin/agent-app-benchmark.mjs && find src examples scripts tests -type f \\( -name '*.mjs' -o -name '*.js' \\) -print0 | xargs -0 -n1 node --check"
   },
   "dependencies": {
     "ajv": "8.20.0"

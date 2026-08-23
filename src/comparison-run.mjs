@@ -13,10 +13,12 @@ const execute = promisify(execFile);
 
 export function buildComparisonSchedule(appIds, scenarioIds = ["app-start-v1", "session-switch-v1"]) {
   if (!Array.isArray(appIds) || appIds.length < 2 || new Set(appIds).size !== appIds.length) throw new Error("A comparison requires at least two distinct applications.");
-  if (scenarioIds.length !== 2) throw new Error("V1 comparison scheduling requires exactly two scenarios.");
+  if (scenarioIds.length !== 2) throw new Error("Comparison scheduling requires exactly two scenarios.");
   const ordered = [appIds, [...appIds].reverse()];
   const steps = scenarioIds.flatMap((scenarioId, scenarioIndex) => ordered[scenarioIndex].map((appId) => ({ appId, scenarioId })));
-  return { version: 1, policy: "balanced-mirrored-v1", steps: steps.map((step, index) => ({ ordinal: index + 1, ...step })) };
+  const versions = scenarioIds.map((id) => Number(id.match(/-v(\d+)$/)?.[1] ?? 1));
+  const version = new Set(versions).size === 1 ? versions[0] : 1;
+  return { version, policy: `balanced-mirrored-v${version}`, steps: steps.map((step, index) => ({ ordinal: index + 1, ...step })) };
 }
 
 export async function runComparison(configFile) {
@@ -36,7 +38,12 @@ export async function runComparison(configFile) {
 }
 
 async function runScheduledComparison(config, outputRoot, corpusDirectory) {
-  const corpus = await readRegistered("corpus", "opencode-completed-transcripts-v1");
+  const schedule = buildComparisonSchedule(config.apps.map((app) => app.id), config.scenarioIds);
+  const scenarios = new Map();
+  for (const scenarioId of new Set(schedule.steps.map((step) => step.scenarioId))) scenarios.set(scenarioId, await readRegistered("scenario", scenarioId));
+  const corpusIds = new Set([...scenarios.values()].map((scenario) => scenario.value.corpusId));
+  if (corpusIds.size !== 1) throw new Error("Paired comparison scenarios must share one corpus.");
+  const corpus = await readRegistered("corpus", [...corpusIds][0]);
   const preparedCorpus = config.corpusDirectory
     ? await verifyCorpus(corpusDirectory)
     : await writeCorpus(corpus.value, corpusDirectory);
@@ -44,11 +51,10 @@ async function runScheduledComparison(config, outputRoot, corpusDirectory) {
 
   const apps = new Map();
   for (const appConfig of config.apps) apps.set(appConfig.id, { config: appConfig, registered: await readRegistered("app", appConfig.id) });
-  const schedule = buildComparisonSchedule(config.apps.map((app) => app.id));
   const scheduleDigestSha256 = digest(schedule);
   const resultEntries = [];
   for (const step of schedule.steps) {
-    const scenario = await readRegistered("scenario", step.scenarioId);
+    const scenario = scenarios.get(step.scenarioId);
     const app = apps.get(step.appId);
     const output = path.join(outputRoot, "runs", step.appId, step.scenarioId);
     await runBenchmark({
@@ -64,7 +70,7 @@ async function runScheduledComparison(config, outputRoot, corpusDirectory) {
       corpusDirectory: preparedCorpus.path,
       runProfile: config.runProfile,
       repetitions: config.repetitions,
-      resourceMonitor: step.scenarioId === "session-switch-v1" ? path.resolve(config.resourceMonitor) : undefined,
+      resourceMonitor: scenario.value.kind === "session-switch" ? path.resolve(config.resourceMonitor) : undefined,
       output,
       runId: `${config.id}-${step.ordinal}-${step.appId}-${step.scenarioId}`,
       comparisonRunId: config.id,
@@ -95,7 +101,7 @@ async function runScheduledComparison(config, outputRoot, corpusDirectory) {
 }
 
 export function validateComparisonConfig(config) {
-  const allowed = new Set(["id", "title", "description", "provenance", "frameworkRevision", "runProfile", "repetitions", "resourceMonitor", "corpusDirectory", "outputRoot", "apps"]);
+  const allowed = new Set(["id", "title", "description", "provenance", "frameworkRevision", "runProfile", "repetitions", "scenarioIds", "resourceMonitor", "corpusDirectory", "outputRoot", "apps"]);
   if (!config || typeof config !== "object" || Array.isArray(config) || Object.keys(config).some((key) => !allowed.has(key))) throw new Error("Comparison run config contains unsupported fields.");
   if (!/^[a-z0-9][a-z0-9-]*$/.test(config.id ?? "")) throw new Error("Comparison run id is invalid.");
   if (typeof config.title !== "string" || config.title.length === 0 || config.title.length > 200) throw new Error("Comparison title is invalid.");
@@ -106,7 +112,8 @@ export function validateComparisonConfig(config) {
   if (config.repetitions !== undefined && (!Number.isInteger(config.repetitions) || config.repetitions < 1 || config.repetitions > 100)) throw new Error("Comparison repetitions must be an integer from 1 through 100.");
   if (typeof config.resourceMonitor !== "string" || typeof config.outputRoot !== "string") throw new Error("Comparison resourceMonitor and outputRoot are required.");
   if (!Array.isArray(config.apps)) throw new Error("Comparison apps are required.");
-  buildComparisonSchedule(config.apps.map((app) => app?.id));
+  if (config.scenarioIds !== undefined && (!Array.isArray(config.scenarioIds) || config.scenarioIds.some((id) => typeof id !== "string"))) throw new Error("Comparison scenarioIds must be an array of scenario ids.");
+  buildComparisonSchedule(config.apps.map((app) => app?.id), config.scenarioIds);
   for (const app of config.apps) {
     const keys = Object.keys(app ?? {});
     if (keys.some((key) => !["id", "driver", "args", "env", "cwd"].includes(key)) || typeof app.driver !== "string") throw new Error("Comparison app driver config is invalid.");

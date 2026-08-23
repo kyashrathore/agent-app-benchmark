@@ -13,17 +13,29 @@ const DRIVER = path.resolve("examples/mock-driver/mock-driver.mjs");
 const SMALL = {
   schemaVersion: 1,
   id: "test-conformance-corpus-v1",
-  generator: "opencode-completed-transcripts-v1",
+  generator: "opencode-completed-sessions-v2",
   seed: "conformance-test",
   sourceEventFormat: {
-    id: "opencode-event-v1",
+    id: "opencode-event-v2",
     sourceRevision: "a9f7081d4015b0cc22ed67156e042b482a8d064a",
     envelope: "EventV2.SerializedEvent",
     eventTypes: ["session.created.1", "message.updated.1", "message.part.updated.1"],
   },
   workspaceIds: ["workspace-a", "workspace-b"],
-  transcriptBytes: [16],
-  messageChunkBytes: 8,
+  transcriptBytes: [4096],
+  sessionProfiles: [{
+    transcriptBytes: 4096,
+    userMessages: 1,
+    assistantMessages: 1,
+    toolCalls: 1,
+    patches: 0,
+    payloadPermille: { text: 250, reasoning: 250, toolInput: 250, toolOutput: 250 },
+  }],
+  derivation: {
+    method: "rounded structural distributions with entirely synthetic payloads",
+    sourceFamilies: ["opencode", "claude-code", "codex"],
+    privateContentCopied: false,
+  },
   description: "Small CLI conformance corpus.",
 };
 
@@ -58,7 +70,7 @@ test("CLI conformance sends the complete canonical prepare identity", async () =
 test("CLI runs a local custom scenario and marks it non-comparable", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-custom-scenario-"));
   try {
-    const corpusDefinition = { ...SMALL, id: "custom-corpus-v1", transcriptBytes: [2048], messageChunkBytes: 1024 };
+    const corpusDefinition = { ...SMALL, id: "custom-corpus-v1" };
     const scenario = {
       schemaVersion: 1,
       id: "custom-start-v1",

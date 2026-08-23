@@ -22,29 +22,44 @@ export function assertPrepared(result, expected) {
   return result;
 }
 
-export function assertLaunch(result) {
+export function assertLaunch(result, options = {}) {
   if (!result?.ready || !Array.isArray(result.processes) || result.processes.length === 0) throw new Error("Driver launch did not reach readiness with process roots.");
   for (const process of result.processes) {
     if (!Number.isInteger(process.pid) || process.pid < 1 || !Number.isFinite(process.startTimeMs) || process.startTimeMs < 0 || process.owner !== "application") {
       throw new Error("Driver launch returned an invalid application process identity.");
+    }
+    if (options.requireProcessRoles && !["main", "renderer", "gpu", "utility", "external-helper"].includes(process.role)) {
+      throw new Error("Driver launch must classify every declared process root by role.");
     }
   }
   assertReceipt(result.readiness, "launch readiness");
   return result;
 }
 
-export function normalizeExecution(result, benchmarkCase) {
+export function normalizeExecution(result, benchmarkCase, options = {}) {
   const base = { case: benchmarkCase, receivedAt: new Date().toISOString() };
   if (!result || result.caseId !== benchmarkCase.caseId) return { ...base, status: "invalid", reason: "Driver returned the wrong case id." };
   if (!Number.isFinite(result.durationMs) || result.durationMs < 0) return { ...base, status: "invalid", reason: "Driver returned an invalid duration." };
   try {
-    assertReceipt(result.readiness, "execution readiness");
+    assertReceipt(result.readiness, "execution readiness", options);
     if (result.readiness.checks.some((check) => check.passed !== true)) return { ...base, status: "invalid", durationMs: result.durationMs, reason: "One or more readiness checks failed.", readiness: result.readiness };
     if (!result.clock || result.clock.kind !== "single-monotonic-clock" || !Number.isFinite(result.clock.start) || !Number.isFinite(result.clock.end) || result.clock.end < result.clock.start) {
       return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver returned invalid one-clock timing evidence.", readiness: result.readiness };
     }
     if (Math.abs((result.clock.end - result.clock.start) - result.durationMs) > 0.5) {
       return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver duration does not match its monotonic clock interval.", readiness: result.readiness, clock: result.clock };
+    }
+    if (options.requireTimingEvidence) {
+      for (const check of result.readiness.checks) {
+        if (!Number.isFinite(check.observedAt) || check.observedAt < result.clock.start || check.observedAt > result.clock.end + 0.5) {
+          return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver readiness evidence is missing or outside the timed interval.", readiness: result.readiness, clock: result.clock };
+        }
+      }
+      const evidence = Object.fromEntries(result.readiness.checks.map((check) => [check.id, check.observedAt]));
+      if (evidence["two-presentations"] < evidence["first-fold-painted"]
+        || Math.abs(Math.max(...Object.values(evidence)) - result.clock.end) > 0.5) {
+        return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver readiness milestones do not support the reported endpoint.", readiness: result.readiness, clock: result.clock };
+      }
     }
   } catch (error) {
     return { ...base, status: "invalid", durationMs: result.durationMs, reason: error.message };
@@ -68,12 +83,13 @@ function assertIdentity(value, fields, label) {
   }
 }
 
-function assertReceipt(receipt, label) {
+function assertReceipt(receipt, label, options = {}) {
   if (!receipt || receipt.endpoint !== "correct-content-painted-and-input-ready" || !Array.isArray(receipt.checks)) throw new Error(`Driver ${label} receipt is missing.`);
   if (receipt.checks.length !== REQUIRED_READINESS_CHECKS.length || receipt.checks.some((check, index) => check?.id !== REQUIRED_READINESS_CHECKS[index])) {
     throw new Error(`Driver ${label} receipt does not contain the exact required checks.`);
   }
   for (const check of receipt.checks) {
     if (typeof check.id !== "string" || typeof check.passed !== "boolean") throw new Error(`Driver ${label} check is invalid.`);
+    if (options.requireTimingEvidence && !Number.isFinite(check.observedAt)) throw new Error(`Driver ${label} check has no monotonic observation time.`);
   }
 }

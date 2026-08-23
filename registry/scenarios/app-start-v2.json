@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "app-start-v2",
+  "title": "Application start",
+  "description": "Measure new-process launch to painted and trusted-input-ready application surface using the privacy-derived coding-session corpus.",
+  "kind": "app-start",
+  "corpusId": "opencode-completed-sessions-v2",
+  "cases": {
+    "startModes": ["new-application-state", "initialized-application-state"]
+  },
+  "metrics": [
+    {
+      "id": "start.duration_ms",
+      "description": "Elapsed monotonic time immediately before process spawn until the 1 MiB anchor session is correctly painted across two presentation opportunities and the composer accepts trusted input.",
+      "unit": "ms"
+    }
+  ],
+  "runProfiles": {
+    "smoke": 1,
+    "quick": 2,
+    "publication": 2
+  }
+}

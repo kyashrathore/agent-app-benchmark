@@ -16,19 +16,22 @@ export function percentile(values, percentileRank) {
   return sorted[Math.min(index, sorted.length - 1)];
 }
 
-export function summary(values, attempted = values.length) {
+export function summary(values, attempted = values.length, options = {}) {
   requireValues(values);
   if (!Number.isInteger(attempted) || attempted < values.length) throw new Error("Attempted count cannot be smaller than valid values.");
-  return {
+  const result = {
     average: round(average(values)),
     maximum: round(maximum(values)),
-    p95: round(percentile(values, 95)),
     valid: values.length,
     attempted,
   };
+  if (options.minimumP95Samples && values.length < options.minimumP95Samples) {
+    return { ...result, p95: null, p95Status: `requires-${options.minimumP95Samples}-valid-observations` };
+  }
+  return { ...result, p95: round(percentile(values, 95)) };
 }
 
-export function summaryOrUnavailable(values, attempted, reason = "No valid observations.") {
+export function summaryOrUnavailable(values, attempted, reason = "No valid observations.", options = {}) {
   if (values.length !== attempted) {
     return {
       status: "invalid",
@@ -37,7 +40,7 @@ export function summaryOrUnavailable(values, attempted, reason = "No valid obser
       reason: values.length === 0 ? reason : `Only ${values.length} of ${attempted} required observations were valid.`,
     };
   }
-  return { status: "valid", ...summary(values, attempted) };
+  return { status: "valid", ...summary(values, attempted, options) };
 }
 
 function requireValues(values) {

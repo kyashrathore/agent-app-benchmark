@@ -1,29 +1,98 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/corpus-v1.schema.json",
-  "title": "OpenCode completed transcript corpus definition v1",
+  "title": "Privacy-derived OpenCode completed-session corpus definition v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "generator", "seed", "sourceEventFormat", "workspaceIds", "transcriptBytes", "messageChunkBytes", "description"],
+  "required": ["schemaVersion", "id", "generator", "seed", "sourceEventFormat", "workspaceIds", "transcriptBytes", "description"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
-    "generator": { "const": "opencode-completed-transcripts-v1" },
+    "generator": { "enum": ["opencode-completed-transcripts-v1", "opencode-completed-sessions-v2", "opencode-completed-sessions-v3"] },
     "seed": { "type": "string", "minLength": 1, "maxLength": 256 },
     "sourceEventFormat": {
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "sourceRevision", "envelope", "eventTypes"],
       "properties": {
-        "id": { "const": "opencode-event-v1" },
+        "id": { "enum": ["opencode-event-v1", "opencode-event-v2"] },
         "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "envelope": { "const": "EventV2.SerializedEvent" },
         "eventTypes": { "type": "array", "const": ["session.created.1", "message.updated.1", "message.part.updated.1"] }
       }
     },
     "workspaceIds": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }, "uniqueItems": true },
-    "transcriptBytes": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "integer", "minimum": 1, "maximum": 67108864 }, "uniqueItems": true },
+    "transcriptBytes": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "type": "integer", "minimum": 4096, "maximum": 268435456 }, "uniqueItems": true },
+    "sessionProfiles": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/$defs/sessionProfile" } },
     "messageChunkBytes": { "type": "integer", "minimum": 1024, "maximum": 1048576 },
+    "benchmarkTopology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["standardTranscriptBytes", "latencySamplesPerProcess", "sizeSamplesPerProcess"],
+      "properties": {
+        "standardTranscriptBytes": { "type": "integer", "minimum": 4096, "maximum": 268435456 },
+        "latencySamplesPerProcess": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "sizeSamplesPerProcess": { "type": "integer", "minimum": 1, "maximum": 10 }
+      }
+    },
+    "derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "sourceFamilies", "privateContentCopied"],
+      "properties": {
+        "method": { "const": "rounded structural distributions with entirely synthetic payloads" },
+        "sourceFamilies": { "type": "array", "const": ["opencode", "claude-code", "codex"] },
+        "privateContentCopied": { "const": false }
+      }
+    },
     "description": { "type": "string", "minLength": 1, "maxLength": 2000 }
+  },
+  "oneOf": [
+    {
+      "required": ["messageChunkBytes"],
+      "properties": {
+        "generator": { "const": "opencode-completed-transcripts-v1" },
+        "sourceEventFormat": { "type": "object", "properties": { "id": { "const": "opencode-event-v1" } } }
+      }
+    },
+    {
+      "required": ["sessionProfiles", "derivation"],
+      "properties": {
+        "generator": { "const": "opencode-completed-sessions-v2" },
+        "sourceEventFormat": { "type": "object", "properties": { "id": { "const": "opencode-event-v2" } } }
+      }
+    },
+    {
+      "required": ["sessionProfiles", "derivation", "benchmarkTopology"],
+      "properties": {
+        "generator": { "const": "opencode-completed-sessions-v3" },
+        "sourceEventFormat": { "type": "object", "properties": { "id": { "const": "opencode-event-v2" } } }
+      }
+    }
+  ],
+  "$defs": {
+    "sessionProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transcriptBytes", "userMessages", "assistantMessages", "toolCalls", "patches", "payloadPermille"],
+      "properties": {
+        "transcriptBytes": { "type": "integer", "minimum": 4096, "maximum": 268435456 },
+        "userMessages": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "assistantMessages": { "type": "integer", "minimum": 1, "maximum": 50000 },
+        "toolCalls": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "patches": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "payloadPermille": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text", "reasoning", "toolInput", "toolOutput"],
+          "properties": {
+            "text": { "type": "integer", "minimum": 1, "maximum": 1000 },
+            "reasoning": { "type": "integer", "minimum": 0, "maximum": 1000 },
+            "toolInput": { "type": "integer", "minimum": 0, "maximum": 1000 },
+            "toolOutput": { "type": "integer", "minimum": 0, "maximum": 1000 }
+          }
+        }
+      }
+    }
   }
 }

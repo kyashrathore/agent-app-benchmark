@@ -1,10 +1,10 @@
 # Agent App Benchmark
 
-Agent App Benchmark is a public, reproducible performance benchmark for multi-harness coding-agent GUI applications. V1 measures the GUI handling completed historical sessions; it does not run or compare the coding-agent harness itself.
+Agent App Benchmark is a public, reproducible performance benchmark for multi-harness coding-agent GUI applications. The current V3 scenarios measure GUI handling of completed historical coding sessions; they do not run or compare the coding-agent harness itself.
 
 The first registered applications are [T3 Code](https://github.com/pingdotgg/t3code) and [Claxedo](https://github.com/kyashrathore/Claxedo). Both happen to use Electron. Electron is not a requirement: native, Tauri, Flutter, Qt, browser-based, and other GUI applications are welcome.
 
-## V1 scenarios
+## Current scenarios
 
 ### Application start
 
@@ -23,35 +23,39 @@ Four lanes are reported independently:
 - cold destination across workspaces;
 - warm destination across workspaces.
 
-Cold means the destination has not become active in the measured app process. Warm means exactly one valid activation preceded the measured revisit. Every lane uses exact completed transcript sizes of 1, 2, 4, 8, 16, and 32 MiB and reports arithmetic average, maximum, nearest-rank p95, and valid/attempted observations.
+Cold means the unique destination has never become active in that measured app process. Warm means that destination is activated once to readiness, the driver returns to control, and the revisit is measured. Each configured repetition starts one stabilized process and measures 10 unique 1 MiB destinations per lane, so the default two repetitions provide 20 observations per lane without 40 application launches. Average and sampled maximum are always reported. p95 is reported only with at least 20 valid observations. A separate within-workspace/cold size sweep measures 1, 8, 32, and 128 MiB in a counterbalanced order; it is not derived from the ascending memory workload.
 
 ### Memory and CPU
 
 Memory is one app-level result—not split by app start or workspace relation.
 
-- **Baseline idle:** 60 seconds with the ready 1 MiB control transcript visible and no benchmark input.
-- **Active:** the deterministic session-switch workload progresses completed historical transcripts from 1 MiB through 32 MiB.
-- **Ending idle:** 60 seconds after returning to the same ready 1 MiB control transcript.
+- **Baseline idle:** the configured idle window with the ready 1 MiB control session visible and no benchmark input.
+- **Active:** the deterministic session-switch workload progresses completed historical sessions from 1 MiB through 128 MiB.
+- **Ending idle:** the configured idle window after returning to the same ready 1 MiB control session.
 
-The memory table contains baseline idle average, active average/maximum/p95, ending idle average, and retained RSS growth. CPU and memory growth charts use per-switch resource boundaries. RSS is summed across the driver-declared application process family. CPU percentage uses sampled cumulative CPU-time deltas for every descendant observed inside the boundary; new descendants count from process birth and exiting descendants count through their final sample. Unobserved work after that final sample is not estimated. 100% means one fully occupied logical core.
+The complete memory workload runs once in a fresh process per configured repetition. Its table contains baseline idle average, active average/sampled-maximum/p95, ending idle average, and retained RSS growth. “Maximum” is the largest observed 250 ms RSS sample, not an operating-system true peak. CPU and memory growth charts average matching boundaries across resource runs. RSS is summed across the driver-declared application process family. CPU percentage uses sampled cumulative CPU-time deltas for every descendant observed inside the boundary; new descendants count from process birth and exiting descendants count through their final sample. Unobserved work after that final sample is not estimated. 100% means one fully occupied logical core.
 
 No live session stream, model call, agent run, or terminal activity occurs during these measurements.
 
 ## Canonical corpus
 
-Every app receives the same deterministic `opencode-completed-transcripts-v1` directory. It streams one NDJSON file per logical session using the pinned OpenCode `EventV2.SerializedEvent` envelope and these durable event types:
+Every app receives the same deterministic `opencode-completed-sessions-v3` directory. It contains one NDJSON file per logical session using the pinned OpenCode `EventV2.SerializedEvent` envelope and these durable event types:
 
 - `session.created.1`
 - `message.updated.1`
 - `message.part.updated.1`
 
-The source baseline is OpenCode revision `a9f7081d4015b0cc22ed67156e042b482a8d064a`. Transcript size counts only UTF-8 bytes in final completed text-part payloads—not IDs, event envelopes, metadata, indexes, database encoding, or storage overhead.
+The source baseline is OpenCode revision `a9f7081d4015b0cc22ed67156e042b482a8d064a`. Payload size counts UTF-8 bytes in completed text, reasoning, serialized tool input, and tool output. It excludes IDs, event envelopes, indexes, database encoding, and storage overhead.
+
+V3 uses rounded structural distributions derived from local OpenCode, Claude Code, and Codex histories, including the long-session tail. Only counts and byte-length distributions were used. The committed shape is rounded, and every emitted prompt, response, reasoning block, tool input, tool output, path, patch, title, timestamp, and identifier is synthetic. No original session text, code, command, repository name, path, URL, or identifier is copied into the corpus. Generation and verification also reject common home-path, email, and secret patterns. Payload parts use deterministic heavy-tailed sizes and varied code/log/JSON-like content rather than equal uniform chunks.
+
+The 53-session corpus has separate destinations for the four latency pools, the counterbalanced size sweep, and the progressive memory workload. It contains 574,619,648 measured payload bytes and 219,073 durable events. The largest individual histories are 128 MiB with 4,400 messages, 12,000 completed tool calls, and 1,000 patch records.
 
 An application with a shipped production OpenCode history path should use it and report `native-opencode`. Other apps may translate the canonical event stream through their ordinary production history path and report `translated`. The website discloses the mode. Drivers are trusted adapters: app-owned tests and review catch mistakes, but the framework does not pretend DOM readback proves driver honesty.
 
 ## Non-goals
 
-V1 does not measure Web Vitals (LCP, INP, CLS, FCP, or TTFB), streaming output, live agent or model execution, embedded terminal coding agents, tool/diff/reasoning rendering, or a composite score. Terminal-agent and rich-content work can be added later as separately reviewed scenario versions.
+V3 does not measure Web Vitals (LCP, INP, CLS, FCP, or TTFB), streaming output, live agent or model execution, embedded terminal coding agents, or a composite score. It does include completed historical text, reasoning, tool, and patch records because those are ordinary session-GUI load.
 
 ## Install and validate
 
@@ -70,21 +74,21 @@ Generate and verify the public corpus:
 
 ```bash
 node bin/agent-app-benchmark.mjs corpus generate \
-  --corpus opencode-completed-transcripts-v1 \
-  --output artifacts/corpora/opencode-completed-transcripts-v1
+  --corpus opencode-completed-sessions-v3 \
+  --output artifacts/corpora/opencode-completed-sessions-v3
 
 node bin/agent-app-benchmark.mjs corpus verify \
-  --input artifacts/corpora/opencode-completed-transcripts-v1
+  --input artifacts/corpora/opencode-completed-sessions-v3
 ```
 
-Run an app-owned driver:
+Run an app-owned driver after it advertises V3 support:
 
 ```bash
 node bin/agent-app-benchmark.mjs run \
   --driver /absolute/path/to/driver-executable \
   --driver-arg optional-driver-argument \
   --app t3 \
-  --scenario session-switch-v1 \
+  --scenario session-switch-v3 \
   --run-profile smoke \
   --repetitions 2 \
   --resource-monitor native/resource-monitor/target/release/agent-app-resource-monitor \
@@ -92,11 +96,24 @@ node bin/agent-app-benchmark.mjs run \
   --output artifacts/runs/t3-session-switch
 ```
 
-Pass `--corpus-directory` to reuse a previously verified corpus instead of regenerating roughly 253 MiB for every scenario.
+Pass `--corpus-directory` to reuse a previously verified corpus instead of regenerating its roughly 691 MiB NDJSON representation for every scenario.
 
-The registered profiles provide defaults (`smoke` uses 1; `quick` and `publication` use 2). Pass `--repetitions N` to override the selected profile for a direct run. For a paired comparison, set the top-level `"repetitions": N` in the comparison config; the framework applies the same count to every app and records it in every result. The allowed range is 1–100.
+Maintainers can recompute a private numeric profile without emitting session content:
 
-For a fair same-machine comparison, use the framework-owned paired runner rather than invoking the four results independently. Copy `examples/comparison-run.example.json`, replace its absolute paths and framework commit, then run:
+```bash
+node scripts/derive-private-session-profile.mjs \
+  --open-code-db /absolute/path/to/opencode.db \
+  --claude-root /absolute/path/to/claude/projects \
+  --codex-root /absolute/path/to/codex/sessions \
+  --samples 48 \
+  --output artifacts/private-profile/structural-profile.json
+```
+
+The output stays under the ignored `artifacts/` directory. It contains aggregate numbers only and is not part of the public corpus.
+
+The registered profiles provide defaults (`smoke` uses 1; `quick` and `publication` use 2). Pass `--repetitions N` to override the selected profile for a direct run. For session switching, one repetition means one latency process with 10 unique destinations per lane, one counterbalanced size sweep in that process, and one independent memory process. For a paired comparison, set the top-level `"repetitions": N`; the framework applies the same count to every app and records it in every result. The allowed range is 1–100.
+
+For a fair same-machine comparison, use the framework-owned paired runner rather than invoking the four results independently. Copy `examples/comparison-run.example.json`, replace its absolute paths and framework commit, then run with `"scenarioIds": ["app-start-v3", "session-switch-v3"]`.
 
 ```bash
 node bin/agent-app-benchmark.mjs comparison run \

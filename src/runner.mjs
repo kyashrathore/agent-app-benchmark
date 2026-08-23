@@ -1,21 +1,23 @@
 import { lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { digest } from "./canonical-json.mjs";
-import { buildLatencyGroups, buildResourceSequence, expandCases, repetitionsFor } from "./cases.mjs";
+import { buildLatencyGroups, buildResourceSequence, buildResourceSequences, expandCases, repetitionsFor } from "./cases.mjs";
 import { assertContract } from "./contracts.mjs";
 import { verifyCorpus, writeCorpus } from "./corpus.mjs";
 import { DriverProcess } from "./driver-process.mjs";
 import { assertHello, assertLaunch, assertPrepared, assertShutdown, normalizeExecution } from "./protocol.mjs";
 import { renderReport } from "./report.mjs";
 import { deriveBoundaryPoint, ResourceMonitor, validateCadence } from "./resource-monitor.mjs";
-import { summarizeObservations, summarizeResources } from "./summarize.mjs";
+import { summarizeObservations, summarizeResourceRuns, summarizeResources } from "./summarize.mjs";
 
 const MAX_RESULT_BYTES = 64 * 1024 * 1024;
 const MAX_PUBLIC_ERROR_LENGTH = 512;
 
 export async function runBenchmark(input, dependencies = {}) {
   const repetitions = repetitionsFor(input.scenario.value, input.runProfile, input.repetitions);
+  const environment = input.environment ?? collectEnvironment();
   const output = path.resolve(input.output);
   await mkdir(path.dirname(output), { recursive: true, mode: 0o700 });
   await mkdir(output, { mode: 0o700 });
@@ -62,7 +64,7 @@ export async function runBenchmark(input, dependencies = {}) {
       await runAppStart({ driver, scenario: input.scenario.value, runProfile: input.runProfile, repetitions, prepared, observations });
     } else {
       await runSessionLatency({ driver, scenario: input.scenario.value, runProfile: input.runProfile, repetitions, prepared, observations, seed: input.corpus.value.seed });
-      const resourceRun = await runResourceWorkload({
+      const resourceRun = await runResourceWorkloads({
         driver,
         scenario: input.scenario.value,
         prepared,
@@ -72,6 +74,7 @@ export async function runBenchmark(input, dependencies = {}) {
         startMonitor,
         delay,
         now,
+        repetitions,
       });
       resources = resourceRun.resources;
       resourceTrace = resourceRun.trace;
@@ -92,7 +95,7 @@ export async function runBenchmark(input, dependencies = {}) {
       comparisonScheduleDigestSha256: input.comparisonScheduleDigestSha256 ?? null,
       scheduleOrdinal: input.scheduleOrdinal ?? null,
     },
-    environment: input.environment ?? collectEnvironment(),
+    environment,
     app: hello.application,
     driver: hello.driver,
     sourceEventFormat: {
@@ -156,7 +159,7 @@ async function runSessionLatency({ driver, scenario, runProfile, repetitions, pr
     const firstObservation = observations.length;
     try {
       launchAttempted = true;
-      assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: group.groupId }, 5 * 60_000));
+      assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: group.groupId }, 5 * 60_000), { requireProcessRoles: scenario.id.endsWith("-v3") });
       for (const benchmarkCase of group.cases) {
         observations.push(await executeSafely(driver, scenario.id, benchmarkCase));
         completed += 1;
@@ -176,9 +179,22 @@ async function runSessionLatency({ driver, scenario, runProfile, repetitions, pr
   }
 }
 
-async function runResourceWorkload({ driver, scenario, prepared, observations, seed, resourceMonitor, startMonitor, delay, now }) {
+async function runResourceWorkloads(input) {
+  const groups = input.scenario.cases.latencySamplesPerProcess
+    ? buildResourceSequences(input.scenario, input.repetitions)
+    : [{ groupId: "progressive-resource", repetition: 0, cases: buildResourceSequence(input.scenario) }];
+  if (groups.length === 1 && !input.scenario.cases.latencySamplesPerProcess) {
+    return runResourceWorkloadOnce({ ...input, group: groups[0] });
+  }
+  const runs = [];
+  for (const group of groups) runs.push((await runResourceWorkloadOnce({ ...input, group, deferDerivation: true })).trace);
+  const trace = { version: 2, runs };
+  return { trace, resources: deriveResourcesFromTrace(trace, input.scenario, input.observations) };
+}
+
+async function runResourceWorkloadOnce({ driver, scenario, prepared, observations, resourceMonitor, startMonitor, delay, now, group, deferDerivation = false }) {
   const resource = scenario.resourceMeasurement;
-  const sequence = buildResourceSequence(scenario);
+  const sequence = group.cases;
   let monitor;
   let launchAttempted = false;
   let failure = resourceMonitor ? null : "No framework resource monitor executable was supplied.";
@@ -188,7 +204,7 @@ async function runResourceWorkload({ driver, scenario, prepared, observations, s
   try {
     if (!resourceMonitor) throw new Error(failure);
     launchAttempted = true;
-    const launch = assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: "progressive-resource" }, 5 * 60_000));
+    const launch = assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: group.groupId }, 5 * 60_000), { requireProcessRoles: scenario.id.endsWith("-v3") });
     monitor = await startMonitor(path.resolve(resourceMonitor), launch.processes, resource.idleSampleIntervalMs);
     await delay(resource.settleBeforeIdleMs);
     windows.baseline = { startMs: now(), endMs: 0 };
@@ -208,7 +224,14 @@ async function runResourceWorkload({ driver, scenario, prepared, observations, s
         afterSampleIndex: monitor.samples.indexOf(after),
       });
     }
-    const controlCase = { caseId: "progressive-resource-return-control", workload: "resource-control", destinationSessionId: "control" };
+    const controlCase = {
+      caseId: group.repetition === 0 && !scenario.cases.latencySamplesPerProcess
+        ? "progressive-resource-return-control"
+        : `progressive-resource-return-control-${group.repetition}`,
+      repetition: group.repetition,
+      workload: "resource-control",
+      destinationSessionId: "control",
+    };
     const controlObservation = await executeSafely(driver, scenario.id, controlCase);
     observations.push(controlObservation);
     windows.active.endMs = now();
@@ -228,7 +251,7 @@ async function runResourceWorkload({ driver, scenario, prepared, observations, s
       }
     }
     if (launchAttempted) {
-      const cleanup = await shutdownSafely(driver, "progressive-resource");
+      const cleanup = await shutdownSafely(driver, group.groupId);
       if (!cleanup.valid) {
         failure = `Application cleanup failed: ${cleanup.reason}`;
         for (let index = firstObservation; index < observations.length; index += 1) observations[index] = invalidateForCleanup(observations[index], cleanup.reason);
@@ -237,17 +260,41 @@ async function runResourceWorkload({ driver, scenario, prepared, observations, s
   }
   const trace = {
     version: 1,
+    ...(scenario.cases.latencySamplesPerProcess ? { repetition: group.repetition } : {}),
     samples: monitor?.samples ?? [],
     windows,
     boundaries,
     monitorErrors: (monitor?.errors ?? []).map((error) => ({ code: String(error.code ?? "monitor-error").slice(0, 80), message: publicError(error.message ?? error) })),
     failure,
   };
-  return { trace, resources: deriveResourcesFromTrace(trace, scenario, observations) };
+  return { trace, resources: deferDerivation ? null : deriveResourcesFromTrace(trace, scenario, observations) };
 }
 
 export function deriveResourcesFromTrace(trace, scenario, observations) {
-  if (!trace || trace.version !== 1) return { status: "invalid", reason: "Raw resource trace is missing.", rawSampleCount: 0, trend: [] };
+  if (trace?.version === 2 && Array.isArray(trace.runs)) {
+    const derivedRuns = trace.runs.map((run) => deriveSingleResourceRun(
+      run,
+      scenario,
+      observations.filter((observation) => observation.case?.repetition === run.repetition),
+    ));
+    const invalid = derivedRuns.find((run) => run.resources.status !== "valid");
+    if (invalid) return invalid.resources;
+    return summarizeResourceRuns(derivedRuns.map((run) => ({
+      samples: run.trace.samples,
+      windows: run.trace.windows,
+      boundaryPoints: run.boundaryPoints,
+      repetition: run.trace.repetition,
+    })));
+  }
+  return deriveSingleResourceRun(trace, scenario, observations).resources;
+}
+
+function deriveSingleResourceRun(trace, scenario, observations) {
+  if (!trace || trace.version !== 1) return {
+    trace: trace ?? { samples: [] },
+    boundaryPoints: [],
+    resources: { status: "invalid", reason: "Raw resource trace is missing.", rawSampleCount: 0, trend: [] },
+  };
   const boundaryPoints = [];
   let reason = trace.failure;
   if (!reason) {
@@ -282,13 +329,13 @@ export function deriveResourcesFromTrace(trace, scenario, observations) {
     reason = "The resource monitor could not observe the complete declared application process family.";
   }
   const windows = { ...trace.windows, valid: !reason, ...(reason ? { reason } : {}) };
-  return summarizeResources(trace.samples, windows, boundaryPoints);
+  return { trace, boundaryPoints, resources: summarizeResources(trace.samples, windows, boundaryPoints) };
 }
 
 async function executeSafely(driver, scenarioId, benchmarkCase, extra = {}) {
   try {
     const result = await driver.request("execute", { scenarioId, case: benchmarkCase, ...extra }, 5 * 60_000);
-    return normalizeExecution(result, benchmarkCase);
+    return normalizeExecution(result, benchmarkCase, { requireTimingEvidence: scenarioId.endsWith("-v3") });
   } catch (error) {
     return invalidObservation(benchmarkCase, error);
   }
@@ -313,6 +360,7 @@ function invalidObservation(benchmarkCase, error) {
 
 function collectEnvironment() {
   const cpus = os.cpus();
+  const power = collectPowerState();
   return {
     platform: process.platform,
     architecture: process.arch,
@@ -320,8 +368,31 @@ function collectEnvironment() {
     logicalCpuCount: cpus.length,
     cpuModel: cpus[0]?.model ?? "unknown",
     totalMemoryBytes: os.totalmem(),
+    freeMemoryBytes: os.freemem(),
+    loadAverage1mPerCpu: Math.round((os.loadavg()[0] / Math.max(1, cpus.length)) * 1000) / 1000,
+    ...power,
     nodeVersion: process.version,
   };
+}
+
+function collectPowerState() {
+  if (process.platform !== "darwin") return { powerSource: "unknown", lowPowerMode: null, memoryPressureLevel: null };
+  const battery = safeCommand("pmset", ["-g", "batt"]);
+  const settings = safeCommand("pmset", ["-g", "custom"]);
+  const pressure = Number(safeCommand("sysctl", ["-n", "kern.memorystatus_vm_pressure_level"]));
+  return {
+    powerSource: /AC Power/u.test(battery) ? "ac" : /Battery Power/u.test(battery) ? "battery" : "unknown",
+    lowPowerMode: /\blowpowermode\s+1\b/u.test(settings) ? true : /\blowpowermode\s+0\b/u.test(settings) ? false : null,
+    memoryPressureLevel: Number.isFinite(pressure) && pressure >= 0 ? pressure : null,
+  };
+}
+
+function safeCommand(executable, args) {
+  try {
+    return execFileSync(executable, args, { encoding: "utf8", timeout: 5_000, maxBuffer: 256 * 1024 }).trim();
+  } catch {
+    return "";
+  }
 }
 
 function assertShareable(serialized) {
@@ -416,8 +487,8 @@ async function registeredContextFromResult(result) {
   if (result.corpus.status !== corpus.status) throw new Error("Result corpus status is not registered.");
   if (result.sourceEventFormat.id !== corpus.value.sourceEventFormat.id
     || result.sourceEventFormat.sourceRevision !== corpus.value.sourceEventFormat.sourceRevision) throw new Error("Result source-event identity is not registered.");
-  const { OPENCODE_EVENT_SCHEMA_DIGEST } = await import("./corpus.mjs");
-  if (result.sourceEventFormat.schemaDigestSha256 !== OPENCODE_EVENT_SCHEMA_DIGEST) throw new Error("Result source-event schema digest is not registered.");
+  const { eventSchemaDigest } = await import("./corpus.mjs");
+  if (result.sourceEventFormat.schemaDigestSha256 !== eventSchemaDigest(corpus.value.sourceEventFormat.id)) throw new Error("Result source-event schema digest is not registered.");
   const artifact = await readRegistered("corpusArtifact", result.corpus.id);
   if (artifact.value.definitionDigestSha256 !== result.corpus.definitionDigestSha256
     || artifact.value.eventSchemaDigestSha256 !== result.sourceEventFormat.schemaDigestSha256
@@ -435,8 +506,15 @@ async function registeredContextFromResult(result) {
 function validateObservationSchedule(scenario, runProfile, repetitions, seed, observations) {
   const expected = expandCases(scenario, runProfile, seed, repetitions);
   if (scenario.kind === "session-switch") {
-    expected.push(...buildResourceSequence(scenario, seed));
-    expected.push({ caseId: "progressive-resource-return-control", workload: "resource-control", destinationSessionId: "control" });
+    if (scenario.cases.latencySamplesPerProcess) {
+      for (const group of buildResourceSequences(scenario, repetitions)) {
+        expected.push(...group.cases);
+        expected.push({ caseId: `progressive-resource-return-control-${group.repetition}`, repetition: group.repetition, workload: "resource-control", destinationSessionId: "control" });
+      }
+    } else {
+      expected.push(...buildResourceSequence(scenario, seed));
+      expected.push({ caseId: "progressive-resource-return-control", workload: "resource-control", destinationSessionId: "control" });
+    }
   }
   if (observations.length !== expected.length) throw new Error(`Result contains ${observations.length} observations; ${expected.length} are required.`);
   for (let index = 0; index < expected.length; index += 1) {

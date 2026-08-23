@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "session-switch-v2",
+  "title": "Historical session switching",
+  "description": "Switch among completed historical transcripts while varying workspace relation, destination state, and logical transcript bytes.",
+  "kind": "session-switch",
+  "corpusId": "opencode-completed-sessions-v2",
+  "cases": {
+    "workspaceRelations": ["within-workspace", "across-workspaces"],
+    "sessionStates": ["cold", "warm"],
+    "transcriptBytes": [1048576, 8388608, 33554432, 134217728]
+  },
+  "metrics": [
+    {
+      "id": "switch.duration_ms",
+      "description": "Elapsed monotonic time from trusted destination activation until the requested content is correct, the first fold has no blank virtualization gap, two presentation opportunities have completed, and trusted input is accepted.",
+      "unit": "ms"
+    }
+  ],
+  "resourceMeasurement": {
+    "processScope": "application-family",
+    "activeSampleIntervalMs": 250,
+    "idleSampleIntervalMs": 250,
+    "settleBeforeIdleMs": 1000,
+    "idleWindowMs": 5000
+  },
+  "runProfiles": {
+    "smoke": 1,
+    "quick": 2,
+    "publication": 2
+  }
+}

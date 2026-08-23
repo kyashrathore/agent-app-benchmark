@@ -6,7 +6,7 @@
 - Scenario digest: `0dec6160e946b6f37faf009c2211ce39666a7806de2a6039003bba2bfabd030f`
 - Corpus digest: `979d15dfeb87f2c539b39915c7324470a54f431a23c668f10ef484ab194b9e5e`
 - Run profile: `publication`
-- Repetitions per case: `2`
+- Configured repetitions: `2`
 
 ## Session switching
 
@@ -34,19 +34,29 @@
 |---:|---:|---:|---:|---:|
 | 1 MiB (1048576 bytes) | 193.6 | 197.2 | 197.2 | 2 / 2 |
 
-Cold means the destination has never been active in the measured app process. Warm means exactly one valid activation occurred before the measured revisit. Transcript size is final completed UTF-8 text payload bytes, not database or event-envelope bytes.
+Cold means the unique destination has never been active in the measured app process. Warm means exactly one valid activation occurred before returning to control and measuring the revisit. Transcript bytes count completed text, reasoning, serialized tool input, and tool output—not database or event-envelope bytes.
+
+### Latency growth by transcript size
+
+| Transcript size | Average (ms) | Maximum (ms) | p95 (ms) | Valid / attempted |
+|---:|---:|---:|---:|---:|
+| 1 MiB (1048576 bytes) | 105.8 | 105.8 | 105.8 | 1 / 1 |
+| 8 MiB (8388608 bytes) | 272.7 | 272.7 | 272.7 | 1 / 1 |
+| 32 MiB (33554432 bytes) | 905.4 | 905.4 | 905.4 | 1 / 1 |
+
+The size sweep is within-workspace/cold and counterbalanced separately from the ascending resource-retention workload.
 
 ## Memory consumption
 
-Active means the progressive session-switch workload in which completed chat transcripts move from exactly 1 MiB through 32 MiB. No session stream or live agent is running.
+Active means the progressive session-switch workload in which completed historical sessions move through every configured size. No session stream or live agent is running.
 
 | Metric | Summed process-family RSS (MiB) | Description |
 |---|---:|---|
-| Baseline idle average | 875.0 | Average during 5 seconds on the fixed 1 MiB control transcript before switching. |
+| Baseline idle average | 875.0 | Average during the configured idle window on the fixed 1 MiB control transcript before switching. |
 | Active average | 1074.7 | Average of 250 ms samples during the full progressive switch workload. |
-| Active maximum | 1330.1 | Largest sample during the active workload. |
+| Active sampled maximum | 1330.1 | Largest observed sample during the active workload; not an operating-system true peak. |
 | Active p95 | 1330.1 | Nearest-rank p95 across active samples. |
-| Ending idle average | 1354.1 | Average during 5 seconds after returning to the same 1 MiB control transcript. |
+| Ending idle average | 1354.1 | Average during the configured idle window after returning to the same 1 MiB control transcript. |
 | Retained RSS growth | 479.1 | Ending idle average minus baseline idle average; negative values remain visible. |
 
 CPU growth and memory growth use the preserved per-switch boundary points in `result.json`.

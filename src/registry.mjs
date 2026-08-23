@@ -70,9 +70,9 @@ export async function validateRegistry() {
   for (const artifactId of entries.filter((entry) => entry.kind === "corpusArtifact").map((entry) => entry.id)) {
     const artifact = await readRegistered("corpusArtifact", artifactId);
     const corpus = await readRegistered("corpus", artifact.value.corpusId);
-    const { OPENCODE_EVENT_SCHEMA_DIGEST } = await import("./corpus.mjs");
+    const { eventSchemaDigest } = await import("./corpus.mjs");
     if (artifact.value.definitionDigestSha256 !== corpus.digest) throw new Error(`${artifactId} has a stale corpus definition digest.`);
-    if (artifact.value.eventSchemaDigestSha256 !== OPENCODE_EVENT_SCHEMA_DIGEST) throw new Error(`${artifactId} has a stale event schema digest.`);
+    if (artifact.value.eventSchemaDigestSha256 !== eventSchemaDigest(corpus.value.sourceEventFormat.id)) throw new Error(`${artifactId} has a stale event schema digest.`);
   }
   for (const appId of entries.filter((entry) => entry.kind === "app").map((entry) => entry.id)) {
     const app = await readRegistered("app", appId);
@@ -119,11 +119,24 @@ function validateScenario(value) {
 function validateCorpus(value) {
   assertAscendingIntegers(value.transcriptBytes, "Corpus transcript sizes");
   if (value.workspaceIds.length !== 2) throw new Error("V1 corpus requires exactly two logical workspaces.");
+  if (value.generator === "opencode-completed-transcripts-v1") {
+    const canonicalBytes = value.transcriptBytes.reduce((total, bytes) => total + bytes * 4, value.transcriptBytes[0]);
+    const eventCount = 2 * canonicalBytes / value.messageChunkBytes + 1 + value.transcriptBytes.length * 4;
+    if (canonicalBytes > 512 * 1024 * 1024 || eventCount > 250_000) throw new Error("Legacy corpus definition exceeds its generation budget.");
+    if (value.transcriptBytes.some((bytes) => bytes % value.messageChunkBytes !== 0)) throw new Error("Every legacy transcript size must be divisible by messageChunkBytes.");
+    return;
+  }
+  if (JSON.stringify(value.sessionProfiles.map((profile) => profile.transcriptBytes)) !== JSON.stringify(value.transcriptBytes)) {
+    throw new Error("Corpus session profiles must match transcriptBytes in order.");
+  }
   const canonicalBytes = value.transcriptBytes.reduce((total, bytes) => total + bytes * 4, value.transcriptBytes[0]);
-  const eventCount = 2 * canonicalBytes / value.messageChunkBytes + 1 + value.transcriptBytes.length * 4;
-  if (canonicalBytes > 512 * 1024 * 1024 || eventCount > 250_000) throw new Error("Corpus definition exceeds the V1 generation budget.");
-  if (value.transcriptBytes.some((bytes) => bytes % value.messageChunkBytes !== 0)) {
-    throw new Error("Every V1 transcript size must be divisible by messageChunkBytes.");
+  if (canonicalBytes > 1024 * 1024 * 1024) throw new Error("Corpus definition exceeds the V1 byte budget.");
+  for (const profile of value.sessionProfiles) {
+    const weight = Object.values(profile.payloadPermille).reduce((sum, value) => sum + value, 0);
+    if (weight !== 1000) throw new Error(`Corpus profile ${profile.transcriptBytes} payloadPermille must total 1000.`);
+    if (profile.patches > profile.toolCalls) throw new Error(`Corpus profile ${profile.transcriptBytes} has more patches than tool calls.`);
+    const estimatedEvents = 1 + profile.userMessages * 2 + profile.assistantMessages * 5 + profile.toolCalls + profile.patches;
+    if (estimatedEvents > 250_000) throw new Error(`Corpus profile ${profile.transcriptBytes} exceeds the per-session event budget.`);
   }
 }
 

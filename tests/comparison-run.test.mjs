@@ -11,6 +11,13 @@ test("comparison schedule mirrors app order across the two V1 scenarios", () => 
   ]);
 });
 
+test("comparison schedule accepts the privacy-derived V2 scenarios", () => {
+  const schedule = buildComparisonSchedule(["t3", "claxedo"], ["app-start-v2", "session-switch-v2"]);
+  assert.equal(schedule.version, 2);
+  assert.equal(schedule.policy, "balanced-mirrored-v2");
+  assert.deepEqual(schedule.steps.map((step) => step.scenarioId), ["app-start-v2", "app-start-v2", "session-switch-v2", "session-switch-v2"]);
+});
+
 test("comparison config accepts one shared repetition override", () => {
   const config = {
     id: "configurable-repetitions",

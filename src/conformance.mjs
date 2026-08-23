@@ -19,13 +19,13 @@ export async function runDriverConformance(options) {
         stateHandle: prepared.stateHandles.P1,
         initialSessionId: "control",
         groupId: "conformance",
-      }));
+      }), { requireProcessRoles: options.scenario.id.endsWith("-v3") });
     }
     const execution = normalizeExecution(await driver.request("execute", {
       scenarioId: options.scenario.id,
       case: benchmarkCase,
       ...(options.scenario.kind === "app-start" ? { stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] } : {}),
-    }), benchmarkCase);
+    }), benchmarkCase, { requireTimingEvidence: options.scenario.id.endsWith("-v3") });
     if (execution.status !== "valid") throw new Error(`Driver conformance execution failed: ${execution.reason}`);
     const shutdown = assertShutdown(await driver.request("shutdown", { reason: "conformance-complete" }));
     return { hello, prepared, launch, execution, shutdown };

@@ -36,7 +36,7 @@ async function dispatch(method, params) {
       application: { id: process.env.BENCHMARK_MOCK_APP_ID ?? "mock-native", name: "Mock Native GUI", version: "1.0.0", buildDigestSha256: SHA },
       driver: { name: "mock-native-driver", version: "1.0.0", sourceCommit: COMMIT, digestSha256: SHA },
       scenarios: ["app-start-v1", "session-switch-v1", ...(process.env.BENCHMARK_MOCK_SCENARIO_ID ? [process.env.BENCHMARK_MOCK_SCENARIO_ID] : [])],
-      sourceEventFormats: ["opencode-event-v1"],
+      sourceEventFormats: ["opencode-event-v1", "opencode-event-v2"],
       materializationModes: ["translated"],
       guiFramework: "mock-native",
     };
@@ -72,7 +72,10 @@ async function dispatch(method, params) {
       caseId: params.case.caseId,
       durationMs,
       clock: { kind: "single-monotonic-clock", clock: "mock-performance", start: 100, end: 100 + durationMs },
-      readiness: receipt(process.env.BENCHMARK_MOCK_MODE !== "wrong-content"),
+      readiness: receipt(
+        process.env.BENCHMARK_MOCK_MODE !== "wrong-content",
+        prepared.params.scenarioId.endsWith("-v3") ? 100 + durationMs : undefined,
+      ),
     };
   }
   if (method === "shutdown") {
@@ -83,14 +86,14 @@ async function dispatch(method, params) {
   throw new Error(`Unsupported method ${method}.`);
 }
 
-function receipt(contentPassed = true) {
+function receipt(contentPassed = true, observedAt) {
   return {
     endpoint: "correct-content-painted-and-input-ready",
     checks: [
-      { id: "content-identity", passed: contentPassed },
-      { id: "first-fold-painted", passed: true },
-      { id: "two-presentations", passed: true },
-      { id: "trusted-input", passed: true },
+      { id: "content-identity", passed: contentPassed, ...(observedAt === undefined ? {} : { observedAt }) },
+      { id: "first-fold-painted", passed: true, ...(observedAt === undefined ? {} : { observedAt }) },
+      { id: "two-presentations", passed: true, ...(observedAt === undefined ? {} : { observedAt }) },
+      { id: "trusted-input", passed: true, ...(observedAt === undefined ? {} : { observedAt }) },
     ],
   };
 }
@@ -102,7 +105,7 @@ async function startApplication() {
     child.once("spawn", resolve);
     child.once("error", reject);
   });
-  application = { child, identity: { pid: child.pid, startTimeMs: Date.now(), owner: "application", category: "mock-native-gui" } };
+  application = { child, identity: { pid: child.pid, startTimeMs: Date.now(), owner: "application", category: "mock-native-gui", role: "main" } };
 }
 
 async function stopApplication() {

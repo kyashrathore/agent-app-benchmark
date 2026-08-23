@@ -11,6 +11,7 @@ const FILES = {
   corpusManifest: "corpus-manifest-v1.schema.json",
   driverMessage: "driver-message-v1.schema.json",
   opencodeEvent: "opencode-event-v1.schema.json",
+  opencodeEventV2: "opencode-event-v2.schema.json",
   result: "result-v1.schema.json",
   scenario: "scenario-v1.schema.json",
 };

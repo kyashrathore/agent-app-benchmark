@@ -11,12 +11,24 @@ const APP = { id: "mock-native", name: "Mock Native GUI", materializationModes: 
 const CORPUS_VALUE = {
   schemaVersion: 1,
   id: "test-corpus-v1",
-  generator: "opencode-completed-transcripts-v1",
+  generator: "opencode-completed-sessions-v2",
   seed: "runner-test",
-  sourceEventFormat: { id: "opencode-event-v1", sourceRevision: "a9f7081d4015b0cc22ed67156e042b482a8d064a", envelope: "EventV2.SerializedEvent", eventTypes: ["session.created.1", "message.updated.1", "message.part.updated.1"] },
+  sourceEventFormat: { id: "opencode-event-v2", sourceRevision: "a9f7081d4015b0cc22ed67156e042b482a8d064a", envelope: "EventV2.SerializedEvent", eventTypes: ["session.created.1", "message.updated.1", "message.part.updated.1"] },
   workspaceIds: ["workspace-a", "workspace-b"],
-  transcriptBytes: [16],
-  messageChunkBytes: 8,
+  transcriptBytes: [4096],
+  sessionProfiles: [{
+    transcriptBytes: 4096,
+    userMessages: 1,
+    assistantMessages: 1,
+    toolCalls: 1,
+    patches: 0,
+    payloadPermille: { text: 250, reasoning: 250, toolInput: 250, toolOutput: 250 },
+  }],
+  derivation: {
+    method: "rounded structural distributions with entirely synthetic payloads",
+    sourceFamilies: ["opencode", "claude-code", "codex"],
+    privateContentCopied: false,
+  },
   description: "runner test",
 };
 const START_SCENARIO = {
@@ -37,7 +49,7 @@ const SWITCH_SCENARIO = {
   description: "test",
   kind: "session-switch",
   corpusId: CORPUS_VALUE.id,
-  cases: { workspaceRelations: ["within-workspace", "across-workspaces"], sessionStates: ["cold", "warm"], transcriptBytes: [16] },
+  cases: { workspaceRelations: ["within-workspace", "across-workspaces"], sessionStates: ["cold", "warm"], transcriptBytes: [4096] },
   metrics: [],
   resourceMeasurement: { processScope: "application-family", activeSampleIntervalMs: 250, idleSampleIntervalMs: 1000, settleBeforeIdleMs: 1000, idleWindowMs: 2000 },
   runProfiles: { smoke: 1, quick: 1, publication: 1 },
