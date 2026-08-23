@@ -23,6 +23,12 @@ test("static site builds comparison and stable individual app pages from raw res
     const index = await readFile(path.join(output, "index.html"), "utf8");
     assert.match(index, /Warm session switch — within the same workspace/);
     assert.match(index, /CPU growth with session switching/);
+    assert.match(index, /class="series series-0"/);
+    assert.match(index, /class="swatch series-0"/);
+    assert.doesNotMatch(index, /style="--series:/);
+    const stylesheet = await readFile(path.join(output, "assets", "site.css"), "utf8");
+    assert.match(stylesheet, /\.series-0 polyline,.series-0 circle\{stroke:#6f5cff\}/);
+    assert.match(stylesheet, /\.swatch\.series-1\{background:#00a884\}/);
     const switchTables = [...index.matchAll(/<section class="panel"><h3>(?:Warm|Cold) session switch[^<]*<\/h3>[\s\S]*?<\/section>/g)];
     assert.equal(switchTables.length, 4);
     for (const [table] of switchTables) {
