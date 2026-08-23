@@ -20,9 +20,9 @@
   "resourceMeasurement": {
     "processScope": "application-family",
     "activeSampleIntervalMs": 250,
-    "idleSampleIntervalMs": 1000,
-    "settleBeforeIdleMs": 15000,
-    "idleWindowMs": 60000
+    "idleSampleIntervalMs": 500,
+    "settleBeforeIdleMs": 3000,
+    "idleWindowMs": 10000
   },
   "runProfiles": {
     "smoke": 1,
