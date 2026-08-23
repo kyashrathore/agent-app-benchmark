@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "runId": "initial-macos-arm64-2rep-20260823-1-t3-app-start-v1",
+  "createdAt": "2026-08-23T08:00:33.383Z",
+  "provenance": {
+    "kind": "maintainer-observed",
+    "comparisonRunId": "initial-macos-arm64-2rep-20260823",
+    "frameworkRevision": "e0a7da0a1949fe4dcd8b2f7b806ec32c68a9897d",
+    "comparisonScheduleDigestSha256": "1d44ea6caf3820c2307da8abbbbd78e78d30847ff391caa8f5628e3b9f8c8f87",
+    "scheduleOrdinal": 1
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.2.0",
+    "logicalCpuCount": 12,
+    "cpuModel": "Apple M4 Pro",
+    "totalMemoryBytes": 25769803776,
+    "nodeVersion": "v25.9.0"
+  },
+  "app": {
+    "id": "t3",
+    "name": "T3 Code",
+    "version": "0.0.33",
+    "buildDigestSha256": "74e646ac34fa3f9b71436a9536503c1d82b1fde864e3bd897b82ba47ff7bf9dd"
+  },
+  "driver": {
+    "name": "t3-reference",
+    "version": "1",
+    "sourceCommit": "b4fa340bbd6a14315159ae2e68d68387dc9180f4",
+    "digestSha256": "d16d20290be1398d713e2ab8c99d66382757c0c00d402379c4bb2cda4d3b8852"
+  },
+  "sourceEventFormat": {
+    "id": "opencode-event-v1",
+    "sourceRevision": "a9f7081d4015b0cc22ed67156e042b482a8d064a",
+    "schemaDigestSha256": "40c0eefcafd0738fec89df06d8b6cf268e8accd5431f252ddf5b5d599293eb13"
+  },
+  "materialization": {
+    "mode": "translated",
+    "corpusDigestSha256": "979d15dfeb87f2c539b39915c7324470a54f431a23c668f10ef484ab194b9e5e",
+    "mappingDigestSha256": "e1e413aaa59b39746f717d8ac6842a7252b4a05ef24ebe3f6bca31d7537f4775"
+  },
+  "scenario": {
+    "id": "app-start-v1",
+    "kind": "app-start",
+    "digestSha256": "07cabad835ae62dbaf1d45829361caad45208b305b3cb05f1875a85cebd4f503",
+    "status": "public-comparable"
+  },
+  "corpus": {
+    "id": "opencode-completed-transcripts-v1",
+    "definitionDigestSha256": "c580afe5e63d3ab0661d1d88d69b81e60644659bd80cc9b0eb4314aa4dd5b363",
+    "digestSha256": "979d15dfeb87f2c539b39915c7324470a54f431a23c668f10ef484ab194b9e5e",
+    "status": "public-comparable"
+  },
+  "runProfile": "publication",
+  "repetitions": 2,
+  "observations": [
+    {
+      "case": {
+        "caseId": "start-new-application-state-0",
+        "repetition": 0,
+        "startMode": "new-application-state",
+        "stateHandle": "P0"
+      },
+      "receivedAt": "2026-08-23T08:00:16.056Z",
+      "status": "valid",
+      "durationMs": 2030.1978749999998,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true
+          },
+          {
+            "id": "two-presentations",
+            "passed": true
+          },
+          {
+            "id": "trusted-input",
+            "passed": true
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 7413.075417,
+        "end": 9443.273292
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-initialized-application-state-0",
+        "repetition": 0,
+        "startMode": "initialized-application-state",
+        "stateHandle": "P1"
+      },
+      "receivedAt": "2026-08-23T08:00:20.673Z",
+      "status": "valid",
+      "durationMs": 2003.588667,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true
+          },
+          {
+            "id": "two-presentations",
+            "passed": true
+          },
+          {
+            "id": "trusted-input",
+            "passed": true
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 12057.524125,
+        "end": 14061.112792
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-initialized-application-state-1",
+        "repetition": 1,
+        "startMode": "initialized-application-state",
+        "stateHandle": "P1"
+      },
+      "receivedAt": "2026-08-23T08:00:25.382Z",
+      "status": "valid",
+      "durationMs": 1998.4405420000003,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true
+          },
+          {
+            "id": "two-presentations",
+            "passed": true
+          },
+          {
+            "id": "trusted-input",
+            "passed": true
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 16770.847708,
+        "end": 18769.28825
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-new-application-state-1",
+        "repetition": 1,
+        "startMode": "new-application-state",
+        "stateHandle": "P0"
+      },
+      "receivedAt": "2026-08-23T08:00:30.981Z",
+      "status": "valid",
+      "durationMs": 3032.0202500000014,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true
+          },
+          {
+            "id": "two-presentations",
+            "passed": true
+          },
+          {
+            "id": "trusted-input",
+            "passed": true
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 21337.249792,
+        "end": 24369.270042
+      }
+    }
+  ],
+  "resources": null,
+  "resourceTrace": null,
+  "derivation": {
+    "version": 1,
+    "summaryDigestSha256": "9051458fb6795d988411badc13ef064adbf9e71abc989f0184d78c4cd836d042",
+    "summary": {
+      "new-application-state": {
+        "status": "valid",
+        "average": 2531.109,
+        "maximum": 3032.02,
+        "p95": 3032.02,
+        "valid": 2,
+        "attempted": 2
+      },
+      "initialized-application-state": {
+        "status": "valid",
+        "average": 2001.015,
+        "maximum": 2003.589,
+        "p95": 2003.589,
+        "valid": 2,
+        "attempted": 2
+      }
+    }
+  }
+}
