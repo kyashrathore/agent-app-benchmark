@@ -1,5 +1,6 @@
-import { readFile, writeFile, mkdir, lstat } from "node:fs/promises";
+import { readFile, writeFile, mkdir, lstat, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { digest, digestBytes } from "./canonical-json.mjs";
@@ -26,12 +27,19 @@ export async function runComparison(configFile) {
   const outputRoot = path.resolve(config.outputRoot);
   await assertMissing(outputRoot);
   await mkdir(outputRoot, { recursive: true, mode: 0o700 });
-  await writeFile(path.join(outputRoot, ".agent-app-benchmark-comparison-run"), "v1\n", { mode: 0o600 });
+  const temporaryCorpusRoot = config.corpusDirectory ? null : await mkdtemp(path.join(os.tmpdir(), "agent-app-benchmark-comparison-"));
+  try {
+    return await runScheduledComparison(config, outputRoot, config.corpusDirectory ? path.resolve(config.corpusDirectory) : path.join(temporaryCorpusRoot, "corpus"));
+  } finally {
+    if (temporaryCorpusRoot) await rm(temporaryCorpusRoot, { recursive: true, force: true });
+  }
+}
 
+async function runScheduledComparison(config, outputRoot, corpusDirectory) {
   const corpus = await readRegistered("corpus", "opencode-completed-transcripts-v1");
   const preparedCorpus = config.corpusDirectory
-    ? await verifyCorpus(path.resolve(config.corpusDirectory))
-    : await writeCorpus(corpus.value, path.join(outputRoot, "corpus"));
+    ? await verifyCorpus(corpusDirectory)
+    : await writeCorpus(corpus.value, corpusDirectory);
   if (preparedCorpus.manifest.definitionDigestSha256 !== corpus.digest) throw new Error("Comparison corpus does not match the public definition.");
 
   const apps = new Map();

@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { digest } from "./canonical-json.mjs";
@@ -18,23 +18,25 @@ export async function runBenchmark(input, dependencies = {}) {
   const output = path.resolve(input.output);
   await mkdir(path.dirname(output), { recursive: true, mode: 0o700 });
   await mkdir(output, { mode: 0o700 });
-  await writeFile(path.join(output, ".agent-app-benchmark-run"), "v1\n", { mode: 0o600 });
-  const corpus = input.corpusDirectory
-    ? await verifyCorpus(input.corpusDirectory)
-    : await writeCorpus(input.corpus.value, path.join(output, "corpus"));
-  assertCorpusIdentity(corpus, input.corpus);
-  if (input.corpus.status === "public-comparable") await assertPublicCorpusArtifact(corpus, input.corpus.value.id);
+  const privateRunDirectory = await mkdtemp(path.join(os.tmpdir(), "agent-app-benchmark-run-"));
   const spawnDriver = dependencies.spawnDriver ?? DriverProcess.spawn;
-  const driver = await spawnDriver({ ...input.driver, cwd: input.driver.cwd ?? output });
   const delay = dependencies.delay ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
   const now = dependencies.now ?? Date.now;
   const startMonitor = dependencies.startMonitor ?? ResourceMonitor.start;
   const observations = [];
   let hello;
   let prepared;
+  let corpus;
+  let driver;
   let resources = null;
   let resourceTrace = null;
   try {
+    corpus = input.corpusDirectory
+      ? await verifyCorpus(input.corpusDirectory)
+      : await writeCorpus(input.corpus.value, path.join(privateRunDirectory, "corpus"));
+    assertCorpusIdentity(corpus, input.corpus);
+    if (input.corpus.status === "public-comparable") await assertPublicCorpusArtifact(corpus, input.corpus.value.id);
+    driver = await spawnDriver({ ...input.driver, cwd: input.driver.cwd ?? privateRunDirectory });
     hello = assertHello(await driver.request("hello", { frameworkVersion: 1 }), {
       appId: input.app.id,
       scenarioId: input.scenario.value.id,
@@ -48,7 +50,7 @@ export async function runBenchmark(input, dependencies = {}) {
       corpusDigestSha256: corpus.digestSha256,
       corpusDefinitionDigestSha256: input.corpus.digest,
       eventSchemaDigestSha256: corpus.manifest.sourceEventFormat.schemaDigestSha256,
-      runDirectory: output,
+      runDirectory: privateRunDirectory,
     }, 10 * 60_000), {
       corpusDigestSha256: corpus.digestSha256,
       eventSchemaDigestSha256: corpus.manifest.sourceEventFormat.schemaDigestSha256,
@@ -74,7 +76,8 @@ export async function runBenchmark(input, dependencies = {}) {
       resourceTrace = resourceRun.trace;
     }
   } finally {
-    await driver.close();
+    if (driver) await driver.close();
+    await rm(privateRunDirectory, { recursive: true, force: true });
   }
   const summary = summarizeObservations(input.scenario.value, observations);
   const result = {

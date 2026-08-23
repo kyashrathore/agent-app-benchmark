@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -52,6 +52,7 @@ test("app-start runner preserves raw attempts and derives both exact launch stat
     assert.equal(result.derivation.summary["new-application-state"].valid, 3);
     assert.equal(result.derivation.summary["initialized-application-state"].valid, 3);
     assert.match(await readFile(path.join(output, "report.md"), "utf8"), /Repeat launch — initialized application state/);
+    assert.deepEqual((await readdir(output)).toSorted(), ["report.md", "result.json"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
