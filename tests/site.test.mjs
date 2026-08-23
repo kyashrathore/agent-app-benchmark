@@ -33,9 +33,13 @@ test("static site builds comparison and stable individual app pages from raw res
       assert.equal((table.match(/<tbody>[\s\S]*<\/tbody>/)?.[0].match(/<tr>/g) ?? []).length, 6);
     }
     assert.match(index, /No Web Vitals/);
+    assert.match(index, /1\.0\.0 · electron · native-opencode/);
+    assert.match(index, /1\.0\.0 · electron · translated/);
     assert.doesNotMatch(index, /<script/i);
     assert.doesNotMatch(index, /cdn|fonts\.google|runtime fetch/i);
     assert.match(index, /&lt;unsafe-app&gt;/);
+    const t3 = await readFile(path.join(output, "apps", "t3", "index.html"), "utf8");
+    assert.match(t3, /<dt>GUI framework<\/dt><dd>electron<\/dd>/);
     await writeFile(path.join(output, "stale.html"), "stale");
     await buildSite(comparisonFile, output);
     await assert.rejects(stat(path.join(output, "stale.html")), /ENOENT/);

@@ -32,7 +32,7 @@ export async function buildSite(comparisonFile, outputDirectory) {
 }
 
 function renderIndex(model) {
-  const cards = model.apps.map((app) => `<a class="app-card" href="apps/${app.id}/index.html"><span>${escapeHtml(app.name)}</span><small>${escapeHtml(app.version)} · ${escapeHtml(app.materializationModes.join(", "))}</small></a>`).join("");
+  const cards = model.apps.map((app) => `<a class="app-card" href="apps/${app.id}/index.html"><span>${escapeHtml(app.name)}</span><small>${escapeHtml(app.version)} · ${escapeHtml(app.guiFramework)} · ${escapeHtml(app.materializationModes.join(", "))}</small></a>`).join("");
   const startStatus = model.compatibility["app-start-v1"] ?? { status: "unpaired", reason: "No app-start results were supplied." };
   const switchStatus = model.compatibility["session-switch-v1"] ?? { status: "unpaired", reason: "No session-switch results were supplied." };
   const startRows = model.apps.flatMap((app) => app.appStart ? [

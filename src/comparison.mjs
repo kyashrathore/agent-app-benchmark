@@ -3,6 +3,7 @@ import path from "node:path";
 import { digest, digestBytes } from "./canonical-json.mjs";
 import { assertContract } from "./contracts.mjs";
 import { resolveRealFileInside } from "./paths.mjs";
+import { readRegistered } from "./registry.mjs";
 import { validateResultFile } from "./runner.mjs";
 
 const MAX_MANIFEST_BYTES = 1024 * 1024;
@@ -40,7 +41,8 @@ export async function loadComparison(manifestFile) {
     if (result.scenario.status !== "public-comparable" || result.corpus.status !== "public-comparable") throw new Error(`${entry.path} is custom/non-comparable and cannot be published in a comparison.`);
     if (result.provenance.kind !== manifest.provenance) throw new Error(`${entry.path} provenance does not match the comparison manifest.`);
     if (result.provenance.comparisonRunId !== manifest.id) throw new Error(`${entry.path} comparison run id does not match the comparison manifest.`);
-    results.push({ entry, result, file: resultFile });
+    const appDefinition = (await readRegistered("app", result.app.id)).value;
+    results.push({ entry, result, file: resultFile, appDefinition });
   }
   validatePairedSchedule(results);
   return { manifest, file, results, compatibility: compatibilityByScenario(results) };
