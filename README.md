@@ -86,12 +86,15 @@ node bin/agent-app-benchmark.mjs run \
   --app t3 \
   --scenario session-switch-v1 \
   --run-profile smoke \
+  --repetitions 2 \
   --resource-monitor native/resource-monitor/target/release/agent-app-resource-monitor \
   --comparison-run-id my-same-machine-run \
   --output artifacts/runs/t3-session-switch
 ```
 
 Pass `--corpus-directory` to reuse a previously verified corpus instead of regenerating roughly 253 MiB for every scenario.
+
+The registered profiles provide defaults (`smoke` uses 1; `quick` and `publication` use 2). Pass `--repetitions N` to override the selected profile for a direct run. For a paired comparison, set the top-level `"repetitions": N` in the comparison config; the framework applies the same count to every app and records it in every result. The allowed range is 1–100.
 
 For a fair same-machine comparison, use the framework-owned paired runner rather than invoking the four results independently. Copy `examples/comparison-run.example.json`, replace its absolute paths and framework commit, then run:
 

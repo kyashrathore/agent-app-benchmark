@@ -46,6 +46,6 @@ Cleanly closes only captured app-owned processes and returns terminated identiti
 
 The driver is authoritative for native storage translation, UI activation, app-aware timing, paint, and input readiness. The framework validates response shape and sequence but does not claim the driver can independently prove its own honesty.
 
-The framework independently owns canonical input digests, repetition and ordering, timeouts, externally observed process-family CPU/RSS, raw-observation preservation, aggregation, compatibility, and report generation. Public CI validates submitted source-independent artifacts; it does not run arbitrary contributor executables.
+The framework independently owns canonical input digests, repetition and ordering, timeouts, externally observed process-family CPU/RSS, raw-observation preservation, aggregation, compatibility, and report generation. Registered profiles provide a default repetition count, and a run may override it with an integer from 1 through 100. Paired comparisons use one shared override for every app and record it in each result. Public CI validates submitted source-independent artifacts; it does not run arbitrary contributor executables.
 
 The portable envelope is defined in `schemas/driver-message-v1.schema.json`. Semantic result checks live in `src/protocol.mjs`, and `examples/mock-driver/` is a non-Electron reference implementation.

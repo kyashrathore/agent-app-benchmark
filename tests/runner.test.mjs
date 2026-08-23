@@ -58,12 +58,28 @@ test("app-start runner preserves raw attempts and derives both exact launch stat
   }
 });
 
+test("runner applies and records a caller-selected repetition count", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-runner-repetitions-"));
+  try {
+    const result = await runBenchmark({
+      ...baseInput(path.join(root, "result"), START_SCENARIO),
+      repetitions: 2,
+    });
+    assert.equal(result.repetitions, 2);
+    assert.equal(result.observations.length, 4);
+    assert.equal(result.derivation.summary["new-application-state"].attempted, 2);
+    assert.equal(result.derivation.summary["initialized-application-state"].attempted, 2);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("session runner derives latency and valid framework-observed resource results", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-runner-switch-"));
   let clock = 1_000_000;
   let monitor;
   try {
-    const result = await runBenchmark({ ...baseInput(path.join(root, "result"), SWITCH_SCENARIO), resourceMonitor: "fake-monitor" }, {
+    const result = await runBenchmark({ ...baseInput(path.join(root, "result"), SWITCH_SCENARIO), repetitions: 2, resourceMonitor: "fake-monitor" }, {
       now: () => clock,
       delay: async (milliseconds) => {
         const end = clock + milliseconds;
@@ -78,8 +94,10 @@ test("session runner derives latency and valid framework-observed resource resul
         return monitor;
       },
     });
-    assert.equal(result.derivation.summary["within-workspace-cold"].valid, 1);
-    assert.equal(result.derivation.summary["across-workspaces-warm"].valid, 1);
+    assert.equal(result.derivation.summary["within-workspace-cold"].valid, 2);
+    assert.equal(result.derivation.summary["across-workspaces-warm"].valid, 2);
+    assert.equal(result.observations.length, 13);
+    assert.equal(result.resourceTrace.boundaries.length, 4);
     assert.equal(result.resources.status, "valid");
     assert.equal(result.resources.trend.length, 4);
   } finally {

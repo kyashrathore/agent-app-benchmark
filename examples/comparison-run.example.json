@@ -5,6 +5,7 @@
   "provenance": "community-self-attested",
   "frameworkRevision": "0000000000000000000000000000000000000000",
   "runProfile": "smoke",
+  "repetitions": 2,
   "resourceMonitor": "/absolute/path/to/agent-app-resource-monitor",
   "corpusDirectory": "/absolute/path/to/opencode-completed-transcripts-v1",
   "outputRoot": "/absolute/path/to/comparison-output",

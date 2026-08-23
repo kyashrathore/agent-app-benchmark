@@ -49,6 +49,7 @@ export async function loadComparison(manifestFile) {
 }
 
 function validatePairedSchedule(results) {
+  assertSharedComparisonRepetitions(results);
   const scenarioCounts = Map.groupBy(results, (item) => item.result.scenario.id);
   if (["app-start-v1", "session-switch-v1"].some((id) => (scenarioCounts.get(id)?.length ?? 0) < 2)) return;
   const ordered = [...results].toSorted((left, right) => left.result.provenance.scheduleOrdinal - right.result.provenance.scheduleOrdinal);
@@ -65,6 +66,13 @@ function validatePairedSchedule(results) {
   if (ordered.some((item) => item.result.provenance.comparisonScheduleDigestSha256 !== scheduleDigest)) throw new Error("Comparison schedule digest does not match its results.");
 }
 
+export function assertSharedComparisonRepetitions(results) {
+  const repetitions = new Set(results.map((item) => item.result.repetitions));
+  if (repetitions.size > 1) {
+    throw new Error("Comparison results do not share one repetition count.");
+  }
+}
+
 export function compatibilityByScenario(results) {
   const output = {};
   for (const scenarioId of new Set(results.map((item) => item.result.scenario.id))) {
@@ -77,7 +85,7 @@ export function compatibilityByScenario(results) {
     const compatible = new Set(keys).size === 1 && members.every((item) => item.result.scenario.status === "public-comparable" && item.result.corpus.status === "public-comparable");
     output[scenarioId] = {
       status: compatible ? "valid" : "incompatible",
-      reason: compatible ? undefined : "Results do not share the same comparison run, framework, scenario, corpus, run profile, and environment identities.",
+      reason: compatible ? undefined : "Results do not share the same comparison run, framework, scenario, corpus, run profile, repetition count, and environment identities.",
     };
   }
   return output;
@@ -92,6 +100,7 @@ function compatibilityKey(result) {
     corpus: result.corpus.digestSha256,
     sourceEventSchema: result.sourceEventFormat.schemaDigestSha256,
     runProfile: result.runProfile,
+    repetitions: result.repetitions,
     environment: result.environment,
   });
 }

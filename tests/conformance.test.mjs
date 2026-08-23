@@ -82,10 +82,13 @@ test("CLI runs a local custom scenario and marks it non-comparable", async () =>
       "--driver-env", "BENCHMARK_MOCK_APP_ID=t3",
       "--app", "t3", "--scenario", scenarioFile, "--corpus", corpusFile,
       "--corpus-directory", generated.path, "--run-profile", "smoke", "--output", output,
+      "--repetitions", "2",
     ]);
     const result = JSON.parse(await readFile(path.join(output, "result.json"), "utf8"));
     assert.equal(result.scenario.status, "custom/non-comparable");
     assert.equal(result.corpus.status, "custom/non-comparable");
+    assert.equal(result.repetitions, 2);
+    assert.equal(result.observations.length, 4);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

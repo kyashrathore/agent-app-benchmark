@@ -10,6 +10,7 @@ export function renderReport(result) {
     `- Scenario digest: \`${result.scenario.digestSha256}\``,
     `- Corpus digest: \`${result.corpus.digestSha256}\``,
     `- Run profile: \`${result.runProfile}\``,
+    `- Repetitions per case: \`${result.repetitions}\``,
     "",
   ];
   if (result.scenario.kind === "app-start") renderAppStart(lines, result.derivation.summary);

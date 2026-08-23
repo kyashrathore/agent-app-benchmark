@@ -4,7 +4,7 @@
   "title": "Agent app benchmark raw result bundle v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "runId", "createdAt", "provenance", "environment", "app", "driver", "sourceEventFormat", "materialization", "scenario", "corpus", "runProfile", "observations", "resources", "resourceTrace", "derivation"],
+  "required": ["schemaVersion", "runId", "createdAt", "provenance", "environment", "app", "driver", "sourceEventFormat", "materialization", "scenario", "corpus", "runProfile", "repetitions", "observations", "resources", "resourceTrace", "derivation"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "runId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "maxLength": 200 },
@@ -50,6 +50,7 @@
     "scenario": { "$ref": "#/$defs/scenarioIdentity" },
     "corpus": { "$ref": "#/$defs/corpusIdentity" },
     "runProfile": { "enum": ["smoke", "quick", "publication"] },
+    "repetitions": { "type": "integer", "minimum": 1, "maximum": 100 },
     "observations": { "type": "array", "minItems": 1, "maxItems": 5000, "items": { "$ref": "#/$defs/observation" } },
     "resources": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/validResources" }, { "$ref": "#/$defs/invalidResources" }] },
     "resourceTrace": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/resourceTrace" }] },

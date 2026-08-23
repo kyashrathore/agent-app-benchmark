@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { digest, digestBytes } from "../src/canonical-json.mjs";
 import { buildResourceSequence, expandCases } from "../src/cases.mjs";
-import { loadComparison } from "../src/comparison.mjs";
+import { assertSharedComparisonRepetitions, loadComparison } from "../src/comparison.mjs";
 import { OPENCODE_EVENT_SCHEMA_DIGEST } from "../src/corpus.mjs";
 import { readRegistered } from "../src/registry.mjs";
 import { buildSite } from "../src/report/site.mjs";
@@ -57,6 +57,23 @@ test("comparison rejects result provenance that disagrees with its manifest", as
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("paired comparison requires one repetition count across scenarios", () => {
+  assert.doesNotThrow(() =>
+    assertSharedComparisonRepetitions([
+      { result: { repetitions: 2 } },
+      { result: { repetitions: 2 } },
+    ]),
+  );
+  assert.throws(
+    () =>
+      assertSharedComparisonRepetitions([
+        { result: { repetitions: 2 } },
+        { result: { repetitions: 3 } },
+      ]),
+    /one repetition count/u,
+  );
 });
 
 test("comparison bounds entry count before loading result files", async () => {
@@ -213,6 +230,7 @@ async function resultFixture(app, scenarioId, scheduleOrdinal, scheduleDigest) {
     scenario: { id: scenarioId, kind: scenario.value.kind, digestSha256: scenario.digest, status: "public-comparable" },
     corpus: { id: corpus.value.id, definitionDigestSha256: corpus.digest, digestSha256: CANONICAL_CORPUS_DIGEST, status: "public-comparable" },
     runProfile: "smoke",
+    repetitions: scenario.value.runProfiles.smoke,
     observations,
     resources,
     resourceTrace,

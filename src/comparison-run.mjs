@@ -21,7 +21,7 @@ export function buildComparisonSchedule(appIds, scenarioIds = ["app-start-v1", "
 
 export async function runComparison(configFile) {
   const config = JSON.parse(await readFile(path.resolve(configFile), "utf8"));
-  validateConfig(config);
+  validateComparisonConfig(config);
   const { stdout: revision } = await execute("git", ["rev-parse", "HEAD"], { cwd: REPOSITORY_ROOT });
   if (revision.trim() !== config.frameworkRevision) throw new Error("Comparison frameworkRevision does not match the checked-out framework commit.");
   const outputRoot = path.resolve(config.outputRoot);
@@ -63,6 +63,7 @@ async function runScheduledComparison(config, outputRoot, corpusDirectory) {
       corpus,
       corpusDirectory: preparedCorpus.path,
       runProfile: config.runProfile,
+      repetitions: config.repetitions,
       resourceMonitor: step.scenarioId === "session-switch-v1" ? path.resolve(config.resourceMonitor) : undefined,
       output,
       runId: `${config.id}-${step.ordinal}-${step.appId}-${step.scenarioId}`,
@@ -93,8 +94,8 @@ async function runScheduledComparison(config, outputRoot, corpusDirectory) {
   return { outputRoot, manifest, schedule, scheduleDigestSha256 };
 }
 
-function validateConfig(config) {
-  const allowed = new Set(["id", "title", "description", "provenance", "frameworkRevision", "runProfile", "resourceMonitor", "corpusDirectory", "outputRoot", "apps"]);
+export function validateComparisonConfig(config) {
+  const allowed = new Set(["id", "title", "description", "provenance", "frameworkRevision", "runProfile", "repetitions", "resourceMonitor", "corpusDirectory", "outputRoot", "apps"]);
   if (!config || typeof config !== "object" || Array.isArray(config) || Object.keys(config).some((key) => !allowed.has(key))) throw new Error("Comparison run config contains unsupported fields.");
   if (!/^[a-z0-9][a-z0-9-]*$/.test(config.id ?? "")) throw new Error("Comparison run id is invalid.");
   if (typeof config.title !== "string" || config.title.length === 0 || config.title.length > 200) throw new Error("Comparison title is invalid.");
@@ -102,6 +103,7 @@ function validateConfig(config) {
   if (!["maintainer-observed", "community-self-attested"].includes(config.provenance)) throw new Error("Comparison provenance is invalid.");
   if (!/^[0-9a-f]{40}$/.test(config.frameworkRevision ?? "")) throw new Error("Comparison frameworkRevision must be an exact commit.");
   if (!["smoke", "quick", "publication"].includes(config.runProfile)) throw new Error("Comparison run profile is invalid.");
+  if (config.repetitions !== undefined && (!Number.isInteger(config.repetitions) || config.repetitions < 1 || config.repetitions > 100)) throw new Error("Comparison repetitions must be an integer from 1 through 100.");
   if (typeof config.resourceMonitor !== "string" || typeof config.outputRoot !== "string") throw new Error("Comparison resourceMonitor and outputRoot are required.");
   if (!Array.isArray(config.apps)) throw new Error("Comparison apps are required.");
   buildComparisonSchedule(config.apps.map((app) => app?.id));

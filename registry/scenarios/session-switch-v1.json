@@ -25,8 +25,8 @@
     "idleWindowMs": 60000
   },
   "runProfiles": {
-    "smoke": 3,
-    "quick": 5,
-    "publication": 20
+    "smoke": 1,
+    "quick": 2,
+    "publication": 2
   }
 }

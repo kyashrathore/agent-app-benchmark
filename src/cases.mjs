@@ -7,8 +7,8 @@ export const SESSION_LANES = Object.freeze([
   { id: "across-workspaces-warm", workspaceRelation: "across-workspaces", sessionState: "warm" },
 ]);
 
-export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-public-v1") {
-  const repetitions = repetitionsFor(scenario, runProfile);
+export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-public-v1", repetitionOverride) {
+  const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
   if (scenario.kind === "app-start") {
     const cases = [];
     for (let repetition = 0; repetition < repetitions; repetition += 1) {
@@ -24,11 +24,11 @@ export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-pu
     return cases;
   }
   if (scenario.kind !== "session-switch") throw new Error(`Unsupported scenario kind ${scenario.kind}.`);
-  return buildLatencyGroups(scenario, runProfile, seed).flatMap((group) => group.cases);
+  return buildLatencyGroups(scenario, runProfile, seed, repetitionOverride).flatMap((group) => group.cases);
 }
 
-export function buildLatencyGroups(scenario, runProfile, seed = "agent-app-benchmark-public-v1") {
-  const repetitions = repetitionsFor(scenario, runProfile);
+export function buildLatencyGroups(scenario, runProfile, seed = "agent-app-benchmark-public-v1", repetitionOverride) {
+  const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
   const baseOrder = seededShuffle(scenario.cases.transcriptBytes, `${seed}|sizes`);
   const groups = [];
   for (let repetition = 0; repetition < repetitions; repetition += 1) {
@@ -74,10 +74,14 @@ function makeSwitchCase({ lane, transcriptBytes, repetition, sequence, workload 
   };
 }
 
-function repetitionsFor(scenario, runProfile) {
-  const repetitions = scenario.runProfiles[runProfile];
-  if (!Number.isInteger(repetitions) || repetitions < 1) throw new Error(`Unknown run profile: ${runProfile}.`);
-  return repetitions;
+export function repetitionsFor(scenario, runProfile, repetitionOverride) {
+  const profileRepetitions = scenario.runProfiles[runProfile];
+  if (!Number.isInteger(profileRepetitions) || profileRepetitions < 1) throw new Error(`Unknown run profile: ${runProfile}.`);
+  if (repetitionOverride === undefined) return profileRepetitions;
+  if (!Number.isInteger(repetitionOverride) || repetitionOverride < 1 || repetitionOverride > 100) {
+    throw new Error("Repetitions must be an integer from 1 through 100.");
+  }
+  return repetitionOverride;
 }
 
 function seededShuffle(values, seed) {

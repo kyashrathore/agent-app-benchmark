@@ -51,6 +51,7 @@ try {
       scenario,
       corpus,
       runProfile: options.first("runProfile") ?? "smoke",
+      repetitions: integerOption(options, "repetitions"),
       resourceMonitor: options.first("resourceMonitor"),
       corpusDirectory: options.first("corpusDirectory") ? path.resolve(options.first("corpusDirectory")) : undefined,
       output,
@@ -118,6 +119,13 @@ function required(options, name) {
   const value = options.first(name);
   if (!value) throw new Error(`--${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)} is required.`);
   return value;
+}
+
+function integerOption(options, name) {
+  const value = options.first(name);
+  if (value === undefined) return undefined;
+  if (!/^[1-9][0-9]*$/u.test(value)) throw new Error(`--${name} must be a positive integer.`);
+  return Number(value);
 }
 
 function driverOptions(options) {

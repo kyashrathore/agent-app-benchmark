@@ -2,7 +2,7 @@ import { lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/
 import os from "node:os";
 import path from "node:path";
 import { digest } from "./canonical-json.mjs";
-import { buildLatencyGroups, buildResourceSequence, expandCases } from "./cases.mjs";
+import { buildLatencyGroups, buildResourceSequence, expandCases, repetitionsFor } from "./cases.mjs";
 import { assertContract } from "./contracts.mjs";
 import { verifyCorpus, writeCorpus } from "./corpus.mjs";
 import { DriverProcess } from "./driver-process.mjs";
@@ -15,6 +15,7 @@ const MAX_RESULT_BYTES = 64 * 1024 * 1024;
 const MAX_PUBLIC_ERROR_LENGTH = 512;
 
 export async function runBenchmark(input, dependencies = {}) {
+  const repetitions = repetitionsFor(input.scenario.value, input.runProfile, input.repetitions);
   const output = path.resolve(input.output);
   await mkdir(path.dirname(output), { recursive: true, mode: 0o700 });
   await mkdir(output, { mode: 0o700 });
@@ -58,9 +59,9 @@ export async function runBenchmark(input, dependencies = {}) {
     });
     if (!input.app.materializationModes.includes(prepared.materializationMode)) throw new Error(`${input.app.id} is not registered for ${prepared.materializationMode} materialization.`);
     if (input.scenario.value.kind === "app-start") {
-      await runAppStart({ driver, scenario: input.scenario.value, runProfile: input.runProfile, prepared, observations });
+      await runAppStart({ driver, scenario: input.scenario.value, runProfile: input.runProfile, repetitions, prepared, observations });
     } else {
-      await runSessionLatency({ driver, scenario: input.scenario.value, runProfile: input.runProfile, prepared, observations, seed: input.corpus.value.seed });
+      await runSessionLatency({ driver, scenario: input.scenario.value, runProfile: input.runProfile, repetitions, prepared, observations, seed: input.corpus.value.seed });
       const resourceRun = await runResourceWorkload({
         driver,
         scenario: input.scenario.value,
@@ -107,6 +108,7 @@ export async function runBenchmark(input, dependencies = {}) {
     scenario: { id: input.scenario.value.id, kind: input.scenario.value.kind, digestSha256: input.scenario.digest, status: input.scenario.status },
     corpus: { id: input.corpus.value.id, definitionDigestSha256: input.corpus.digest, digestSha256: corpus.digestSha256, status: input.corpus.status },
     runProfile: input.runProfile,
+    repetitions,
     observations,
     resources,
     resourceTrace,
@@ -139,16 +141,16 @@ async function assertPublicCorpusArtifact(generated, corpusId) {
   }
 }
 
-async function runAppStart({ driver, scenario, runProfile, prepared, observations }) {
-  for (const benchmarkCase of expandCases(scenario, runProfile)) {
+async function runAppStart({ driver, scenario, runProfile, repetitions, prepared, observations }) {
+  for (const benchmarkCase of expandCases(scenario, runProfile, undefined, repetitions)) {
     const index = observations.push(await executeSafely(driver, scenario.id, benchmarkCase, { stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] })) - 1;
     const cleanup = await shutdownSafely(driver, benchmarkCase.caseId);
     if (!cleanup.valid) observations[index] = invalidateForCleanup(observations[index], cleanup.reason);
   }
 }
 
-async function runSessionLatency({ driver, scenario, runProfile, prepared, observations, seed }) {
-  for (const group of buildLatencyGroups(scenario, runProfile, seed)) {
+async function runSessionLatency({ driver, scenario, runProfile, repetitions, prepared, observations, seed }) {
+  for (const group of buildLatencyGroups(scenario, runProfile, seed, repetitions)) {
     let launchAttempted = false;
     let completed = 0;
     const firstObservation = observations.length;
@@ -379,7 +381,7 @@ export async function validateResultFile(file) {
   assertContract("result", result, file);
   assertShareable(serialized);
   const context = await registeredContextFromResult(result);
-  validateObservationSchedule(context.scenario.value, result.runProfile, context.corpus.value.seed, result.observations);
+  validateObservationSchedule(context.scenario.value, result.runProfile, result.repetitions, context.corpus.value.seed, result.observations);
   const summary = summarizeObservations(context.scenario.value, result.observations);
   if (digest(summary) !== result.derivation.summaryDigestSha256) throw new Error("Result summary digest does not match raw observations.");
   if (digest(summary) !== digest(result.derivation.summary)) throw new Error("Stored result summary does not match raw observations.");
@@ -430,8 +432,8 @@ async function registeredContextFromResult(result) {
   return { scenario, corpus, app };
 }
 
-function validateObservationSchedule(scenario, runProfile, seed, observations) {
-  const expected = expandCases(scenario, runProfile, seed);
+function validateObservationSchedule(scenario, runProfile, repetitions, seed, observations) {
+  const expected = expandCases(scenario, runProfile, seed, repetitions);
   if (scenario.kind === "session-switch") {
     expected.push(...buildResourceSequence(scenario, seed));
     expected.push({ caseId: "progressive-resource-return-control", workload: "resource-control", destinationSessionId: "control" });

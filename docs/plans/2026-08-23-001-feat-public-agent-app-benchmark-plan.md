@@ -139,10 +139,11 @@ Repeat launch is not revealing a hidden window, focusing a background process, o
 
 ### 5.2 Publication defaults
 
-- Smoke: 3 measured attempts per case.
-- Local quick run: 5 measured attempts per case.
-- Public app start: 20 measured attempts per app-start case.
-- Public session switching: 20 observations per `(lane, transcript size)`. One fresh app process runs all six counterbalanced sizes for one lane repetition, yielding 80 session-switch processes and 480 raw switch observations per app rather than one process per observation.
+- Smoke: 1 measured attempt per case.
+- Local quick run: 2 measured attempts per case.
+- Public app start: 2 measured attempts per app-start case.
+- Public session switching: 2 observations per `(lane, transcript size)`. One fresh app process runs all six counterbalanced sizes for one lane repetition, yielding 8 session-switch processes and 48 raw switch observations per app rather than one process per observation.
+- A direct run or paired comparison may override the selected profile with 1–100 repetitions. A paired comparison owns one shared value for every app, and each result records the effective count.
 - Conformance checks and required warmup/P1 preparation are separate lifecycle steps, not discarded “harness samples.”
 - T3 and Claxedo attempts are interleaved using a recorded balanced seed to reduce thermal and time-order bias.
 
@@ -610,7 +611,7 @@ The current uncommitted local skeleton predates this proposed plan. During imple
 - “Publish to the corpus” becomes two explicit PR flows: public scenario/corpus definitions and public result submissions.
 - Public comparisons accept community and maintainer results with provenance labels, but pair only same-run/same-machine artifacts.
 - Initial comparison support is macOS arm64; schemas remain portable without implying cross-platform equivalence.
-- Publication uses 20 app-start observations per case and 20 session-switch observations per `(lane, transcript size)`; quick uses 5 and smoke uses 3 on the same dimensions.
+- Publication defaults to 2 app-start observations per case and 2 session-switch observations per `(lane, transcript size)`; quick also defaults to 2 and smoke to 1. Users may override any run with 1–100 repetitions, and paired comparisons enforce one shared count across apps.
 - Latency size trends come from isolated counterbalanced runs; the ascending 1–32 MiB pass is the resource accumulation workload.
 - App adapters stay in their application repositories.
 - Public result summaries use arithmetic average, maximum, and nearest-rank p95.
