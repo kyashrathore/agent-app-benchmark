@@ -54,7 +54,7 @@ function renderSessionSwitch(lines, summary, resources) {
       "",
       "| Transcript size | Average (ms) | Maximum (ms) | p95 (ms) | Valid / attempted |",
       "|---:|---:|---:|---:|---:|",
-      ...summary[key].trend.map((metric) => metricRow(formatBytes(metric.transcriptBytes), metric)),
+      metricRow(formatBytes(summary[key].transcriptBytes), summary[key]),
       "",
     );
   }
@@ -76,11 +76,11 @@ function renderResources(lines, resources) {
     "",
     "| Metric | Summed process-family RSS (MiB) | Description |",
     "|---|---:|---|",
-    `| Baseline idle average | ${number(resources.baselineIdleAverageRssMiB)} | Average during 60 seconds on the fixed 1 MiB control transcript before switching. |`,
+    `| Baseline idle average | ${number(resources.baselineIdleAverageRssMiB)} | Average during 5 seconds on the fixed 1 MiB control transcript before switching. |`,
     `| Active average | ${number(resources.activeAverageRssMiB)} | Average of 250 ms samples during the full progressive switch workload. |`,
     `| Active maximum | ${number(resources.activeMaximumRssMiB)} | Largest sample during the active workload. |`,
     `| Active p95 | ${number(resources.activeP95RssMiB)} | Nearest-rank p95 across active samples. |`,
-    `| Ending idle average | ${number(resources.endingIdleAverageRssMiB)} | Average during 60 seconds after returning to the same 1 MiB control transcript. |`,
+    `| Ending idle average | ${number(resources.endingIdleAverageRssMiB)} | Average during 5 seconds after returning to the same 1 MiB control transcript. |`,
     `| Retained RSS growth | ${number(resources.retainedRssGrowthMiB)} | Ending idle average minus baseline idle average; negative values remain visible. |`,
     "",
     "CPU growth and memory growth use the preserved per-switch boundary points in `result.json`.",

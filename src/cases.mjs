@@ -29,16 +29,15 @@ export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-pu
 
 export function buildLatencyGroups(scenario, runProfile, seed = "agent-app-benchmark-public-v1", repetitionOverride) {
   const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
-  const baseOrder = seededShuffle(scenario.cases.transcriptBytes, `${seed}|sizes`);
+  const transcriptBytes = scenario.cases.transcriptBytes[0];
   const groups = [];
   for (let repetition = 0; repetition < repetitions; repetition += 1) {
     for (const lane of seededShuffle(SESSION_LANES, `${seed}|lanes|${repetition}`)) {
-      const sizes = rotate(baseOrder, repetition % baseOrder.length);
       groups.push({
         groupId: `latency-${lane.id}-${repetition}`,
         repetition,
         lane,
-        cases: sizes.map((transcriptBytes, sequence) => makeSwitchCase({ lane, transcriptBytes, repetition, sequence, workload: "isolated-latency" })),
+        cases: [makeSwitchCase({ lane, transcriptBytes, repetition, sequence: 0, workload: "isolated-latency" })],
       });
     }
   }

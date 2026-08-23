@@ -142,7 +142,7 @@ Repeat launch is not revealing a hidden window, focusing a background process, o
 - Smoke: 1 measured attempt per case.
 - Local quick run: 2 measured attempts per case.
 - Public app start: 2 measured attempts per app-start case.
-- Public session switching: 2 observations per `(lane, transcript size)`. One fresh app process runs all three counterbalanced sizes for one lane repetition, yielding 8 session-switch processes and 24 raw switch observations per app rather than one process per observation.
+- Public session switching: 2 observations per lane at the fixed 1 MiB standard transcript, yielding 8 lane-table observations per app. A separate within-workspace/cold progression measures the exact 1, 8, and 32 MiB trend once each.
 - A direct run or paired comparison may override the selected profile with 1–100 repetitions. A paired comparison owns one shared value for every app, and each result records the effective count.
 - Conformance checks and required warmup/P1 preparation are separate lifecycle steps, not discarded “harness samples.”
 - T3 and Claxedo attempts are interleaved using a recorded balanced seed to reduce thermal and time-order bias.
@@ -158,7 +158,7 @@ Repeat launch is not revealing a hidden window, focusing a background process, o
 | Across workspaces — cold | Origin and destination are in different workspaces. | Destination has never become active in the current app process. |
 | Across workspaces — warm | Origin and destination are in different workspaces. | Destination was activated once to the full valid endpoint, the driver navigated back to the fixed origin, then the measured revisit occurs. |
 
-Each lane receives its own result table containing only average, maximum, p95, and valid/attempted sample count. The report does not print session IDs or a session list. Raw artifacts retain pseudonymous corpus session IDs for auditability.
+Each lane receives its own result table at the fixed 1 MiB standard transcript containing only average, maximum, p95, and valid/attempted sample count. The separate trend chart uses the disclosed within-workspace/cold progression. The report does not print session IDs or a session list. Raw artifacts retain pseudonymous corpus session IDs for auditability.
 
 ### 6.2 Transcript size
 
@@ -561,7 +561,7 @@ The current uncommitted local skeleton predates this proposed plan. During imple
 | Corpus | Exact canonical sizes, 25-session topology, stable digest, and globally unique logical IDs. | One-byte generator drift, missing logical session, wrong benchmark role, or duplicate ID fails before a driver starts. App-native fidelity remains driver-attested and app-tested. |
 | Driver | Correct lifecycle, receipts, process roots, clean shutdown. | Out-of-order response, timeout, crash, wrong content, untrusted input, and survivor remain visible and invalid. |
 | App start | Fresh P0 and initialized P1 clone per attempt reach the identical endpoint. | Reused mutable application state, existing process, incomplete anchor paint, or failed shutdown invalidates. |
-| Session switch | All four lanes and three exact sizes emit raw actions; resources use the disclosed within-workspace/cold progression. | Previously activated “cold” destination or warm destination without exactly one warmup invalidates. |
+| Session switch | All four fixed-size lanes emit raw actions; the disclosed within-workspace/cold progression emits 1, 8, and 32 MiB trend points. | Previously activated “cold” destination or warm destination without exactly one warmup invalidates. |
 | Resources | Driver-declared roots and descendants, baseline/active/ending windows, boundary CPU snapshots. | PID reuse, observed unclassified family process, monitor gap/death, or missing bracket invalidates only affected resource results. |
 | Statistics | Average, maximum, nearest-rank p95 match fixed fixtures. | Empty/insufficient valid sample sets do not produce a headline metric. |
 | Reports | Exact tables/charts regenerate deterministically from raw input. | Hand-edited summaries, omitted failures, or mismatched raw hash fail CI. |

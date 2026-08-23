@@ -30,7 +30,7 @@ test("static site builds comparison and stable individual app pages from raw res
       assert.match(table, /Maximum/);
       assert.match(table, /p95/);
       assert.match(table, /Valid \/ attempted/);
-      assert.equal((table.match(/<tbody>[\s\S]*<\/tbody>/)?.[0].match(/<tr>/g) ?? []).length, 3);
+      assert.equal((table.match(/<tbody>[\s\S]*<\/tbody>/)?.[0].match(/<tr>/g) ?? []).length, 1);
     }
     assert.match(index, /No Web Vitals/);
     assert.match(index, /1\.0\.0 · electron · native-opencode/);

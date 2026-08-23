@@ -61,7 +61,7 @@
       "properties": {
         "version": { "const": 1 },
         "summaryDigestSha256": { "$ref": "#/$defs/sha256" },
-        "summary": { "type": "object", "minProperties": 1, "maxProperties": 4 }
+        "summary": { "type": "object", "minProperties": 1, "maxProperties": 5 }
       }
     }
   },

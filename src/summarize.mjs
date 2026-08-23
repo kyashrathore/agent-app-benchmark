@@ -15,12 +15,14 @@ export function summarizeObservations(scenario, observations) {
     const valid = attempted.filter(isValid).map((item) => item.durationMs);
     lanes[lane.id] = {
       ...summaryOrUnavailable(valid, attempted.length),
-      trend: scenario.cases.transcriptBytes.map((transcriptBytes) => {
-        const atSize = attempted.filter((item) => item.case.transcriptBytes === transcriptBytes);
-        return { transcriptBytes, ...summaryOrUnavailable(atSize.filter(isValid).map((item) => item.durationMs), atSize.length) };
-      }),
+      transcriptBytes: scenario.cases.transcriptBytes[0],
     };
   }
+  const progression = observations.filter((item) => item.case?.workload === "progressive-resource");
+  lanes.transcriptSizeTrend = scenario.cases.transcriptBytes.map((transcriptBytes) => {
+    const attempted = progression.filter((item) => item.case.transcriptBytes === transcriptBytes);
+    return { transcriptBytes, ...summaryOrUnavailable(attempted.filter(isValid).map((item) => item.durationMs), attempted.length) };
+  });
   return lanes;
 }
 

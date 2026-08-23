@@ -48,7 +48,7 @@ function renderIndex(model) {
     ["Warm session switch — across workspaces", "across-workspaces-warm"],
     ["Cold session switch — across workspaces", "across-workspaces-cold"],
   ].map(([title, key]) => switchTable(title, model.apps.filter((app) => app.sessionSwitch), key)).join("");
-  const latencySeries = model.apps.flatMap((app) => app.sessionSwitch ? Object.entries(app.sessionSwitch.derivation.summary).map(([lane, metric]) => ({ label: `${app.name} · ${lane}`, points: metric.trend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.p95 })) })) : []);
+  const latencySeries = model.apps.flatMap((app) => app.sessionSwitch ? [{ label: app.name, points: app.sessionSwitch.derivation.summary.transcriptSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.p95 })) }] : []);
   const cpuSeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.cpuPercent })) }));
   const memorySeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.rssMiB })) }));
   const sessionComparison = switchStatus.status === "valid"
@@ -71,23 +71,23 @@ function renderApp(model, app) {
     for (const [title, key] of [["Warm within workspace", "within-workspace-warm"], ["Cold within workspace", "within-workspace-cold"], ["Warm across workspaces", "across-workspaces-warm"], ["Cold across workspaces", "across-workspaces-cold"]]) {
       sections.push(switchTable(title, [app], key));
     }
-    sections.push(chart("Latency by transcript size", Object.entries(summary).map(([lane, metric]) => ({ label: lane, points: metric.trend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.p95 })) })), "Transcript size (MiB)", "p95 latency (ms)"));
+    sections.push(chart("Latency by transcript size", [{ label: "Within workspace — cold", points: summary.transcriptSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.p95 })) }], "Transcript size (MiB)", "p95 latency (ms)"));
     sections.push(memoryTable(app.sessionSwitch.resources));
     if (app.sessionSwitch.resources?.status === "valid") {
       sections.push(chart("CPU growth with session switching", [{ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.cpuPercent })) }], "Switch sequence", "CPU (%)"));
       sections.push(chart("Memory growth with session switching", [{ label: app.name, points: app.sessionSwitch.resources.trend.map((point) => ({ x: point.switchSequence, y: point.rssMiB })) }], "Switch sequence", "RSS (MiB)"));
     }
   }
-  const body = `<section class="hero compact"><p class="eyebrow"><a href="../../index.html">← All applications</a></p><h1>${escapeHtml(app.name)}</h1><p>Individual result page for ${escapeHtml(model.title)}.</p></section>${sections.join("")}<section class="panel"><h2>Definitions</h2><p><strong>Active memory</strong> is measured while completed historical sessions progress from 1 MiB through 32 MiB. <strong>Idle</strong> means the fixed 1 MiB control transcript is fully ready with no benchmark input for 60 seconds. No live session stream is running.</p></section>`;
+  const body = `<section class="hero compact"><p class="eyebrow"><a href="../../index.html">← All applications</a></p><h1>${escapeHtml(app.name)}</h1><p>Individual result page for ${escapeHtml(model.title)}.</p></section>${sections.join("")}<section class="panel"><h2>Definitions</h2><p><strong>Active memory</strong> is measured while completed historical sessions progress from 1 MiB through 32 MiB. <strong>Idle</strong> means the fixed 1 MiB control transcript is fully ready with no benchmark input for 5 seconds. No live session stream is running.</p></section>`;
   return page({ title: `${app.name} · ${model.title}`, current: app.id, body });
 }
 
 function switchTable(title, apps, key) {
-  const sizes = [...new Set(apps.flatMap((app) => app.sessionSwitch.derivation.summary[key].trend.map((point) => point.transcriptBytes)))].toSorted((left, right) => left - right);
   const appHeaders = apps.map((app) => `<th scope="colgroup" colspan="4">${escapeHtml(app.name)}</th>`).join("");
   const metricHeaders = apps.map(() => "<th scope=\"col\">Average</th><th scope=\"col\">Maximum</th><th scope=\"col\">p95</th><th scope=\"col\">Valid / attempted</th>").join("");
-  const rows = sizes.map((size) => `<tr><th scope="row">${formatBytes(size)}</th>${apps.map((app) => switchMetricCells(app.sessionSwitch.derivation.summary[key].trend.find((point) => point.transcriptBytes === size))).join("")}</tr>`).join("");
-  return `<section class="panel"><h3>${escapeHtml(title)}</h3><div class="table-scroll"><table><caption>${escapeHtml(title)} at each exact completed transcript size</caption><thead><tr><th scope="col" rowspan="2">Transcript size</th>${appHeaders}</tr><tr>${metricHeaders}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  const size = apps[0]?.sessionSwitch.derivation.summary[key].transcriptBytes;
+  const row = `<tr><th scope="row">${formatBytes(size)}</th>${apps.map((app) => switchMetricCells(app.sessionSwitch.derivation.summary[key])).join("")}</tr>`;
+  return `<section class="panel"><h3>${escapeHtml(title)}</h3><div class="table-scroll"><table><caption>${escapeHtml(title)} at the fixed standard transcript</caption><thead><tr><th scope="col" rowspan="2">Transcript size</th>${appHeaders}</tr><tr>${metricHeaders}</tr></thead><tbody>${row}</tbody></table></div></section>`;
 }
 
 function switchMetricCells(metric) {
@@ -116,11 +116,11 @@ function formatBytes(bytes) {
 function memoryTable(resources) {
   if (!resources || resources.status !== "valid") return `<section class="panel"><h3>Memory consumption</h3><p class="status invalid">${escapeHtml(resources?.reason ?? "Unavailable")}</p></section>`;
   const rows = [
-    ["Baseline idle average", resources.baselineIdleAverageRssMiB, "60 seconds on the ready 1 MiB control transcript before switching"],
+    ["Baseline idle average", resources.baselineIdleAverageRssMiB, "5 seconds on the ready 1 MiB control transcript before switching"],
     ["Active average", resources.activeAverageRssMiB, "Average during the progressive 1–32 MiB switch workload"],
     ["Active maximum", resources.activeMaximumRssMiB, "Largest active process-family RSS sample"],
     ["Active p95", resources.activeP95RssMiB, "Nearest-rank p95 of active samples"],
-    ["Ending idle average", resources.endingIdleAverageRssMiB, "60 seconds after returning to the same control transcript"],
+    ["Ending idle average", resources.endingIdleAverageRssMiB, "5 seconds after returning to the same control transcript"],
     ["Retained RSS growth", resources.retainedRssGrowthMiB, "Ending idle average minus baseline idle average"],
   ];
   return `<section class="panel"><h3>Memory consumption</h3><div class="table-scroll"><table><caption>Whole-application memory result</caption><thead><tr><th scope="col">Metric</th><th scope="col">Summed RSS</th><th scope="col">Definition</th></tr></thead><tbody>${rows.map(([label, value, description]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${format(value)} MiB</td><td>${escapeHtml(description)}</td></tr>`).join("")}</tbody></table></div></section>`;
