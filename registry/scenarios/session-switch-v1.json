@@ -8,7 +8,7 @@
   "cases": {
     "workspaceRelations": ["within-workspace", "across-workspaces"],
     "sessionStates": ["cold", "warm"],
-    "transcriptBytes": [1048576, 2097152, 4194304, 8388608, 16777216, 33554432]
+    "transcriptBytes": [1048576, 8388608, 33554432]
   },
   "metrics": [
     {
@@ -20,9 +20,9 @@
   "resourceMeasurement": {
     "processScope": "application-family",
     "activeSampleIntervalMs": 250,
-    "idleSampleIntervalMs": 500,
-    "settleBeforeIdleMs": 3000,
-    "idleWindowMs": 10000
+    "idleSampleIntervalMs": 250,
+    "settleBeforeIdleMs": 1000,
+    "idleWindowMs": 5000
   },
   "runProfiles": {
     "smoke": 1,

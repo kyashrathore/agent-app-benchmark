@@ -142,7 +142,7 @@ Repeat launch is not revealing a hidden window, focusing a background process, o
 - Smoke: 1 measured attempt per case.
 - Local quick run: 2 measured attempts per case.
 - Public app start: 2 measured attempts per app-start case.
-- Public session switching: 2 observations per `(lane, transcript size)`. One fresh app process runs all six counterbalanced sizes for one lane repetition, yielding 8 session-switch processes and 48 raw switch observations per app rather than one process per observation.
+- Public session switching: 2 observations per `(lane, transcript size)`. One fresh app process runs all three counterbalanced sizes for one lane repetition, yielding 8 session-switch processes and 24 raw switch observations per app rather than one process per observation.
 - A direct run or paired comparison may override the selected profile with 1–100 repetitions. A paired comparison owns one shared value for every app, and each result records the effective count.
 - Conformance checks and required warmup/P1 preparation are separate lifecycle steps, not discarded “harness samples.”
 - T3 and Claxedo attempts are interleaved using a recorded balanced seed to reduce thermal and time-order bias.
@@ -164,7 +164,7 @@ Each lane receives its own result table containing only average, maximum, p95, a
 
 Public V1 pins exact target sizes:
 
-`1, 2, 4, 8, 16, 32 MiB`, where `1 MiB = 1,048,576` canonical UTF-8 content bytes.
+`1, 8, 32 MiB`, where `1 MiB = 1,048,576` canonical UTF-8 content bytes. These are exact byte points, not small/medium/large labels. The canonical corpus retains intermediate sizes so a future scenario can add denser sampling without changing app-native input translation.
 
 V1 uses only completed user/assistant text messages. This keeps the initial size benchmark portable across apps whose tool, diff, reasoning, and rich-part event structures differ. Rich-content corpora can be proposed later as separately versioned public corpora.
 
@@ -214,7 +214,7 @@ Each lane/size has a distinct destination assigned by the corpus manifest. A col
 
 ### 7.2 Exact terms
 
-- **Baseline idle:** The visible app has fully loaded the fixed 1 MiB control transcript. During the 60-second window there is no driver input, session switch, live agent, stream, or terminal activity. Normal product timers, garbage collection, and background services remain included.
+- **Baseline idle:** The visible app has fully loaded the fixed 1 MiB control transcript. During the 5-second window there is no driver input, session switch, live agent, stream, or terminal activity. Normal product timers, garbage collection, and background services remain included.
 - **Active:** Only the intervals from each trusted session activation through its valid painted and input-ready endpoint during the deterministic `session-switch-v1` progression.
 - **Ending idle:** The same 1 MiB control transcript and same no-input conditions as baseline, after the full workload. Returning to the same surface avoids mistaking the currently displayed 32 MiB page for retained growth.
 
@@ -225,7 +225,7 @@ Each lane/size has a distinct destination assigned by the corpus manifest. A col
 - The trusted driver declares every app-owned process root. The framework validates those roots, tracks their descendants by PID/start-time identity, displays the declaration, and invalidates observed unclassified processes within that declared family. It does not claim host-wide discovery of undeclared unrelated processes.
 - RSS is the sum across the app process family and is labeled as such because shared pages can be counted in multiple multi-process GUI helpers.
 - CPU percentage is sampled cumulative CPU-time delta for every descendant observed inside the boundary, divided by elapsed wall time. New descendants count from process birth; exiting descendants count through their final sample, and unobserved later work is not estimated. PID/start-time identity prevents reuse from being treated as continuity. 100% means one fully occupied logical core and multicore totals may exceed 100%.
-- Continuous active samples use the existing native 250 ms cadence; idle uses 1000 ms.
+- Continuous active and idle samples use the native 250 ms cadence. Each 5-second idle window therefore contains about 20 samples.
 - Each switch also has resource snapshots immediately before activation and after the semantic endpoint. Per-switch CPU derives from cumulative CPU-time deltas, so a switch faster than 250 ms is not assigned a fabricated zero or missing interior sample.
 - Missing telemetry, identity reuse, excessive cadence gaps, or monitor failure invalidates the resource portion while preserving independently valid latency observations.
 
@@ -242,7 +242,7 @@ Each lane/size has a distinct destination assigned by the corpus manifest. A col
 
 ### 7.5 Charts
 
-- **CPU growth chart:** X is cumulative switch sequence, annotated with lane and exact transcript bytes. Y is per-switch whole-process-family CPU percentage from bracketing cumulative CPU-time snapshots. A light rolling trend may be derived, but raw points remain available.
+- **CPU growth chart:** X is the exact `1, 8, 32 MiB` size progression in the fixed within-workspace/cold resource lane. Y is per-switch whole-process-family CPU percentage from bracketing cumulative CPU-time snapshots. Raw points remain available.
 - **Memory growth chart:** X is the same switch sequence. Y is post-ready whole-process-family RSS, with the active peak available in the underlying point metadata.
 - **Retained-memory marker:** Baseline idle average versus ending idle average on the same control transcript.
 
@@ -561,7 +561,7 @@ The current uncommitted local skeleton predates this proposed plan. During imple
 | Corpus | Exact canonical sizes, 25-session topology, stable digest, and globally unique logical IDs. | One-byte generator drift, missing logical session, wrong benchmark role, or duplicate ID fails before a driver starts. App-native fidelity remains driver-attested and app-tested. |
 | Driver | Correct lifecycle, receipts, process roots, clean shutdown. | Out-of-order response, timeout, crash, wrong content, untrusted input, and survivor remain visible and invalid. |
 | App start | Fresh P0 and initialized P1 clone per attempt reach the identical endpoint. | Reused mutable application state, existing process, incomplete anchor paint, or failed shutdown invalidates. |
-| Session switch | All four lanes and six exact sizes emit raw actions. | Previously activated “cold” destination or warm destination without exactly one warmup invalidates. |
+| Session switch | All four lanes and three exact sizes emit raw actions; resources use the disclosed within-workspace/cold progression. | Previously activated “cold” destination or warm destination without exactly one warmup invalidates. |
 | Resources | Driver-declared roots and descendants, baseline/active/ending windows, boundary CPU snapshots. | PID reuse, observed unclassified family process, monitor gap/death, or missing bracket invalidates only affected resource results. |
 | Statistics | Average, maximum, nearest-rank p95 match fixed fixtures. | Empty/insufficient valid sample sets do not produce a headline metric. |
 | Reports | Exact tables/charts regenerate deterministically from raw input. | Hand-edited summaries, omitted failures, or mismatched raw hash fail CI. |

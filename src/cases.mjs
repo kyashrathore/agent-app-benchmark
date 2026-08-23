@@ -45,18 +45,17 @@ export function buildLatencyGroups(scenario, runProfile, seed = "agent-app-bench
   return groups;
 }
 
-export function buildResourceSequence(scenario, seed = "agent-app-benchmark-public-v1") {
+export function buildResourceSequence(scenario) {
   if (scenario.kind !== "session-switch") throw new Error("Resource sequence requires a session-switch scenario.");
-  return scenario.cases.transcriptBytes.flatMap((transcriptBytes, sizeIndex) =>
-    seededShuffle(SESSION_LANES, `${seed}|resource|${transcriptBytes}`).map((lane, laneIndex) =>
-      makeSwitchCase({
-        lane,
-        transcriptBytes,
-        repetition: 0,
-        sequence: sizeIndex * SESSION_LANES.length + laneIndex,
-        workload: "progressive-resource",
-      }),
-    ),
+  const lane = SESSION_LANES[0];
+  return scenario.cases.transcriptBytes.map((transcriptBytes, sequence) =>
+    makeSwitchCase({
+      lane,
+      transcriptBytes,
+      repetition: 0,
+      sequence,
+      workload: "progressive-resource",
+    }),
   );
 }
 

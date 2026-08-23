@@ -96,10 +96,10 @@ test("session runner derives latency and valid framework-observed resource resul
     });
     assert.equal(result.derivation.summary["within-workspace-cold"].valid, 2);
     assert.equal(result.derivation.summary["across-workspaces-warm"].valid, 2);
-    assert.equal(result.observations.length, 13);
-    assert.equal(result.resourceTrace.boundaries.length, 4);
+    assert.equal(result.observations.length, 10);
+    assert.equal(result.resourceTrace.boundaries.length, 1);
     assert.equal(result.resources.status, "valid");
-    assert.equal(result.resources.trend.length, 4);
+    assert.equal(result.resources.trend.length, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

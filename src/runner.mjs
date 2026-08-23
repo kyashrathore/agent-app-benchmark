@@ -178,7 +178,7 @@ async function runSessionLatency({ driver, scenario, runProfile, repetitions, pr
 
 async function runResourceWorkload({ driver, scenario, prepared, observations, seed, resourceMonitor, startMonitor, delay, now }) {
   const resource = scenario.resourceMeasurement;
-  const sequence = buildResourceSequence(scenario, seed);
+  const sequence = buildResourceSequence(scenario);
   let monitor;
   let launchAttempted = false;
   let failure = resourceMonitor ? null : "No framework resource monitor executable was supplied.";
