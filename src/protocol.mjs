@@ -133,6 +133,7 @@ function assertRendererTrace(trace, clock, benchmarkCase) {
   const milestones = Object.fromEntries(trace.milestones.map((item) => [item.id, item.at]));
   const required = requiredMilestones(benchmarkCase);
   if (required.some((id) => !Number.isFinite(milestones[id]))) throw new Error(`Driver renderer trace is missing required milestones: ${required.filter((id) => !Number.isFinite(milestones[id])).join(", ")}.`);
+  if (Math.abs(milestones.interactive - clock.end) > 0.5) throw new Error("Driver renderer interactive milestone does not match the action endpoint.");
   if (benchmarkCase.workload === "workspace-panel-action") assertPanelMilestoneOrder(benchmarkCase.action, milestones, trace.transitionMode);
   if (benchmarkCase.workload === "panel-session-switch" && (milestones["session-ready"] < milestones["trusted-input"]
     || milestones["panel-ready"] < milestones["trusted-input"]

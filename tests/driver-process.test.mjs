@@ -153,6 +153,15 @@ test("invalid semantic renderer evidence remains preserved for diagnosis", () =>
   assert.deepEqual(observation.readiness, result.readiness);
 });
 
+test("panel timing ends at the interactive milestone without post-endpoint tail frames", () => {
+  const benchmarkCase = { caseId: "toggle", workload: "workspace-panel-action", action: "toggle-open-close" };
+  const result = panelExecution(benchmarkCase, "none");
+  result.rendererTrace.milestones.find((item) => item.id === "interactive").at = 118;
+  const observation = normalizeExecution(result, benchmarkCase, { requireTimingEvidence: true, requireRendererTrace: true });
+  assert.equal(observation.status, "invalid");
+  assert.match(observation.reason, /interactive milestone does not match/u);
+});
+
 function panelExecution(benchmarkCase, transitionMode) {
   return {
     caseId: benchmarkCase.caseId,
