@@ -19,6 +19,8 @@ test("all public registry entries satisfy strict schemas and cross references", 
     "corpusArtifact:opencode-completed-sessions-v2",
     "corpusArtifact:opencode-completed-sessions-v3",
     "corpusArtifact:opencode-completed-transcripts-v1",
+    "app:claxedo-solid1-web",
+    "app:claxedo-solid2-web",
     "app:claxedo",
     "app:t3",
   ]);
