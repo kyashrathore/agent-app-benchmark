@@ -9,6 +9,7 @@ import { readDefinition, readRegistered, validateRegistry } from "../src/registr
 import { runBenchmark, validateResultFile } from "../src/runner.mjs";
 import { buildSite } from "../src/report/site.mjs";
 import { validateAppendOnly } from "../src/publication.mjs";
+import { buildWorkspaceFixtureManifest } from "../src/workspace-fixture.mjs";
 
 const argv = process.argv.slice(2);
 const command = argv.shift();
@@ -65,6 +66,8 @@ try {
     const app = await readRegistered("app", required(options, "app"));
     const scenario = await readRegistered("scenario", required(options, "scenario"));
     const verified = await verifyCorpus(path.resolve(required(options, "corpusDirectory")));
+    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(scenario.value.kind);
+    const workspaceFixture = panelScenario ? buildWorkspaceFixtureManifest(scenario.value.cases.workspaceLoad, verified.manifest.seed) : null;
     const result = await runDriverConformance({
       driver: driverOptions(options),
       expected: { appId: app.value.id, scenarioId: scenario.value.id, sourceEventFormatId: verified.manifest.sourceEventFormat.id },
@@ -73,8 +76,12 @@ try {
       prepare: {
         scenarioId: scenario.value.id,
         scenarioDigestSha256: scenario.digest,
-        scenarioDefinition: scenario.value,
-        fixtureSeed: verified.manifest.seed,
+        ...(workspaceFixture ? {
+          scenarioDefinition: scenario.value,
+          fixtureSeed: verified.manifest.seed,
+          workspaceFixtureManifest: workspaceFixture,
+          workspaceFixtureDigestSha256: workspaceFixture.manifestDigestSha256,
+        } : {}),
         corpusDirectory: verified.path,
         corpusManifestPath: path.join(verified.path, "manifest.json"),
         corpusDigestSha256: verified.digestSha256,

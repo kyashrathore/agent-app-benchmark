@@ -81,7 +81,18 @@
     },
     {
       "if": { "properties": { "scenario": { "type": "object", "properties": { "kind": { "enum": ["workspace-panel", "session-switch-workspace-panel"] } }, "required": ["kind"] } } },
-      "then": { "properties": { "resources": { "type": "null" }, "resourceTrace": { "type": "null" } } }
+      "then": {
+        "properties": {
+          "resources": { "type": "null" },
+          "resourceTrace": { "type": "null" },
+          "materialization": { "type": "object", "required": ["workspaceFixtureDigestSha256"] }
+        }
+      },
+      "else": {
+        "properties": {
+          "materialization": { "type": "object", "not": { "required": ["workspaceFixtureDigestSha256"] } }
+        }
+      }
     }
   ],
   "$defs": {
@@ -123,7 +134,8 @@
       "properties": {
         "mode": { "enum": ["native-opencode", "translated"] },
         "corpusDigestSha256": { "$ref": "#/$defs/sha256" },
-        "mappingDigestSha256": { "$ref": "#/$defs/sha256" }
+        "mappingDigestSha256": { "$ref": "#/$defs/sha256" },
+        "workspaceFixtureDigestSha256": { "$ref": "#/$defs/sha256" }
       }
     },
     "scenarioIdentity": {
@@ -156,7 +168,7 @@
         "startMode": { "enum": ["new-application-state", "initialized-application-state"] },
         "stateHandle": { "enum": ["P0", "P1"] },
         "workload": { "enum": ["isolated-latency", "transcript-size-latency", "progressive-resource", "resource-control", "workspace-panel-action", "panel-session-switch"] },
-        "action": { "enum": ["open-cold", "interrupt-open-close", "interrupt-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"] },
+        "action": { "enum": ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"] },
         "panelProfile": { "enum": ["closed", "files", "diff"] },
         "workspaceRelation": { "enum": ["within-workspace", "across-workspaces"] },
         "sessionState": { "enum": ["cold", "warm"] },
@@ -219,7 +231,7 @@
     },
     "rendererTrace": {
       "type": "object", "additionalProperties": false,
-      "required": ["clock", "transitionMode", "milestones", "frameTimestampsMs", "longAnimationFrames", "counters"],
+      "required": ["clock", "transitionMode", "milestones", "frameTimestampsMs", "longAnimationFrames", "counterInterval", "counters"],
       "properties": {
         "clock": { "type": "string", "minLength": 1, "maxLength": 120 },
         "transitionMode": { "enum": ["none", "animated"] },
@@ -260,6 +272,13 @@
                 }
               }
             }
+          }
+        },
+        "counterInterval": {
+          "type": "object", "additionalProperties": false, "required": ["start", "end"],
+          "properties": {
+            "start": { "$ref": "#/$defs/nonnegative" },
+            "end": { "$ref": "#/$defs/nonnegative" }
           }
         },
         "counters": {

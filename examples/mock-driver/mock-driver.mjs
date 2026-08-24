@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
+import { attestWorkspaceFixture, generateWorkspaceFileBytes, verifyWorkspaceFixtureManifest } from "../../src/workspace-fixture.mjs";
 
 const SHA = "0".repeat(64);
 const COMMIT = "0".repeat(40);
@@ -46,7 +47,17 @@ async function dispatch(method, params) {
       throw new Error("Mock driver requires corpusDefinitionDigestSha256.");
     }
     const manifest = JSON.parse(await readFile(params.corpusManifestPath, "utf8"));
-    if (!params.scenarioDefinition || params.scenarioDefinition.id !== params.scenarioId || params.fixtureSeed !== manifest.seed) throw new Error("Mock driver requires the exact scenario definition and corpus fixture seed.");
+    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(params.scenarioDefinition?.kind);
+    let workspaceFixtureDigestSha256;
+    if (panelScenario) {
+      if (params.scenarioDefinition.id !== params.scenarioId || params.fixtureSeed !== manifest.seed) throw new Error("Mock driver requires the exact scenario definition and corpus fixture seed.");
+      const fixture = verifyWorkspaceFixtureManifest(params.workspaceFixtureManifest);
+      if (fixture.manifestDigestSha256 !== params.workspaceFixtureDigestSha256) throw new Error("Mock driver received the wrong workspace fixture digest.");
+      workspaceFixtureDigestSha256 = await attestWorkspaceFixture(fixture, (filePath, revision) => {
+        const file = fixture.files.find((candidate) => candidate.path === filePath);
+        return generateWorkspaceFileBytes(fixture.seed, file, revision);
+      });
+    }
     prepared = { params, manifest };
     const mapping = Object.fromEntries(manifest.sessions.map((session) => [session.logicalSessionId, `mock-${session.nativeSessionId}`]));
     return {
@@ -56,6 +67,7 @@ async function dispatch(method, params) {
       mappingDigestSha256: createHash("sha256").update(JSON.stringify(mapping)).digest("hex"),
       stateHandles: { P0: "mock-p0", P1: "mock-p1" },
       sessionMapping: mapping,
+      ...(panelScenario ? { workspaceFixtureDigestSha256 } : {}),
     };
   }
   if (method === "launch") {
@@ -68,7 +80,7 @@ async function dispatch(method, params) {
     if (process.env.BENCHMARK_MOCK_MODE === "sensitive-error") throw new Error("failed at /Users/example/private/session.json token=super-secret-value");
     if (params.case.startMode) await startApplication();
     if (!application) throw new Error("Mock application is not running.");
-    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(prepared.params.scenarioDefinition.kind);
+    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(prepared.params.scenarioDefinition?.kind);
     const durationMs = panelScenario ? panelDuration(params.case) : params.case.transcriptBytes ? 4 + Math.log2(params.case.transcriptBytes / 1048576 + 1) : params.case.startMode === "new-application-state" ? 40 : 25;
     const rendererTrace = panelScenario ? mockRendererTrace(params.case, 100, durationMs) : undefined;
     return {
@@ -91,7 +103,7 @@ async function dispatch(method, params) {
 }
 
 function panelDuration(benchmarkCase) {
-  if (benchmarkCase.action?.startsWith("interrupt-")) return 36;
+  if (["toggle-open-close", "toggle-close-open"].includes(benchmarkCase.action)) return 36;
   if (benchmarkCase.action?.startsWith("open-")) return 70;
   if (benchmarkCase.workload === "workspace-panel-action") return 16;
   return benchmarkCase.panelProfile === "diff" ? 30 : benchmarkCase.panelProfile === "files" ? 24 : 18;
@@ -106,9 +118,9 @@ function mockRendererTrace(benchmarkCase, start, duration) {
     milestones = benchmarkCase.action === "open-warm-data"
       ? [point("data-ready", start), point("trusted-input", start + 1), point("shell-visible", start + 3), point("above-fold-painted", start + 12), point("animation-settled", end - 4), point("interactive", end)]
       : [point("trusted-input", start), point("shell-visible", start + 3), point("data-ready", start + 10), point("above-fold-painted", start + 20), point("animation-settled", end - 4), point("interactive", end)];
-  } else if (benchmarkCase.action?.startsWith("interrupt-")) {
+  } else if (["toggle-open-close", "toggle-close-open"].includes(benchmarkCase.action)) {
     transitionMode = "animated";
-    milestones = [point("trusted-input", start), point("reversal-input", start + 10), point("reversal-observed", start + 16), point("animation-settled", end - 2), point("interactive", end)];
+    milestones = [point("trusted-input", start), point("second-toggle-input", start + 10), point("final-state-presented", start + 16), point("animation-settled", end - 2), point("interactive", end)];
   } else if (benchmarkCase.workload === "workspace-panel-action") {
     milestones = [point("trusted-input", start), point("action-painted", end - 2), point("interactive", end)];
   } else {
@@ -137,6 +149,7 @@ function mockRendererTrace(benchmarkCase, start, duration) {
     milestones,
     frameTimestampsMs,
     longAnimationFrames,
+    counterInterval: { start, end },
     counters: {
       scriptDurationMs: duration * 0.25,
       styleRecalcDurationMs: duration * 0.1,

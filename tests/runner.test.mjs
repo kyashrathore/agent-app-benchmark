@@ -54,7 +54,7 @@ const SWITCH_SCENARIO = {
   resourceMeasurement: { processScope: "application-family", activeSampleIntervalMs: 250, idleSampleIntervalMs: 1000, settleBeforeIdleMs: 1000, idleWindowMs: 2000 },
   runProfiles: { smoke: 1, quick: 1, publication: 1 },
 };
-const WORKSPACE_LOAD = { directoryCount: 16, sourceFileCount: 160, sourceFileBytes: 32768, changedFileCount: 24, diffHunksPerFile: 8, diffLinesPerHunk: 24, openFileTabCount: 4 };
+const WORKSPACE_LOAD = { generator: "agent-app-workspace-v1", directoryCount: 16, sourceFileCount: 160, sourceFileBytes: 32768, changedFileCount: 24, diffHunksPerFile: 8, diffLinesPerHunk: 24, openFileTabCount: 4 };
 const PANEL_SCENARIO = {
   schemaVersion: 1,
   id: "workspace-panel-v1",
@@ -62,7 +62,7 @@ const PANEL_SCENARIO = {
   description: "test",
   kind: "workspace-panel",
   corpusId: CORPUS_VALUE.id,
-  cases: { workspaceLoad: WORKSPACE_LOAD, actions: ["open-cold", "interrupt-open-close", "interrupt-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"] },
+  cases: { workspaceLoad: WORKSPACE_LOAD, actions: ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"] },
   metrics: [{ id: "panel.duration_ms", description: "Panel duration.", unit: "ms" }],
   runProfiles: { smoke: 1, quick: 1, publication: 1 },
 };
@@ -162,11 +162,17 @@ test("workspace-panel runner preserves per-action traces and derives renderer su
     assert.ok(result.observations.every((item) => item.status === "valid" && item.rendererTrace.frameTimestampsMs.length >= 2));
     assert.equal(result.derivation.summary["open-cold"].durationMs.average, 70);
     assert.equal(result.derivation.summary["open-cold"].milestones.inputToShellMs.average, 3);
-    assert.equal(result.derivation.summary["interrupt-open-close"].milestones.reversalResponseMs.average, 6);
+    assert.equal(result.derivation.summary["toggle-open-close"].milestones.secondToggleResponseMs.average, 6);
     assert.equal(result.derivation.summary["open-cold"].longAnimationFrames.count.average, 1);
+    assert.equal(result.derivation.summary["open-cold"].longAnimationFrames.worstBlockingDurationMs.maximum, 5);
+    assert.equal(result.derivation.summary["open-cold"].rendererWork.taskDurationMs.average, 35);
     assert.equal(result.observations[0].rendererTrace.longAnimationFrames[0].scripts[0].functionName, "renderWorkspacePanel");
+    assert.match(result.materialization.workspaceFixtureDigestSha256, /^[0-9a-f]{64}$/u);
     assert.equal(result.resources, null);
-    assert.match(await readFile(path.join(output, "report.md"), "utf8"), /Data-ready to interactive/);
+    const report = await readFile(path.join(output, "report.md"), "utf8");
+    assert.match(report, /Data-ready to interactive/);
+    assert.match(report, /Worst blocking max/);
+    assert.match(report, /Task avg/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

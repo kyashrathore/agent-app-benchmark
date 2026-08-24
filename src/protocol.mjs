@@ -1,3 +1,5 @@
+import { assertContract } from "./contracts.mjs";
+
 const SHA256 = /^[0-9a-f]{64}$/;
 const REQUIRED_READINESS_CHECKS = ["content-identity", "first-fold-painted", "two-presentations", "trusted-input"];
 
@@ -18,6 +20,7 @@ export function assertPrepared(result, expected) {
   if (result.corpusDigestSha256 !== expected.corpusDigestSha256) throw new Error("Driver attested to the wrong corpus digest.");
   if (result.eventSchemaDigestSha256 !== expected.eventSchemaDigestSha256) throw new Error("Driver attested to the wrong event schema digest.");
   if (!SHA256.test(result.mappingDigestSha256 ?? "")) throw new Error("Driver prepare result has no mapping digest.");
+  if (expected.workspaceFixtureDigestSha256 && result.workspaceFixtureDigestSha256 !== expected.workspaceFixtureDigestSha256) throw new Error("Driver attested to the wrong workspace fixture digest.");
   if (!result.stateHandles || typeof result.stateHandles.P0 !== "string" || typeof result.stateHandles.P1 !== "string") throw new Error("Driver did not prepare P0 and P1 state handles.");
   return result;
 }
@@ -42,28 +45,28 @@ export function normalizeExecution(result, benchmarkCase, options = {}) {
   if (!Number.isFinite(result.durationMs) || result.durationMs < 0) return { ...base, status: "invalid", reason: "Driver returned an invalid duration." };
   try {
     assertReceipt(result.readiness, "execution readiness", options);
-    if (result.readiness.checks.some((check) => check.passed !== true)) return { ...base, status: "invalid", durationMs: result.durationMs, reason: "One or more readiness checks failed.", readiness: result.readiness };
+    if (result.readiness.checks.some((check) => check.passed !== true)) return invalidExecution(base, result, "One or more readiness checks failed.");
     if (!result.clock || result.clock.kind !== "single-monotonic-clock" || !Number.isFinite(result.clock.start) || !Number.isFinite(result.clock.end) || result.clock.end < result.clock.start) {
-      return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver returned invalid one-clock timing evidence.", readiness: result.readiness };
+      return invalidExecution(base, result, "Driver returned invalid one-clock timing evidence.");
     }
     if (Math.abs((result.clock.end - result.clock.start) - result.durationMs) > 0.5) {
-      return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver duration does not match its monotonic clock interval.", readiness: result.readiness, clock: result.clock };
+      return invalidExecution(base, result, "Driver duration does not match its monotonic clock interval.");
     }
     if (options.requireTimingEvidence) {
       for (const check of result.readiness.checks) {
         if (!Number.isFinite(check.observedAt) || check.observedAt < result.clock.start || check.observedAt > result.clock.end + 0.5) {
-          return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver readiness evidence is missing or outside the timed interval.", readiness: result.readiness, clock: result.clock };
+          return invalidExecution(base, result, "Driver readiness evidence is missing or outside the timed interval.");
         }
       }
       const evidence = Object.fromEntries(result.readiness.checks.map((check) => [check.id, check.observedAt]));
       if (evidence["two-presentations"] < evidence["first-fold-painted"]
         || Math.abs(Math.max(...Object.values(evidence)) - result.clock.end) > 0.5) {
-        return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver readiness milestones do not support the reported endpoint.", readiness: result.readiness, clock: result.clock };
+        return invalidExecution(base, result, "Driver readiness milestones do not support the reported endpoint.");
       }
     }
     if (options.requireRendererTrace) assertRendererTrace(result.rendererTrace, result.clock, benchmarkCase);
   } catch (error) {
-    return { ...base, status: "invalid", durationMs: result.durationMs, reason: error.message };
+    return invalidExecution(base, result, error.message);
   }
   return {
     ...base,
@@ -73,6 +76,21 @@ export function normalizeExecution(result, benchmarkCase, options = {}) {
     clock: result.clock,
     ...(result.rendererTrace === undefined ? {} : { rendererTrace: result.rendererTrace }),
   };
+}
+
+function invalidExecution(base, result, reason) {
+  const invalid = { ...base, status: "invalid", durationMs: result.durationMs, reason };
+  try {
+    assertReceipt(result.readiness, "preserved execution readiness");
+    if (result.readiness.checks.every((check) => check.observedAt === undefined || (Number.isFinite(check.observedAt) && check.observedAt >= 0))) invalid.readiness = result.readiness;
+  } catch {}
+  if (result.clock?.kind === "single-monotonic-clock" && typeof result.clock.clock === "string"
+    && Number.isFinite(result.clock.start) && Number.isFinite(result.clock.end) && result.clock.end >= result.clock.start) invalid.clock = result.clock;
+  try {
+    assertContract("rendererTrace", result.rendererTrace, "preserved renderer trace");
+    invalid.rendererTrace = result.rendererTrace;
+  } catch {}
+  return invalid;
 }
 
 export function assertShutdown(result) {
@@ -104,7 +122,10 @@ function assertReceipt(receipt, label, options = {}) {
 
 function assertRendererTrace(trace, clock, benchmarkCase) {
   if (!trace || trace.clock !== clock.clock || !["none", "animated"].includes(trace.transitionMode)) throw new Error("Driver renderer trace is missing or uses a different clock.");
-  if (!Array.isArray(trace.milestones) || !Array.isArray(trace.frameTimestampsMs) || !Array.isArray(trace.longAnimationFrames) || !trace.counters) throw new Error("Driver renderer trace is incomplete.");
+  if (!Array.isArray(trace.milestones) || !Array.isArray(trace.frameTimestampsMs) || !Array.isArray(trace.longAnimationFrames) || !trace.counterInterval || !trace.counters) throw new Error("Driver renderer trace is incomplete.");
+  if (!Number.isFinite(trace.counterInterval.start) || !Number.isFinite(trace.counterInterval.end)
+    || Math.abs(trace.counterInterval.start - clock.start) > 0.5
+    || Math.abs(trace.counterInterval.end - clock.end) > 0.5) throw new Error("Driver renderer counters do not cover the exact action interval.");
   assertOrderedTimes(trace.milestones.map((item) => item.at), clock, "renderer milestones");
   assertOrderedTimes(trace.frameTimestampsMs, clock, "renderer frames");
   const milestoneIds = trace.milestones.map((item) => item.id);
@@ -129,7 +150,7 @@ function assertRendererTrace(trace, clock, benchmarkCase) {
 function requiredMilestones(benchmarkCase) {
   if (benchmarkCase.workload === "panel-session-switch") return ["trusted-input", "session-ready", "panel-ready", "content-identity", "above-fold-painted", "interactive"];
   if (["open-cold", "open-warm-data"].includes(benchmarkCase.action)) return ["trusted-input", "shell-visible", "animation-settled", "data-ready", "above-fold-painted", "interactive"];
-  if (["interrupt-open-close", "interrupt-close-open"].includes(benchmarkCase.action)) return ["trusted-input", "reversal-input", "reversal-observed", "animation-settled", "interactive"];
+  if (["toggle-open-close", "toggle-close-open"].includes(benchmarkCase.action)) return ["trusted-input", "second-toggle-input", "final-state-presented", "animation-settled", "interactive"];
   return ["trusted-input", "action-painted", "interactive"];
 }
 
@@ -142,11 +163,11 @@ function assertPanelMilestoneOrder(action, milestones, transitionMode) {
     if (transitionMode === "none" && milestones["animation-settled"] !== milestones["shell-visible"]) throw new Error("A non-animated panel open must settle when its shell becomes visible.");
     return;
   }
-  if (["interrupt-open-close", "interrupt-close-open"].includes(action)) {
-    if (milestones["reversal-input"] < milestones["trusted-input"]
-      || milestones["reversal-observed"] < milestones["reversal-input"]
-      || milestones["animation-settled"] < milestones["reversal-observed"]
-      || milestones.interactive < milestones["animation-settled"]) throw new Error("Driver panel-reversal milestones are out of order.");
+  if (["toggle-open-close", "toggle-close-open"].includes(action)) {
+    if (milestones["second-toggle-input"] < milestones["trusted-input"]
+      || milestones["final-state-presented"] < milestones["second-toggle-input"]
+      || milestones["animation-settled"] < milestones["final-state-presented"]
+      || milestones.interactive < milestones["animation-settled"]) throw new Error("Driver panel-toggle milestones are out of order.");
     return;
   }
   if (milestones["action-painted"] < milestones["trusted-input"] || milestones.interactive < milestones["action-painted"]) throw new Error("Driver settled panel-interaction milestones are out of order.");

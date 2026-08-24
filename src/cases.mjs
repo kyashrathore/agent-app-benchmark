@@ -9,8 +9,8 @@ export const SESSION_LANES = Object.freeze([
 
 export const WORKSPACE_PANEL_ACTIONS = Object.freeze([
   "open-cold",
-  "interrupt-open-close",
-  "interrupt-close-open",
+  "toggle-open-close",
+  "toggle-close-open",
   "open-warm-data",
   "switch-surface",
   "open-file",
@@ -64,22 +64,29 @@ export function buildPanelSwitchGroups(scenario, runProfile, seed = "agent-app-b
   if (scenario.kind !== "session-switch-workspace-panel") throw new Error("Panel-switch groups require a session-switch-workspace-panel scenario.");
   const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
   return Array.from({ length: repetitions }, (_, repetition) => {
-    const cases = PANEL_PROFILES.flatMap((panelProfile, profileIndex) => SESSION_LANES.map((lane) => ({
-      caseId: `panel-session-switch-${repetition}-${panelProfile}-${lane.id}`,
-      repetition,
-      sample: profileIndex,
-      workload: "panel-session-switch",
-      workspaceRelation: lane.workspaceRelation,
-      sessionState: lane.sessionState,
-      panelProfile,
-      transcriptBytes: scenario.cases.transcriptBytes,
-      sourceSessionId: "control",
-      destinationSessionId: `latency-${lane.id}-${profileIndex}-${scenario.cases.transcriptBytes}`,
-    })));
+    const lanes = seededShuffle(SESSION_LANES, `${seed}|panel-lanes|${repetition}`);
+    const cases = lanes.flatMap((lane) => {
+      const laneIndex = SESSION_LANES.findIndex((candidate) => candidate.id === lane.id);
+      return rotate(PANEL_PROFILES, (repetition + laneIndex) % PANEL_PROFILES.length).map((panelProfile) => {
+        const profileIndex = PANEL_PROFILES.indexOf(panelProfile);
+        return {
+          caseId: `panel-session-switch-${repetition}-${panelProfile}-${lane.id}`,
+          repetition,
+          sample: profileIndex,
+          workload: "panel-session-switch",
+          workspaceRelation: lane.workspaceRelation,
+          sessionState: lane.sessionState,
+          panelProfile,
+          transcriptBytes: scenario.cases.transcriptBytes,
+          sourceSessionId: "control",
+          destinationSessionId: `latency-${lane.id}-${profileIndex}-${scenario.cases.transcriptBytes}`,
+        };
+      });
+    });
     return {
       groupId: `panel-session-switch-${repetition}`,
       repetition,
-      cases: seededShuffle(cases, `${seed}|panel-session-switch|${repetition}`).map((benchmarkCase, sequence) => ({ ...benchmarkCase, sequence })),
+      cases: cases.map((benchmarkCase, sequence) => ({ ...benchmarkCase, sequence })),
     };
   });
 }

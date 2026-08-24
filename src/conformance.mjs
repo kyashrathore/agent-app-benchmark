@@ -10,6 +10,7 @@ export async function runDriverConformance(options) {
       corpusDigestSha256: options.prepare.corpusDigestSha256,
       eventSchemaDigestSha256: options.prepare.eventSchemaDigestSha256,
       materializationModes: hello.materializationModes,
+      ...(options.prepare.workspaceFixtureDigestSha256 ? { workspaceFixtureDigestSha256: options.prepare.workspaceFixtureDigestSha256 } : {}),
     });
     const benchmarkCase = expandCases(options.scenario, "smoke", options.seed)[0];
     let launch;

@@ -102,7 +102,7 @@
             "properties": {
               "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" },
               "actions": {
-                "const": ["open-cold", "interrupt-open-close", "interrupt-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"]
+                "const": ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"]
               }
             }
           }
@@ -133,8 +133,9 @@
     "workspaceLoad": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["directoryCount", "sourceFileCount", "sourceFileBytes", "changedFileCount", "diffHunksPerFile", "diffLinesPerHunk", "openFileTabCount"],
+      "required": ["generator", "directoryCount", "sourceFileCount", "sourceFileBytes", "changedFileCount", "diffHunksPerFile", "diffLinesPerHunk", "openFileTabCount"],
       "properties": {
+        "generator": { "const": "agent-app-workspace-v1" },
         "directoryCount": { "type": "integer", "minimum": 1, "maximum": 10000 },
         "sourceFileCount": { "type": "integer", "minimum": 1, "maximum": 100000 },
         "sourceFileBytes": { "type": "integer", "minimum": 1, "maximum": 10485760 },

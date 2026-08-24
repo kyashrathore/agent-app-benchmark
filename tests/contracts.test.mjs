@@ -4,7 +4,7 @@ import { assertContract, contractSchemas } from "../src/contracts.mjs";
 import { readRegistered, validateDefinition, validateRegistry } from "../src/registry.mjs";
 
 test("all public registry entries satisfy strict schemas and cross references", async () => {
-  assert.deepEqual(contractSchemas(), ["app", "comparison", "corpus", "corpusArtifact", "corpusManifest", "driverMessage", "opencodeEvent", "opencodeEventV2", "result", "scenario"]);
+  assert.deepEqual(contractSchemas(), ["app", "comparison", "corpus", "corpusArtifact", "corpusManifest", "driverMessage", "opencodeEvent", "opencodeEventV2", "rendererTrace", "result", "scenario", "workspaceFixture"]);
   const entries = await validateRegistry();
   assert.deepEqual(entries.map(({ kind, id }) => `${kind}:${id}`), [
     "scenario:app-start-v1",
@@ -62,7 +62,7 @@ test("driver response must contain exactly one result or error", () => {
   }), /schema validation/);
 });
 
-test("prepare requests carry the exact scenario definition and corpus fixture seed", () => {
+test("prepare keeps the legacy request shape compatible and accepts panel fixture identity", () => {
   const request = {
     protocolVersion: 1,
     kind: "request",
@@ -73,6 +73,8 @@ test("prepare requests carry the exact scenario definition and corpus fixture se
       scenarioDigestSha256: "a".repeat(64),
       scenarioDefinition: { id: "workspace-panel-v1" },
       fixtureSeed: "canonical-seed",
+      workspaceFixtureManifest: { schemaVersion: 1 },
+      workspaceFixtureDigestSha256: "e".repeat(64),
       corpusDirectory: "/private/corpus",
       corpusManifestPath: "/private/corpus/manifest.json",
       corpusDigestSha256: "b".repeat(64),
@@ -82,7 +84,14 @@ test("prepare requests carry the exact scenario definition and corpus fixture se
     },
   };
   assertContract("driverMessage", request);
-  const missingSeed = structuredClone(request);
-  delete missingSeed.params.fixtureSeed;
-  assert.throws(() => assertContract("driverMessage", missingSeed), /fixtureSeed/u);
+  const incompletePanel = structuredClone(request);
+  delete incompletePanel.params.fixtureSeed;
+  assert.throws(() => assertContract("driverMessage", incompletePanel), /fixtureSeed/u);
+  const legacy = structuredClone(request);
+  legacy.params.scenarioId = "session-switch-v1";
+  delete legacy.params.scenarioDefinition;
+  delete legacy.params.fixtureSeed;
+  delete legacy.params.workspaceFixtureManifest;
+  delete legacy.params.workspaceFixtureDigestSha256;
+  assertContract("driverMessage", legacy);
 });

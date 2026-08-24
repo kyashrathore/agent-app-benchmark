@@ -80,3 +80,22 @@ test("panel-open session switching uses distinct real V3 latency-pool destinatio
   assert.ok(groups[0].cases.every((item) => item.destinationSessionId === `latency-${item.workspaceRelation}-${item.sessionState}-${item.sample}-${item.transcriptBytes}`));
   assert.deepEqual(new Set(groups[0].cases.map((item) => item.panelProfile)), new Set(["closed", "files", "diff"]));
 });
+
+test("panel profiles stay adjacent and rotate through every within-lane schedule position", async () => {
+  const { value: scenario } = await readRegistered("scenario", "session-switch-workspace-panel-v1");
+  const groups = buildPanelSwitchGroups(scenario, "smoke", "panel-seed", 3);
+  for (const group of groups) {
+    for (let offset = 0; offset < group.cases.length; offset += 3) {
+      const block = group.cases.slice(offset, offset + 3);
+      assert.equal(new Set(block.map((item) => `${item.workspaceRelation}:${item.sessionState}`)).size, 1);
+      assert.deepEqual(new Set(block.map((item) => item.panelProfile)), new Set(["closed", "files", "diff"]));
+    }
+  }
+  for (const lane of SESSION_LANES) {
+    const positions = groups.map((group) => {
+      const block = group.cases.filter((item) => item.workspaceRelation === lane.workspaceRelation && item.sessionState === lane.sessionState);
+      return Object.fromEntries(block.map((item, index) => [item.panelProfile, index]));
+    });
+    for (const profile of ["closed", "files", "diff"]) assert.deepEqual(new Set(positions.map((item) => item[profile])), new Set([0, 1, 2]));
+  }
+});

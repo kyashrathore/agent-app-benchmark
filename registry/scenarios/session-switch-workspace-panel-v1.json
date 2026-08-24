@@ -11,6 +11,7 @@
     "panelProfiles": ["closed", "files", "diff"],
     "transcriptBytes": 1048576,
     "workspaceLoad": {
+      "generator": "agent-app-workspace-v1",
       "directoryCount": 16,
       "sourceFileCount": 160,
       "sourceFileBytes": 32768,

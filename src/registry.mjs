@@ -115,7 +115,7 @@ function validateScenario(value) {
     assertAscendingIntegers(value.cases.transcriptBytes, "Scenario transcript sizes");
   }
   if (value.kind === "workspace-panel") {
-    const expectedActions = ["open-cold", "interrupt-open-close", "interrupt-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"];
+    const expectedActions = ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"];
     if (JSON.stringify(value.cases.actions) !== JSON.stringify(expectedActions)) throw new Error("Workspace-panel actions are not canonical.");
     validateWorkspaceLoad(value.cases.workspaceLoad);
   }
@@ -128,8 +128,11 @@ function validateScenario(value) {
 }
 
 function validateWorkspaceLoad(load) {
+  if (load.generator !== "agent-app-workspace-v1") throw new Error("Workspace load generator is not canonical.");
   if (load.changedFileCount > load.sourceFileCount) throw new Error("Workspace load cannot change more files than it contains.");
-  if (load.openFileTabCount > load.sourceFileCount) throw new Error("Workspace load cannot open more file tabs than it contains.");
+  if (load.openFileTabCount > load.changedFileCount) throw new Error("Workspace load cannot open more changed-file tabs than it contains.");
+  const lineCount = Math.floor(load.sourceFileBytes / 64);
+  if (Math.floor(lineCount / (load.diffHunksPerFile + 1)) < load.diffLinesPerHunk + 6) throw new Error("Workspace source files are too small for separated canonical diff hunks.");
 }
 
 function validateCorpus(value) {

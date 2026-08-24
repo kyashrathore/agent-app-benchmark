@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/renderer-trace-v1.schema.json",
+  "title": "Per-action renderer trace v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["clock", "transitionMode", "milestones", "frameTimestampsMs", "longAnimationFrames", "counterInterval", "counters"],
+  "properties": {
+    "clock": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "transitionMode": { "enum": ["none", "animated"] },
+    "milestones": {
+      "type": "array", "minItems": 2, "maxItems": 32,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "at"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 80 },
+          "at": { "$ref": "#/$defs/nonnegative" }
+        }
+      }
+    },
+    "frameTimestampsMs": { "type": "array", "minItems": 2, "maxItems": 600, "items": { "$ref": "#/$defs/nonnegative" } },
+    "longAnimationFrames": {
+      "type": "array", "maxItems": 100,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["start", "duration", "blockingDuration", "renderStart", "styleAndLayoutStart", "scripts"],
+        "properties": {
+          "start": { "$ref": "#/$defs/nonnegative" },
+          "duration": { "$ref": "#/$defs/nonnegative" },
+          "blockingDuration": { "$ref": "#/$defs/nonnegative" },
+          "renderStart": { "$ref": "#/$defs/nonnegative" },
+          "styleAndLayoutStart": { "$ref": "#/$defs/nonnegative" },
+          "scripts": {
+            "type": "array", "maxItems": 32,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["functionName", "invokerType", "sourceURL", "duration", "forcedStyleAndLayoutDuration"],
+              "properties": {
+                "functionName": { "type": "string", "maxLength": 300 },
+                "invokerType": { "type": "string", "maxLength": 120 },
+                "sourceURL": { "type": "string", "maxLength": 500 },
+                "duration": { "$ref": "#/$defs/nonnegative" },
+                "forcedStyleAndLayoutDuration": { "$ref": "#/$defs/nonnegative" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "counterInterval": {
+      "type": "object", "additionalProperties": false, "required": ["start", "end"],
+      "properties": { "start": { "$ref": "#/$defs/nonnegative" }, "end": { "$ref": "#/$defs/nonnegative" } }
+    },
+    "counters": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scriptDurationMs", "styleRecalcDurationMs", "layoutDurationMs", "taskDurationMs"],
+      "properties": {
+        "scriptDurationMs": { "$ref": "#/$defs/nonnegative" },
+        "styleRecalcDurationMs": { "$ref": "#/$defs/nonnegative" },
+        "layoutDurationMs": { "$ref": "#/$defs/nonnegative" },
+        "taskDurationMs": { "$ref": "#/$defs/nonnegative" }
+      }
+    }
+  },
+  "$defs": { "nonnegative": { "type": "number", "minimum": 0 } }
+}

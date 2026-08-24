@@ -2,11 +2,12 @@
   "schemaVersion": 1,
   "id": "workspace-panel-v1",
   "title": "Workspace panel rendering and interaction",
-  "description": "Measure a substantial workspace panel as separate, per-action intervals: cold-surface shell opening, opening and closing reversal, warm-data reopening, surface and file navigation, and settled diff controls. Network/data readiness remains a milestone rather than being folded into shell animation.",
+  "description": "Measure a substantial workspace panel as separate, per-action intervals: cold-surface shell opening, opening and closing toggle pairs, warm-data reopening, surface and file navigation, and settled diff controls. Toggle pairs are animated reversals when a transition exists and immediate double-toggles otherwise. Network/data readiness remains a milestone rather than being folded into shell animation.",
   "kind": "workspace-panel",
   "corpusId": "opencode-completed-sessions-v3",
   "cases": {
     "workspaceLoad": {
+      "generator": "agent-app-workspace-v1",
       "directoryCount": 16,
       "sourceFileCount": 160,
       "sourceFileBytes": 32768,
@@ -15,7 +16,7 @@
       "diffLinesPerHunk": 24,
       "openFileTabCount": 4
     },
-    "actions": ["open-cold", "interrupt-open-close", "interrupt-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"]
+    "actions": ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"]
   },
   "metrics": [
     {

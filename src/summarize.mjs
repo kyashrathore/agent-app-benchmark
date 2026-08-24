@@ -69,7 +69,7 @@ function summarizeRendererGroup(attempted) {
     dataReadyToPaintMs: ["data-ready", "above-fold-painted"],
     dataReadyToInteractiveMs: ["data-ready", "interactive"],
     paintToInteractiveMs: ["above-fold-painted", "interactive"],
-    reversalResponseMs: ["reversal-input", "reversal-observed"],
+    secondToggleResponseMs: ["second-toggle-input", "final-state-presented"],
     inputToActionPaintMs: ["trusted-input", "action-painted"],
     inputToContentMs: ["trusted-input", "content-identity"],
     inputToSessionReadyMs: ["trusted-input", "session-ready"],

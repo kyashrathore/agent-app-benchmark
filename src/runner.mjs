@@ -11,6 +11,7 @@ import { assertHello, assertLaunch, assertPrepared, assertShutdown, normalizeExe
 import { renderReport } from "./report.mjs";
 import { deriveBoundaryPoint, ResourceMonitor, validateCadence } from "./resource-monitor.mjs";
 import { summarizeObservations, summarizeResourceRuns, summarizeResources } from "./summarize.mjs";
+import { buildWorkspaceFixtureManifest } from "./workspace-fixture.mjs";
 
 const MAX_RESULT_BYTES = 64 * 1024 * 1024;
 const MAX_PUBLIC_ERROR_LENGTH = 512;
@@ -45,11 +46,17 @@ export async function runBenchmark(input, dependencies = {}) {
       scenarioId: input.scenario.value.id,
       sourceEventFormatId: input.corpus.value.sourceEventFormat.id,
     });
+    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(input.scenario.value.kind);
+    const workspaceFixture = panelScenario ? buildWorkspaceFixtureManifest(input.scenario.value.cases.workspaceLoad, input.corpus.value.seed) : null;
     prepared = assertPrepared(await driver.request("prepare", {
       scenarioId: input.scenario.value.id,
       scenarioDigestSha256: input.scenario.digest,
-      scenarioDefinition: input.scenario.value,
-      fixtureSeed: input.corpus.value.seed,
+      ...(workspaceFixture ? {
+        scenarioDefinition: input.scenario.value,
+        fixtureSeed: input.corpus.value.seed,
+        workspaceFixtureManifest: workspaceFixture,
+        workspaceFixtureDigestSha256: workspaceFixture.manifestDigestSha256,
+      } : {}),
       corpusDirectory: corpus.path,
       corpusManifestPath: path.join(corpus.path, "manifest.json"),
       corpusDigestSha256: corpus.digestSha256,
@@ -60,6 +67,7 @@ export async function runBenchmark(input, dependencies = {}) {
       corpusDigestSha256: corpus.digestSha256,
       eventSchemaDigestSha256: corpus.manifest.sourceEventFormat.schemaDigestSha256,
       materializationModes: hello.materializationModes,
+      ...(workspaceFixture ? { workspaceFixtureDigestSha256: workspaceFixture.manifestDigestSha256 } : {}),
     });
     if (!input.app.materializationModes.includes(prepared.materializationMode)) throw new Error(`${input.app.id} is not registered for ${prepared.materializationMode} materialization.`);
     if (input.scenario.value.kind === "app-start") {
@@ -115,6 +123,7 @@ export async function runBenchmark(input, dependencies = {}) {
       mode: prepared.materializationMode,
       corpusDigestSha256: prepared.corpusDigestSha256,
       mappingDigestSha256: prepared.mappingDigestSha256,
+      ...(prepared.workspaceFixtureDigestSha256 ? { workspaceFixtureDigestSha256: prepared.workspaceFixtureDigestSha256 } : {}),
     },
     scenario: { id: input.scenario.value.id, kind: input.scenario.value.kind, digestSha256: input.scenario.digest, status: input.scenario.status },
     corpus: { id: input.corpus.value.id, definitionDigestSha256: input.corpus.digest, digestSha256: corpus.digestSha256, status: input.corpus.status },
@@ -530,6 +539,14 @@ async function registeredContextFromResult(result) {
     || artifact.value.corpusDigestSha256 !== result.materialization.corpusDigestSha256) {
     throw new Error("Result corpus artifact identity is not canonical.");
   }
+  if (["workspace-panel", "session-switch-workspace-panel"].includes(scenario.value.kind)) {
+    const fixture = buildWorkspaceFixtureManifest(scenario.value.cases.workspaceLoad, corpus.value.seed);
+    if (result.materialization.workspaceFixtureDigestSha256 !== fixture.manifestDigestSha256) {
+      throw new Error("Result workspace fixture attestation is not canonical.");
+    }
+  } else if (result.materialization.workspaceFixtureDigestSha256 !== undefined) {
+    throw new Error("Result has a workspace fixture attestation for a scenario without a workspace fixture.");
+  }
   const app = await readRegistered("app", result.app.id);
   if (!app.value.scenarios.includes(scenario.value.id)
     || !app.value.sourceEventFormats.includes(result.sourceEventFormat.id)
@@ -553,5 +570,15 @@ function validateObservationSchedule(scenario, runProfile, repetitions, seed, ob
   if (observations.length !== expected.length) throw new Error(`Result contains ${observations.length} observations; ${expected.length} are required.`);
   for (let index = 0; index < expected.length; index += 1) {
     if (digest(observations[index]?.case) !== digest(expected[index])) throw new Error(`Result observation ${index} does not match the required schedule.`);
+    if (["workspace-panel", "session-switch-workspace-panel"].includes(scenario.kind) && observations[index].status === "valid") {
+      const normalized = normalizeExecution({
+        caseId: observations[index].case.caseId,
+        durationMs: observations[index].durationMs,
+        readiness: observations[index].readiness,
+        clock: observations[index].clock,
+        rendererTrace: observations[index].rendererTrace,
+      }, expected[index], { requireTimingEvidence: true, requireRendererTrace: true });
+      if (normalized.status !== "valid") throw new Error(`Result observation ${index} has invalid renderer evidence: ${normalized.reason}`);
+    }
   }
 }

@@ -58,19 +58,27 @@
     },
     "prepareParams": {
       "type": "object", "additionalProperties": false,
-      "required": ["scenarioId", "scenarioDigestSha256", "scenarioDefinition", "fixtureSeed", "corpusDirectory", "corpusManifestPath", "corpusDigestSha256", "corpusDefinitionDigestSha256", "eventSchemaDigestSha256", "runDirectory"],
+      "required": ["scenarioId", "scenarioDigestSha256", "corpusDirectory", "corpusManifestPath", "corpusDigestSha256", "corpusDefinitionDigestSha256", "eventSchemaDigestSha256", "runDirectory"],
       "properties": {
         "scenarioId": { "$ref": "#/$defs/scenarioId" },
         "scenarioDigestSha256": { "$ref": "#/$defs/sha256" },
         "scenarioDefinition": { "type": "object" },
         "fixtureSeed": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "workspaceFixtureManifest": { "type": "object" },
+        "workspaceFixtureDigestSha256": { "$ref": "#/$defs/sha256" },
         "corpusDirectory": { "type": "string", "minLength": 1 },
         "corpusManifestPath": { "type": "string", "minLength": 1 },
         "corpusDigestSha256": { "$ref": "#/$defs/sha256" },
         "corpusDefinitionDigestSha256": { "$ref": "#/$defs/sha256" },
         "eventSchemaDigestSha256": { "$ref": "#/$defs/sha256" },
         "runDirectory": { "type": "string", "minLength": 1 }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "scenarioId": { "enum": ["workspace-panel-v1", "session-switch-workspace-panel-v1"] } }, "required": ["scenarioId"] },
+          "then": { "required": ["scenarioDefinition", "fixtureSeed", "workspaceFixtureManifest", "workspaceFixtureDigestSha256"] }
+        }
+      ]
     },
     "launchParams": {
       "type": "object", "additionalProperties": false, "required": ["scenarioId", "stateHandle", "initialSessionId", "groupId"],

@@ -11,6 +11,10 @@
     "./driver-sdk": {
       "types": "./src/driver-sdk.d.ts",
       "default": "./src/driver-sdk.mjs"
+    },
+    "./workspace-fixture": {
+      "types": "./src/workspace-fixture.d.ts",
+      "default": "./src/workspace-fixture.mjs"
     }
   },
   "scripts": {

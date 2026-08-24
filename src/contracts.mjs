@@ -13,7 +13,9 @@ const FILES = {
   opencodeEvent: "opencode-event-v1.schema.json",
   opencodeEventV2: "opencode-event-v2.schema.json",
   result: "result-v1.schema.json",
+  rendererTrace: "renderer-trace-v1.schema.json",
   scenario: "scenario-v1.schema.json",
+  workspaceFixture: "workspace-fixture-v1.schema.json",
 };
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false });
