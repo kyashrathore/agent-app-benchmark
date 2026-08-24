@@ -2,4 +2,4 @@
 
 T3's application-owned benchmark driver is at `scripts/lib/agent-app-benchmark/drivers/t3.ts`. It owns OpenCode-event translation into T3's ordinary event/projection storage, Electron launch, semantic paint and trusted-input readiness, and process ownership.
 
-The public adapter implements the exact new/initialized application-state cases and four explicit `session-switch-v1` lanes from [the protocol](../../docs/driver-protocol.md). It reports `materializationMode: translated` unless a shipped production OpenCode history-ingestion path is verified. This repository intentionally does not copy T3 storage or UI selectors.
+The public adapter implements the exact application-start, historical-session, `workspace-panel-v1`, and `session-switch-workspace-panel-v1` contracts from [the protocol](../../docs/driver-protocol.md). Panel fixtures come from the public scenario's `workspaceLoad` plus corpus `fixtureSeed`; T3 must not substitute driver-local fixture sizes. It reports `materializationMode: translated` unless a shipped production OpenCode history-ingestion path is verified. This repository intentionally does not copy T3 storage or UI selectors.

@@ -13,7 +13,7 @@ export async function runDriverConformance(options) {
     });
     const benchmarkCase = expandCases(options.scenario, "smoke", options.seed)[0];
     let launch;
-    if (options.scenario.kind === "session-switch") {
+    if (options.scenario.kind !== "app-start") {
       launch = assertLaunch(await driver.request("launch", {
         scenarioId: options.scenario.id,
         stateHandle: prepared.stateHandles.P1,
@@ -25,7 +25,10 @@ export async function runDriverConformance(options) {
       scenarioId: options.scenario.id,
       case: benchmarkCase,
       ...(options.scenario.kind === "app-start" ? { stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] } : {}),
-    }), benchmarkCase, { requireTimingEvidence: options.scenario.id.endsWith("-v3") });
+    }), benchmarkCase, {
+      requireTimingEvidence: options.scenario.id.endsWith("-v3") || ["workspace-panel", "session-switch-workspace-panel"].includes(options.scenario.kind),
+      requireRendererTrace: ["workspace-panel", "session-switch-workspace-panel"].includes(options.scenario.kind),
+    });
     if (execution.status !== "valid") throw new Error(`Driver conformance execution failed: ${execution.reason}`);
     const shutdown = assertShutdown(await driver.request("shutdown", { reason: "conformance-complete" }));
     return { hello, prepared, launch, execution, shutdown };

@@ -7,6 +7,21 @@ export const SESSION_LANES = Object.freeze([
   { id: "across-workspaces-warm", workspaceRelation: "across-workspaces", sessionState: "warm" },
 ]);
 
+export const WORKSPACE_PANEL_ACTIONS = Object.freeze([
+  "open-cold",
+  "interrupt-open-close",
+  "interrupt-close-open",
+  "open-warm-data",
+  "switch-surface",
+  "open-file",
+  "switch-file-tab",
+  "toggle-diff-view",
+  "collapse-all",
+  "expand-all",
+]);
+
+export const PANEL_PROFILES = Object.freeze(["closed", "files", "diff"]);
+
 export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-public-v1", repetitionOverride) {
   const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
   if (scenario.kind === "app-start") {
@@ -23,8 +38,50 @@ export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-pu
     }
     return cases;
   }
-  if (scenario.kind !== "session-switch") throw new Error(`Unsupported scenario kind ${scenario.kind}.`);
-  return buildLatencyGroups(scenario, runProfile, seed, repetitionOverride).flatMap((group) => group.cases);
+  if (scenario.kind === "session-switch") return buildLatencyGroups(scenario, runProfile, seed, repetitionOverride).flatMap((group) => group.cases);
+  if (scenario.kind === "workspace-panel") return buildWorkspacePanelGroups(scenario, runProfile, repetitionOverride).flatMap((group) => group.cases);
+  if (scenario.kind === "session-switch-workspace-panel") return buildPanelSwitchGroups(scenario, runProfile, seed, repetitionOverride).flatMap((group) => group.cases);
+  throw new Error(`Unsupported scenario kind ${scenario.kind}.`);
+}
+
+export function buildWorkspacePanelGroups(scenario, runProfile, repetitionOverride) {
+  if (scenario.kind !== "workspace-panel") throw new Error("Workspace-panel groups require a workspace-panel scenario.");
+  const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
+  return Array.from({ length: repetitions }, (_, repetition) => ({
+    groupId: `workspace-panel-${repetition}`,
+    repetition,
+    cases: scenario.cases.actions.map((action, sequence) => ({
+      caseId: `workspace-panel-${repetition}-${action}`,
+      repetition,
+      sequence,
+      workload: "workspace-panel-action",
+      action,
+    })),
+  }));
+}
+
+export function buildPanelSwitchGroups(scenario, runProfile, seed = "agent-app-benchmark-public-v1", repetitionOverride) {
+  if (scenario.kind !== "session-switch-workspace-panel") throw new Error("Panel-switch groups require a session-switch-workspace-panel scenario.");
+  const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
+  return Array.from({ length: repetitions }, (_, repetition) => {
+    const cases = PANEL_PROFILES.flatMap((panelProfile, profileIndex) => SESSION_LANES.map((lane) => ({
+      caseId: `panel-session-switch-${repetition}-${panelProfile}-${lane.id}`,
+      repetition,
+      sample: profileIndex,
+      workload: "panel-session-switch",
+      workspaceRelation: lane.workspaceRelation,
+      sessionState: lane.sessionState,
+      panelProfile,
+      transcriptBytes: scenario.cases.transcriptBytes,
+      sourceSessionId: "control",
+      destinationSessionId: `latency-${lane.id}-${profileIndex}-${scenario.cases.transcriptBytes}`,
+    })));
+    return {
+      groupId: `panel-session-switch-${repetition}`,
+      repetition,
+      cases: seededShuffle(cases, `${seed}|panel-session-switch|${repetition}`).map((benchmarkCase, sequence) => ({ ...benchmarkCase, sequence })),
+    };
+  });
 }
 
 export function buildLatencyGroups(scenario, runProfile, seed = "agent-app-benchmark-public-v1", repetitionOverride) {

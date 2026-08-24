@@ -73,6 +73,8 @@ try {
       prepare: {
         scenarioId: scenario.value.id,
         scenarioDigestSha256: scenario.digest,
+        scenarioDefinition: scenario.value,
+        fixtureSeed: verified.manifest.seed,
         corpusDirectory: verified.path,
         corpusManifestPath: path.join(verified.path, "manifest.json"),
         corpusDigestSha256: verified.digestSha256,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildLatencyGroups, buildResourceSequence, buildResourceSequences, expandCases, repetitionsFor, SESSION_LANES } from "../src/cases.mjs";
+import { buildLatencyGroups, buildPanelSwitchGroups, buildResourceSequence, buildResourceSequences, buildWorkspacePanelGroups, expandCases, repetitionsFor, SESSION_LANES, WORKSPACE_PANEL_ACTIONS } from "../src/cases.mjs";
 import { readRegistered } from "../src/registry.mjs";
 
 test("publication schedule emits 2 observations per lane at the fixed standard size", async () => {
@@ -61,4 +61,22 @@ test("V3 uses stabilized process pools, counterbalanced size order, and repeated
   assert.equal(resourceRuns.length, 2);
   assert.deepEqual(resourceRuns[0].cases.map((item) => item.transcriptBytes), scenario.cases.transcriptBytes);
   assert.ok(resourceRuns.flatMap((run) => run.cases).every((item) => item.destinationSessionId.startsWith("progressive-resource-")));
+});
+
+test("workspace panel schedules one raw per-action observation in each process", async () => {
+  const { value: scenario } = await readRegistered("scenario", "workspace-panel-v1");
+  const groups = buildWorkspacePanelGroups(scenario, "smoke");
+  assert.equal(groups.length, 1);
+  assert.deepEqual(groups[0].cases.map((item) => item.action), WORKSPACE_PANEL_ACTIONS);
+  assert.ok(groups[0].cases.every((item) => item.workload === "workspace-panel-action"));
+});
+
+test("panel-open session switching uses distinct real V3 latency-pool destinations", async () => {
+  const { value: scenario } = await readRegistered("scenario", "session-switch-workspace-panel-v1");
+  const groups = buildPanelSwitchGroups(scenario, "smoke", "panel-seed");
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].cases.length, 12);
+  assert.equal(new Set(groups[0].cases.map((item) => item.destinationSessionId)).size, 12);
+  assert.ok(groups[0].cases.every((item) => item.destinationSessionId === `latency-${item.workspaceRelation}-${item.sessionState}-${item.sample}-${item.transcriptBytes}`));
+  assert.deepEqual(new Set(groups[0].cases.map((item) => item.panelProfile)), new Set(["closed", "files", "diff"]));
 });

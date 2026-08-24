@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "session-switch-workspace-panel-v1",
+  "title": "Session switching with substantial workspace panels",
+  "description": "Measure cold and warm historical session switching within and across workspaces with the workspace panel closed, on a substantial Files surface, and on a substantial Diff surface. Each open profile uses a distinct canonical destination so cold and warm semantics remain valid; the framework derives open-minus-closed penalties.",
+  "kind": "session-switch-workspace-panel",
+  "corpusId": "opencode-completed-sessions-v3",
+  "cases": {
+    "workspaceRelations": ["within-workspace", "across-workspaces"],
+    "sessionStates": ["cold", "warm"],
+    "panelProfiles": ["closed", "files", "diff"],
+    "transcriptBytes": 1048576,
+    "workspaceLoad": {
+      "directoryCount": 16,
+      "sourceFileCount": 160,
+      "sourceFileBytes": 32768,
+      "changedFileCount": 24,
+      "diffHunksPerFile": 8,
+      "diffLinesPerHunk": 24,
+      "openFileTabCount": 4
+    }
+  },
+  "metrics": [
+    {
+      "id": "switch.duration_ms",
+      "description": "Trusted session activation to correct content, above-the-fold paint, and interactive readiness for each panel profile and cache/workspace lane.",
+      "unit": "ms"
+    },
+    {
+      "id": "switch.panel_penalty_ms",
+      "description": "Framework-derived Files-minus-closed and Diff-minus-closed duration and renderer-work deltas for each cache/workspace lane.",
+      "unit": "ms"
+    },
+    {
+      "id": "switch.renderer_work_ms",
+      "description": "Per-switch renderer task, script, style-recalculation, and layout work, with bounded raw long-animation-frame attribution.",
+      "unit": "ms"
+    }
+  ],
+  "runProfiles": { "smoke": 1, "quick": 5, "publication": 20 }
+}

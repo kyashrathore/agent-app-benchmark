@@ -14,7 +14,9 @@ export function renderReport(result) {
     "",
   ];
   if (result.scenario.kind === "app-start") renderAppStart(lines, result.derivation.summary);
-  else renderSessionSwitch(lines, result.derivation.summary, result.resources);
+  else if (result.scenario.kind === "session-switch") renderSessionSwitch(lines, result.derivation.summary, result.resources);
+  else if (result.scenario.kind === "workspace-panel") renderWorkspacePanel(lines, result.derivation.summary);
+  else renderPanelSessionSwitch(lines, result.derivation.summary);
   lines.push(
     "## Scope",
     "",
@@ -24,6 +26,53 @@ export function renderReport(result) {
     "",
   );
   return `${lines.join("\n").trimEnd()}\n`;
+}
+
+function renderWorkspacePanel(lines, summary) {
+  lines.push(
+    "## Workspace panel actions",
+    "",
+    "| Action | Transition (animated / none) | Duration avg (ms) | Shell / action paint avg (ms) | Data-ready to interactive avg (ms) | Worst frame interval max (ms) | >16.667 ms intervals avg | LoAF count avg | Worst LoAF max (ms) | Script avg (ms) | Style avg (ms) | Layout avg (ms) | Valid / attempted |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+  );
+  for (const [action, metric] of Object.entries(summary)) {
+    const paint = metric.milestones.inputToShellMs ?? metric.milestones.reversalResponseMs ?? metric.milestones.inputToActionPaintMs;
+    lines.push(`| ${action} | ${metric.transitionModes.animated} / ${metric.transitionModes.none} | ${metricValue(metric.durationMs, "average")} | ${metricValue(paint, "average")} | ${metricValue(metric.milestones.dataReadyToInteractiveMs, "average")} | ${metricValue(metric.frames.worstIntervalMs, "maximum")} | ${metricValue(metric.frames.overBudgetIntervalCount, "average")} | ${metricValue(metric.longAnimationFrames.count, "average")} | ${metricValue(metric.longAnimationFrames.worstDurationMs, "maximum")} | ${metricValue(metric.rendererWork.scriptDurationMs, "average")} | ${metricValue(metric.rendererWork.styleRecalcDurationMs, "average")} | ${metricValue(metric.rendererWork.layoutDurationMs, "average")} | ${validity(metric.durationMs)} |`);
+  }
+  lines.push(
+    "",
+    "Opening measures the shell transition independently from data-ready-to-paint and data-ready-to-interactive. Only the toggle is exercised during an in-progress transition; all surface, file, tab, and diff actions begin from settled loaded state and are reported separately.",
+    "",
+  );
+}
+
+function renderPanelSessionSwitch(lines, summary) {
+  lines.push(
+    "## Session switching by workspace-panel profile",
+    "",
+    "| Panel profile / lane | Transition (animated / none) | Session ready avg (ms) | Panel ready avg (ms) | Combined duration avg (ms) | Duration max (ms) | Worst frame interval max (ms) | Worst LoAF max (ms) | Script avg (ms) | Style avg (ms) | Layout avg (ms) | Valid / attempted |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+  );
+  for (const profile of ["closed", "files", "diff"]) {
+    for (const lane of ["within-workspace-cold", "within-workspace-warm", "across-workspaces-cold", "across-workspaces-warm"]) {
+      const metric = summary[`${profile}-${lane}`];
+      lines.push(`| ${profile} / ${lane} | ${metric.transitionModes.animated} / ${metric.transitionModes.none} | ${metricValue(metric.milestones.inputToSessionReadyMs, "average")} | ${metricValue(metric.milestones.inputToPanelReadyMs, "average")} | ${metricValue(metric.durationMs, "average")} | ${metricValue(metric.durationMs, "maximum")} | ${metricValue(metric.frames.worstIntervalMs, "maximum")} | ${metricValue(metric.longAnimationFrames.worstDurationMs, "maximum")} | ${metricValue(metric.rendererWork.scriptDurationMs, "average")} | ${metricValue(metric.rendererWork.styleRecalcDurationMs, "average")} | ${metricValue(metric.rendererWork.layoutDurationMs, "average")} | ${validity(metric.durationMs)} |`);
+    }
+  }
+  lines.push(
+    "",
+    "## Open-panel penalty relative to closed",
+    "",
+    "| Panel profile / lane | Duration delta avg (ms) | Script delta avg (ms) | Style delta avg (ms) | Layout delta avg (ms) | Valid pairs |",
+    "|---|---:|---:|---:|---:|---:|",
+  );
+  for (const profile of ["files", "diff"]) {
+    for (const lane of ["within-workspace-cold", "within-workspace-warm", "across-workspaces-cold", "across-workspaces-warm"]) {
+      const metric = summary[`${profile}-minus-closed-${lane}`];
+      lines.push(`| ${profile} / ${lane} | ${metricValue(metric.durationMs, "average")} | ${metricValue(metric.scriptDurationMs, "average")} | ${metricValue(metric.styleRecalcDurationMs, "average")} | ${metricValue(metric.layoutDurationMs, "average")} | ${validity(metric.durationMs)} |`);
+    }
+  }
+  lines.push("", "Each profile uses a distinct canonical 1 MiB destination. Cold means that destination has not been activated in the measured process; warm means exactly one unmeasured valid activation before the measured revisit.", "");
 }
 
 function renderAppStart(lines, summary) {
@@ -103,6 +152,14 @@ function metricRow(label, metric) {
 function metricCells(metric) {
   if (!metric || metric.status !== "valid") return `— | — | — | ${metric?.valid ?? 0} / ${metric?.attempted ?? 0}`;
   return `${number(metric.average)} | ${number(metric.maximum)} | ${number(metric.p95)} | ${metric.valid} / ${metric.attempted}`;
+}
+
+function metricValue(metric, field) {
+  return metric?.status === "valid" ? number(metric[field]) : "—";
+}
+
+function validity(metric) {
+  return `${metric?.valid ?? 0} / ${metric?.attempted ?? 0}`;
 }
 
 function formatBytes(bytes) {

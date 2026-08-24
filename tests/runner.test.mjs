@@ -54,6 +54,29 @@ const SWITCH_SCENARIO = {
   resourceMeasurement: { processScope: "application-family", activeSampleIntervalMs: 250, idleSampleIntervalMs: 1000, settleBeforeIdleMs: 1000, idleWindowMs: 2000 },
   runProfiles: { smoke: 1, quick: 1, publication: 1 },
 };
+const WORKSPACE_LOAD = { directoryCount: 16, sourceFileCount: 160, sourceFileBytes: 32768, changedFileCount: 24, diffHunksPerFile: 8, diffLinesPerHunk: 24, openFileTabCount: 4 };
+const PANEL_SCENARIO = {
+  schemaVersion: 1,
+  id: "workspace-panel-v1",
+  title: "Test panel",
+  description: "test",
+  kind: "workspace-panel",
+  corpusId: CORPUS_VALUE.id,
+  cases: { workspaceLoad: WORKSPACE_LOAD, actions: ["open-cold", "interrupt-open-close", "interrupt-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"] },
+  metrics: [{ id: "panel.duration_ms", description: "Panel duration.", unit: "ms" }],
+  runProfiles: { smoke: 1, quick: 1, publication: 1 },
+};
+const PANEL_SWITCH_SCENARIO = {
+  schemaVersion: 1,
+  id: "session-switch-workspace-panel-v1",
+  title: "Test panel switches",
+  description: "test",
+  kind: "session-switch-workspace-panel",
+  corpusId: CORPUS_VALUE.id,
+  cases: { workspaceRelations: ["within-workspace", "across-workspaces"], sessionStates: ["cold", "warm"], panelProfiles: ["closed", "files", "diff"], transcriptBytes: 4096, workspaceLoad: WORKSPACE_LOAD },
+  metrics: [{ id: "panel.switch_ms", description: "Panel switch duration.", unit: "ms" }],
+  runProfiles: { smoke: 1, quick: 1, publication: 1 },
+};
 
 test("app-start runner preserves raw attempts and derives both exact launch states", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-runner-start-"));
@@ -125,6 +148,41 @@ test("invalid readiness is retained and never summarized as zero", async () => {
     assert.equal(result.derivation.summary["new-application-state"].status, "invalid");
     assert.equal(result.derivation.summary["new-application-state"].attempted, 3);
     assert.ok(result.observations.every((item) => item.status === "invalid"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("workspace-panel runner preserves per-action traces and derives renderer summaries", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-runner-panel-"));
+  try {
+    const output = path.join(root, "result");
+    const result = await runBenchmark(baseInput(output, PANEL_SCENARIO));
+    assert.equal(result.observations.length, 10);
+    assert.ok(result.observations.every((item) => item.status === "valid" && item.rendererTrace.frameTimestampsMs.length >= 2));
+    assert.equal(result.derivation.summary["open-cold"].durationMs.average, 70);
+    assert.equal(result.derivation.summary["open-cold"].milestones.inputToShellMs.average, 3);
+    assert.equal(result.derivation.summary["interrupt-open-close"].milestones.reversalResponseMs.average, 6);
+    assert.equal(result.derivation.summary["open-cold"].longAnimationFrames.count.average, 1);
+    assert.equal(result.observations[0].rendererTrace.longAnimationFrames[0].scripts[0].functionName, "renderWorkspacePanel");
+    assert.equal(result.resources, null);
+    assert.match(await readFile(path.join(output, "report.md"), "utf8"), /Data-ready to interactive/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("panel-switch runner derives closed, Files, Diff, and open-minus-closed costs", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-runner-panel-switch-"));
+  try {
+    const result = await runBenchmark(baseInput(path.join(root, "result"), PANEL_SWITCH_SCENARIO));
+    assert.equal(result.observations.length, 12);
+    assert.equal(result.derivation.summary["closed-within-workspace-cold"].durationMs.average, 18);
+    assert.equal(result.derivation.summary["closed-within-workspace-cold"].milestones.inputToSessionReadyMs.average, 10);
+    assert.equal(result.derivation.summary["closed-within-workspace-cold"].milestones.inputToPanelReadyMs.average, 14);
+    assert.equal(result.derivation.summary["files-minus-closed-within-workspace-cold"].durationMs.average, 6);
+    assert.equal(result.derivation.summary["diff-minus-closed-across-workspaces-warm"].durationMs.average, 12);
+    assert.equal(result.resources, null);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

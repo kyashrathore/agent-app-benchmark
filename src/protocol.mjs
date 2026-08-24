@@ -61,10 +61,18 @@ export function normalizeExecution(result, benchmarkCase, options = {}) {
         return { ...base, status: "invalid", durationMs: result.durationMs, reason: "Driver readiness milestones do not support the reported endpoint.", readiness: result.readiness, clock: result.clock };
       }
     }
+    if (options.requireRendererTrace) assertRendererTrace(result.rendererTrace, result.clock, benchmarkCase);
   } catch (error) {
     return { ...base, status: "invalid", durationMs: result.durationMs, reason: error.message };
   }
-  return { ...base, status: "valid", durationMs: result.durationMs, readiness: result.readiness, clock: result.clock };
+  return {
+    ...base,
+    status: "valid",
+    durationMs: result.durationMs,
+    readiness: result.readiness,
+    clock: result.clock,
+    ...(result.rendererTrace === undefined ? {} : { rendererTrace: result.rendererTrace }),
+  };
 }
 
 export function assertShutdown(result) {
@@ -92,4 +100,59 @@ function assertReceipt(receipt, label, options = {}) {
     if (typeof check.id !== "string" || typeof check.passed !== "boolean") throw new Error(`Driver ${label} check is invalid.`);
     if (options.requireTimingEvidence && !Number.isFinite(check.observedAt)) throw new Error(`Driver ${label} check has no monotonic observation time.`);
   }
+}
+
+function assertRendererTrace(trace, clock, benchmarkCase) {
+  if (!trace || trace.clock !== clock.clock || !["none", "animated"].includes(trace.transitionMode)) throw new Error("Driver renderer trace is missing or uses a different clock.");
+  if (!Array.isArray(trace.milestones) || !Array.isArray(trace.frameTimestampsMs) || !Array.isArray(trace.longAnimationFrames) || !trace.counters) throw new Error("Driver renderer trace is incomplete.");
+  assertOrderedTimes(trace.milestones.map((item) => item.at), clock, "renderer milestones");
+  assertOrderedTimes(trace.frameTimestampsMs, clock, "renderer frames");
+  const milestoneIds = trace.milestones.map((item) => item.id);
+  if (new Set(milestoneIds).size !== milestoneIds.length) throw new Error("Driver renderer milestones are not unique.");
+  const milestones = Object.fromEntries(trace.milestones.map((item) => [item.id, item.at]));
+  const required = requiredMilestones(benchmarkCase);
+  if (required.some((id) => !Number.isFinite(milestones[id]))) throw new Error(`Driver renderer trace is missing required milestones: ${required.filter((id) => !Number.isFinite(milestones[id])).join(", ")}.`);
+  if (benchmarkCase.workload === "workspace-panel-action") assertPanelMilestoneOrder(benchmarkCase.action, milestones, trace.transitionMode);
+  if (benchmarkCase.workload === "panel-session-switch" && (milestones["session-ready"] < milestones["trusted-input"]
+    || milestones["panel-ready"] < milestones["trusted-input"]
+    || milestones["above-fold-painted"] < milestones["content-identity"]
+    || milestones.interactive < Math.max(milestones["session-ready"], milestones["panel-ready"], milestones["above-fold-painted"]))) {
+    throw new Error("Driver panel-switch milestones are out of order.");
+  }
+  for (const entry of trace.longAnimationFrames) {
+    if (!Number.isFinite(entry.start) || !Number.isFinite(entry.duration) || entry.start < clock.start || entry.start + entry.duration > clock.end + 0.5) throw new Error("Driver long-animation-frame evidence is outside the action interval.");
+    if (!Array.isArray(entry.scripts) || entry.scripts.some((script) => !Number.isFinite(script.duration) || !Number.isFinite(script.forcedStyleAndLayoutDuration))) throw new Error("Driver long-animation-frame script attribution is invalid.");
+  }
+  for (const value of Object.values(trace.counters)) if (!Number.isFinite(value) || value < 0) throw new Error("Driver renderer counters are invalid.");
+}
+
+function requiredMilestones(benchmarkCase) {
+  if (benchmarkCase.workload === "panel-session-switch") return ["trusted-input", "session-ready", "panel-ready", "content-identity", "above-fold-painted", "interactive"];
+  if (["open-cold", "open-warm-data"].includes(benchmarkCase.action)) return ["trusted-input", "shell-visible", "animation-settled", "data-ready", "above-fold-painted", "interactive"];
+  if (["interrupt-open-close", "interrupt-close-open"].includes(benchmarkCase.action)) return ["trusted-input", "reversal-input", "reversal-observed", "animation-settled", "interactive"];
+  return ["trusted-input", "action-painted", "interactive"];
+}
+
+function assertPanelMilestoneOrder(action, milestones, transitionMode) {
+  if (["open-cold", "open-warm-data"].includes(action)) {
+    if (milestones["shell-visible"] < milestones["trusted-input"]
+      || milestones["animation-settled"] < milestones["shell-visible"]
+      || milestones["above-fold-painted"] < milestones["data-ready"]
+      || milestones.interactive < Math.max(milestones["animation-settled"], milestones["above-fold-painted"])) throw new Error("Driver panel-open milestones are out of order.");
+    if (transitionMode === "none" && milestones["animation-settled"] !== milestones["shell-visible"]) throw new Error("A non-animated panel open must settle when its shell becomes visible.");
+    return;
+  }
+  if (["interrupt-open-close", "interrupt-close-open"].includes(action)) {
+    if (milestones["reversal-input"] < milestones["trusted-input"]
+      || milestones["reversal-observed"] < milestones["reversal-input"]
+      || milestones["animation-settled"] < milestones["reversal-observed"]
+      || milestones.interactive < milestones["animation-settled"]) throw new Error("Driver panel-reversal milestones are out of order.");
+    return;
+  }
+  if (milestones["action-painted"] < milestones["trusted-input"] || milestones.interactive < milestones["action-painted"]) throw new Error("Driver settled panel-interaction milestones are out of order.");
+}
+
+function assertOrderedTimes(values, clock, label) {
+  if (values.length < 2 || values.some((value) => !Number.isFinite(value) || value < clock.start || value > clock.end + 0.5)) throw new Error(`Driver ${label} are missing or outside the action interval.`);
+  if (values.some((value, index) => index > 0 && value < values[index - 1])) throw new Error(`Driver ${label} are not monotonic.`);
 }

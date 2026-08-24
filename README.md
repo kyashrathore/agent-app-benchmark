@@ -37,6 +37,12 @@ The complete memory workload runs once in a fresh process per configured repetit
 
 No live session stream, model call, agent run, or terminal activity occurs during these measurements.
 
+### Workspace panel
+
+`workspace-panel-v1` measures one trusted action at a time against a deterministic substantial workspace: cold-surface opening, both directions of interrupted reversal, warm-data/cold-surface reopening, surface navigation, opening a file, switching an already open file tab, diff view mode, and collapse/expand all. Opening reports shell animation separately from data-ready-to-paint and data-ready-to-interactive. Only reversal toggles occur during an animation; all content interactions begin after loaded state has settled.
+
+`session-switch-workspace-panel-v1` repeats the four cold/warm and within/across session-switch lanes with the panel closed, with Files open, and with Diff open. Files-minus-closed and Diff-minus-closed penalties are derived per lane. Both scenarios preserve raw per-action renderer milestones, frame timestamps, long-animation-frame script attribution, and task/script/style/layout work; the framework, not the driver, derives every summary and report row.
+
 ## Canonical corpus
 
 Every app receives the same deterministic `opencode-completed-sessions-v3` directory. It contains one NDJSON file per logical session using the pinned OpenCode `EventV2.SerializedEvent` envelope and these durable event types:

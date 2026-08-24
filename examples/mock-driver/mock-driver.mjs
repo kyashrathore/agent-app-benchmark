@@ -35,7 +35,7 @@ async function dispatch(method, params) {
       protocolVersion: 1,
       application: { id: process.env.BENCHMARK_MOCK_APP_ID ?? "mock-native", name: "Mock Native GUI", version: "1.0.0", buildDigestSha256: SHA },
       driver: { name: "mock-native-driver", version: "1.0.0", sourceCommit: COMMIT, digestSha256: SHA },
-      scenarios: ["app-start-v1", "session-switch-v1", ...(process.env.BENCHMARK_MOCK_SCENARIO_ID ? [process.env.BENCHMARK_MOCK_SCENARIO_ID] : [])],
+      scenarios: ["app-start-v1", "session-switch-v1", "workspace-panel-v1", "session-switch-workspace-panel-v1", ...(process.env.BENCHMARK_MOCK_SCENARIO_ID ? [process.env.BENCHMARK_MOCK_SCENARIO_ID] : [])],
       sourceEventFormats: ["opencode-event-v1", "opencode-event-v2"],
       materializationModes: ["translated"],
       guiFramework: "mock-native",
@@ -46,6 +46,7 @@ async function dispatch(method, params) {
       throw new Error("Mock driver requires corpusDefinitionDigestSha256.");
     }
     const manifest = JSON.parse(await readFile(params.corpusManifestPath, "utf8"));
+    if (!params.scenarioDefinition || params.scenarioDefinition.id !== params.scenarioId || params.fixtureSeed !== manifest.seed) throw new Error("Mock driver requires the exact scenario definition and corpus fixture seed.");
     prepared = { params, manifest };
     const mapping = Object.fromEntries(manifest.sessions.map((session) => [session.logicalSessionId, `mock-${session.nativeSessionId}`]));
     return {
@@ -67,15 +68,18 @@ async function dispatch(method, params) {
     if (process.env.BENCHMARK_MOCK_MODE === "sensitive-error") throw new Error("failed at /Users/example/private/session.json token=super-secret-value");
     if (params.case.startMode) await startApplication();
     if (!application) throw new Error("Mock application is not running.");
-    const durationMs = params.case.transcriptBytes ? 4 + Math.log2(params.case.transcriptBytes / 1048576 + 1) : params.case.startMode === "new-application-state" ? 40 : 25;
+    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(prepared.params.scenarioDefinition.kind);
+    const durationMs = panelScenario ? panelDuration(params.case) : params.case.transcriptBytes ? 4 + Math.log2(params.case.transcriptBytes / 1048576 + 1) : params.case.startMode === "new-application-state" ? 40 : 25;
+    const rendererTrace = panelScenario ? mockRendererTrace(params.case, 100, durationMs) : undefined;
     return {
       caseId: params.case.caseId,
       durationMs,
       clock: { kind: "single-monotonic-clock", clock: "mock-performance", start: 100, end: 100 + durationMs },
       readiness: receipt(
         process.env.BENCHMARK_MOCK_MODE !== "wrong-content",
-        prepared.params.scenarioId.endsWith("-v3") ? 100 + durationMs : undefined,
+        prepared.params.scenarioId.endsWith("-v3") || panelScenario ? 100 + durationMs : undefined,
       ),
+      ...(rendererTrace ? { rendererTrace } : {}),
     };
   }
   if (method === "shutdown") {
@@ -84,6 +88,66 @@ async function dispatch(method, params) {
     return { terminated, survivors: process.env.BENCHMARK_MOCK_MODE === "survivor" ? terminated : [] };
   }
   throw new Error(`Unsupported method ${method}.`);
+}
+
+function panelDuration(benchmarkCase) {
+  if (benchmarkCase.action?.startsWith("interrupt-")) return 36;
+  if (benchmarkCase.action?.startsWith("open-")) return 70;
+  if (benchmarkCase.workload === "workspace-panel-action") return 16;
+  return benchmarkCase.panelProfile === "diff" ? 30 : benchmarkCase.panelProfile === "files" ? 24 : 18;
+}
+
+function mockRendererTrace(benchmarkCase, start, duration) {
+  const end = start + duration;
+  let transitionMode = "none";
+  let milestones;
+  if (["open-cold", "open-warm-data"].includes(benchmarkCase.action)) {
+    transitionMode = "animated";
+    milestones = benchmarkCase.action === "open-warm-data"
+      ? [point("data-ready", start), point("trusted-input", start + 1), point("shell-visible", start + 3), point("above-fold-painted", start + 12), point("animation-settled", end - 4), point("interactive", end)]
+      : [point("trusted-input", start), point("shell-visible", start + 3), point("data-ready", start + 10), point("above-fold-painted", start + 20), point("animation-settled", end - 4), point("interactive", end)];
+  } else if (benchmarkCase.action?.startsWith("interrupt-")) {
+    transitionMode = "animated";
+    milestones = [point("trusted-input", start), point("reversal-input", start + 10), point("reversal-observed", start + 16), point("animation-settled", end - 2), point("interactive", end)];
+  } else if (benchmarkCase.workload === "workspace-panel-action") {
+    milestones = [point("trusted-input", start), point("action-painted", end - 2), point("interactive", end)];
+  } else {
+    milestones = [point("trusted-input", start), point("content-identity", start + 8), point("session-ready", start + 10), point("panel-ready", end - 4), point("above-fold-painted", end - 2), point("interactive", end)];
+  }
+  const frameTimestampsMs = [];
+  for (let at = start; at < end; at += 8) frameTimestampsMs.push(at);
+  if (frameTimestampsMs.at(-1) !== end) frameTimestampsMs.push(end);
+  const longAnimationFrames = benchmarkCase.action === "open-cold" ? [{
+    start: start + 5,
+    duration: 55,
+    blockingDuration: 5,
+    renderStart: start + 45,
+    styleAndLayoutStart: start + 48,
+    scripts: [{
+      functionName: "renderWorkspacePanel",
+      invokerType: "event-listener",
+      sourceURL: "benchmark-assets/panel.js",
+      duration: 40,
+      forcedStyleAndLayoutDuration: 4,
+    }],
+  }] : [];
+  return {
+    clock: "mock-performance",
+    transitionMode,
+    milestones,
+    frameTimestampsMs,
+    longAnimationFrames,
+    counters: {
+      scriptDurationMs: duration * 0.25,
+      styleRecalcDurationMs: duration * 0.1,
+      layoutDurationMs: duration * 0.05,
+      taskDurationMs: duration * 0.5,
+    },
+  };
+}
+
+function point(id, at) {
+  return { id, at };
 }
 
 function receipt(contentPassed = true, observedAt) {

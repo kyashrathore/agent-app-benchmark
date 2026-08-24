@@ -12,7 +12,7 @@ Returns immutable application/build and driver/source identities, supported scen
 
 ## `prepare`
 
-Receives exact scenario/corpus/event-schema digests, the generated corpus directory and manifest, and a private run directory. The driver materializes every logical session through the app's ordinary production history path and returns:
+Receives the exact validated `scenarioDefinition`, its digest, the corpus `fixtureSeed`, corpus/event-schema digests, the generated corpus directory and manifest, and a private run directory. The driver materializes every logical session through the app's ordinary production history path and returns:
 
 - `native-opencode` or `translated` materialization mode;
 - the exact corpus and event-schema digests received;
@@ -22,6 +22,8 @@ Receives exact scenario/corpus/event-schema digests, the generated corpus direct
 `P0` has never been launched by the application. `P1` completed exactly one unmeasured launch to the common readiness endpoint and then a complete clean shutdown. Handles may identify sealed driver-owned snapshots; public results never serialize their values.
 
 For `opencode-event-v2`, `message.part.updated.1` can carry completed `text`, `reasoning`, `tool`, `step-start`, `step-finish`, and `patch` parts. A native OpenCode driver stores those parts unchanged through its production database path. A translated driver uses its ordinary production history model. If that model has no structured tool/reasoning representation, it serializes the byte-accounted payload into the production message representation rather than dropping it. The manifest's `transcriptBytes` is the exact sum of completed text bytes, reasoning bytes, serialized tool-input bytes, and tool-output bytes. IDs, envelopes, and patch metadata are outside that byte total but remain part of the source object-count load. Preparation must reread authoritative storage and match the manifest's total message count and transcript bytes.
+
+`workspace-panel-v1` and `session-switch-workspace-panel-v1` also carry `scenarioDefinition.cases.workspaceLoad`. The driver deterministically materializes that file tree and git diff from `fixtureSeed`; it must not replace the public shape with app-local hard-coded fixtures. The load specifies directory and source-file counts, bytes per source file, changed-file count, hunks and lines per changed file, and initially open file-tab count.
 
 ## `launch`
 
@@ -39,6 +41,29 @@ The readiness receipt endpoint is exactly `correct-content-painted-and-input-rea
 Performs exactly one manifest-defined action and returns one raw observation. For app start, process spawn occurs inside this method because spawn is the start timestamp. For session switching, the app is already launched.
 
 The response contains the exact case ID, duration, a single-monotonic-clock interval, and the readiness receipt. The framework requires `durationMs` to equal `clock.end - clock.start` within 0.5 ms. V3 also requires a same-clock `observedAt` timestamp for every readiness check; every milestone must lie inside the interval, first-fold paint must precede or equal the second presentation, and the reported end must equal the final readiness milestone. A warm switch includes exactly one unmeasured valid activation before its measured revisit. Drivers never return average, maximum, p95, or report HTML.
+
+The two workspace-panel scenarios additionally return one `rendererTrace` per action. Its `clock` is the execution clock; absolute milestone, frame, and long-animation-frame timestamps remain inside that action's interval. `transitionMode` is `animated` or `none`. A non-animated open reports `shell-visible` and `animation-settled` at the same time. Reversal actions prove that the second trusted toggle was accepted and that the final opposite state appeared on the next presentation before settling. Settled surface, file, tab, and diff interactions are never issued during the opening transition.
+
+The trace preserves at most 600 frame timestamps and 100 long-animation frames. Each long-animation frame preserves at most 32 script attributions with function name, invoker type, sanitized package-asset identifier in `sourceURL`, duration, and forced style/layout duration. Drivers must not serialize URL schemes or local absolute paths in `sourceURL`; use a stable value such as `renderer-assets/panel.js`. Renderer task, script, style-recalculation, and layout counters are raw per-action deltas, never cumulative across actions. The framework derives milestone intervals, frame-budget misses, transition counts, long-animation-frame summaries, renderer-work summaries, and reports.
+
+`workspace-panel-v1` actions have these exact preconditions and one-click measured inputs:
+
+| Action | Untimed precondition | Measured input and endpoint |
+|---|---|---|
+| `open-cold` | Panel surface has never mounted and workspace content has not been requested in the process; Files is the selected target. | Toggle open; measure shell visibility and transition independently, then Files data readiness, above-fold paint, and input readiness. |
+| `interrupt-open-close` | Panel is closed and Files data is warm. | Toggle open, then toggle again halfway through the transition; the close reversal must be accepted immediately and shown on the next presentation. |
+| `interrupt-close-open` | Panel is open, settled, and Files data is warm. | Toggle closed, then toggle again halfway through the transition; the open reversal must be accepted immediately and shown on the next presentation. |
+| `open-warm-data` | Files data is warm but the panel surface is unmounted/closed. | Toggle open through shell, above-fold paint, and input readiness. |
+| `switch-surface` | Panel is settled on loaded Files. | Click the Diff surface tab through its above-fold painted and interactive state. |
+| `open-file` | Panel is settled on loaded Files with no file-preview surface active. | Click the first canonical changed file through painted interactive preview. |
+| `switch-file-tab` | The scenario's canonical open file tabs are settled and the first is active. | Click the second canonical file tab through painted interactive preview. |
+| `toggle-diff-view` | Loaded Diff is settled in stacked mode. | Click split mode through painted interactive Diff. |
+| `collapse-all` | Loaded Diff is settled with all file sections expanded. | Click Collapse all through painted interactive Diff. |
+| `expand-all` | Loaded Diff is settled with all file sections collapsed. | Click Expand all through painted interactive Diff. |
+
+No panel content input is sent before an opening/closing transition settles. Reversal toggles are the sole exception because interruptibility is the behavior being measured. A `none` transition is valid for an inline panel, but remains explicit in raw evidence and framework summaries.
+
+`session-switch-workspace-panel-v1` measures the four cold/warm and within/across lanes independently for `closed`, `files`, and `diff`. Each profile uses a distinct existing V3 latency-pool destination (`sample` 0, 1, or 2), preserving cold/warm semantics in one stabilized process. Its trace reports `session-ready` and `panel-ready` independently before the combined interactive endpoint, allowing the framework to distinguish transcript readiness from the open Files/Diff cost. The framework derives Files-minus-closed and Diff-minus-closed costs per lane.
 
 ## `shutdown`
 

@@ -7,5 +7,5 @@
   "guiFramework": "electron",
   "sourceEventFormats": ["opencode-event-v1", "opencode-event-v2"],
   "materializationModes": ["translated"],
-  "scenarios": ["app-start-v1", "session-switch-v1", "app-start-v3", "session-switch-v3"]
+  "scenarios": ["app-start-v1", "session-switch-v1", "app-start-v3", "session-switch-v3", "workspace-panel-v1", "session-switch-workspace-panel-v1"]
 }

@@ -58,10 +58,12 @@
     },
     "prepareParams": {
       "type": "object", "additionalProperties": false,
-      "required": ["scenarioId", "scenarioDigestSha256", "corpusDirectory", "corpusManifestPath", "corpusDigestSha256", "corpusDefinitionDigestSha256", "eventSchemaDigestSha256", "runDirectory"],
+      "required": ["scenarioId", "scenarioDigestSha256", "scenarioDefinition", "fixtureSeed", "corpusDirectory", "corpusManifestPath", "corpusDigestSha256", "corpusDefinitionDigestSha256", "eventSchemaDigestSha256", "runDirectory"],
       "properties": {
         "scenarioId": { "$ref": "#/$defs/scenarioId" },
         "scenarioDigestSha256": { "$ref": "#/$defs/sha256" },
+        "scenarioDefinition": { "type": "object" },
+        "fixtureSeed": { "type": "string", "minLength": 1, "maxLength": 300 },
         "corpusDirectory": { "type": "string", "minLength": 1 },
         "corpusManifestPath": { "type": "string", "minLength": 1 },
         "corpusDigestSha256": { "$ref": "#/$defs/sha256" },

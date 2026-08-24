@@ -46,6 +46,12 @@ test("mock non-Electron driver completes the public lifecycle", async () => {
       eventSchemaDigestSha256: generated.manifest.sourceEventFormat.schemaDigestSha256,
       scenarioId: "session-switch-v1",
       scenarioDigestSha256: "1".repeat(64),
+      scenarioDefinition: {
+        schemaVersion: 1,
+        id: "session-switch-v1",
+        kind: "session-switch",
+      },
+      fixtureSeed: generated.manifest.seed,
       runDirectory: root,
     }), { corpusDigestSha256: generated.digestSha256, eventSchemaDigestSha256: generated.manifest.sourceEventFormat.schemaDigestSha256, materializationModes: ["translated"] });
     assert.equal(prepared.materializationMode, "translated");

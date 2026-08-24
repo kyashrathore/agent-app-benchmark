@@ -114,6 +114,22 @@ function validateScenario(value) {
     if (JSON.stringify(value.cases.sessionStates) !== JSON.stringify(expectedStates)) throw new Error("Session cache states are not canonical.");
     assertAscendingIntegers(value.cases.transcriptBytes, "Scenario transcript sizes");
   }
+  if (value.kind === "workspace-panel") {
+    const expectedActions = ["open-cold", "interrupt-open-close", "interrupt-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"];
+    if (JSON.stringify(value.cases.actions) !== JSON.stringify(expectedActions)) throw new Error("Workspace-panel actions are not canonical.");
+    validateWorkspaceLoad(value.cases.workspaceLoad);
+  }
+  if (value.kind === "session-switch-workspace-panel") {
+    if (JSON.stringify(value.cases.workspaceRelations) !== JSON.stringify(["within-workspace", "across-workspaces"])) throw new Error("Panel-switch workspace relations are not canonical.");
+    if (JSON.stringify(value.cases.sessionStates) !== JSON.stringify(["cold", "warm"])) throw new Error("Panel-switch cache states are not canonical.");
+    if (JSON.stringify(value.cases.panelProfiles) !== JSON.stringify(["closed", "files", "diff"])) throw new Error("Panel-switch profiles are not canonical.");
+    validateWorkspaceLoad(value.cases.workspaceLoad);
+  }
+}
+
+function validateWorkspaceLoad(load) {
+  if (load.changedFileCount > load.sourceFileCount) throw new Error("Workspace load cannot change more files than it contains.");
+  if (load.openFileTabCount > load.sourceFileCount) throw new Error("Workspace load cannot open more file tabs than it contains.");
 }
 
 function validateCorpus(value) {

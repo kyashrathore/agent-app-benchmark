@@ -10,6 +10,11 @@ export function summarizeObservations(scenario, observations) {
       return [startMode, summaryOrUnavailable(valid, attempted.length, "No valid observations.", honestP95)];
     }));
   }
+  if (scenario.kind === "workspace-panel") return Object.fromEntries(scenario.cases.actions.map((action) => {
+    const attempted = observations.filter((item) => item.case?.action === action);
+    return [action, summarizeRendererGroup(attempted)];
+  }));
+  if (scenario.kind === "session-switch-workspace-panel") return summarizePanelSwitches(observations);
   const lanes = {};
   const honestP95 = scenario.cases.latencySamplesPerProcess ? { minimumP95Samples: 20 } : {};
   for (const lane of SESSION_LANES) {
@@ -29,6 +34,113 @@ export function summarizeObservations(scenario, observations) {
     };
   });
   return lanes;
+}
+
+function summarizePanelSwitches(observations) {
+  const result = {};
+  for (const panelProfile of ["closed", "files", "diff"]) {
+    for (const lane of SESSION_LANES) {
+      const key = `${panelProfile}-${lane.id}`;
+      const attempted = observations.filter((item) => item.case?.panelProfile === panelProfile
+        && item.case?.workspaceRelation === lane.workspaceRelation
+        && item.case?.sessionState === lane.sessionState);
+      result[key] = summarizeRendererGroup(attempted);
+    }
+  }
+  for (const panelProfile of ["files", "diff"]) {
+    for (const lane of SESSION_LANES) {
+      const key = `${panelProfile}-minus-closed-${lane.id}`;
+      result[key] = summarizePanelPenalty(observations, panelProfile, lane);
+    }
+  }
+  return result;
+}
+
+function summarizeRendererGroup(attempted) {
+  const valid = attempted.filter((item) => item.status === "valid" && item.rendererTrace);
+  const deltas = (start, end) => valid.flatMap((item) => {
+    const milestones = Object.fromEntries(item.rendererTrace.milestones.map((milestone) => [milestone.id, milestone.at]));
+    return Number.isFinite(milestones[start]) && Number.isFinite(milestones[end]) ? [milestones[end] - milestones[start]] : [];
+  });
+  const intervals = valid.map((item) => frameIntervals(item.clock, item.rendererTrace.frameTimestampsMs));
+  const milestoneDefinitions = {
+    inputToShellMs: ["trusted-input", "shell-visible"],
+    animationMs: ["trusted-input", "animation-settled"],
+    dataReadyToPaintMs: ["data-ready", "above-fold-painted"],
+    dataReadyToInteractiveMs: ["data-ready", "interactive"],
+    paintToInteractiveMs: ["above-fold-painted", "interactive"],
+    reversalResponseMs: ["reversal-input", "reversal-observed"],
+    inputToActionPaintMs: ["trusted-input", "action-painted"],
+    inputToContentMs: ["trusted-input", "content-identity"],
+    inputToSessionReadyMs: ["trusted-input", "session-ready"],
+    inputToPanelReadyMs: ["trusted-input", "panel-ready"],
+    inputToInteractiveMs: ["trusted-input", "interactive"],
+  };
+  const milestones = Object.fromEntries(Object.entries(milestoneDefinitions).flatMap(([id, [start, end]]) => {
+    const values = deltas(start, end);
+    return values.length === 0 ? [] : [[id, summaryOrUnavailable(values, attempted.length, `No ${id} evidence.`)]];
+  }));
+  return {
+    durationMs: summaryOrUnavailable(valid.map((item) => item.durationMs), attempted.length),
+    transitionModes: {
+      animated: valid.filter((item) => item.rendererTrace.transitionMode === "animated").length,
+      none: valid.filter((item) => item.rendererTrace.transitionMode === "none").length,
+    },
+    milestones,
+    frames: {
+      worstIntervalMs: summaryOrUnavailable(intervals.map((values) => maximum(values)), attempted.length, "No frame evidence."),
+      p95IntervalMs: summaryOrUnavailable(intervals.map((values) => percentile(values, 95)), attempted.length, "No frame evidence."),
+      overBudgetIntervalCount: summaryOrUnavailable(intervals.map((values) => values.filter((value) => value > 16.667).length), attempted.length, "No frame evidence."),
+    },
+    longAnimationFrames: {
+      count: summaryOrUnavailable(valid.map((item) => item.rendererTrace.longAnimationFrames.length), attempted.length, "No long-animation-frame evidence."),
+      worstDurationMs: summaryOrUnavailable(valid.map((item) => maximum([0, ...item.rendererTrace.longAnimationFrames.map((entry) => entry.duration)])), attempted.length, "No long-animation-frame evidence."),
+      worstBlockingDurationMs: summaryOrUnavailable(valid.map((item) => maximum([0, ...item.rendererTrace.longAnimationFrames.map((entry) => entry.blockingDuration)])), attempted.length, "No long-animation-frame evidence."),
+    },
+    rendererWork: Object.fromEntries(["scriptDurationMs", "styleRecalcDurationMs", "layoutDurationMs", "taskDurationMs"].map((id) => [
+      id,
+      summaryOrUnavailable(valid.map((item) => item.rendererTrace.counters[id]), attempted.length, `No ${id} evidence.`),
+    ])),
+  };
+}
+
+function summarizePanelPenalty(observations, panelProfile, lane) {
+  const repetitions = new Set(observations.map((item) => item.case?.repetition).filter(Number.isInteger));
+  const metric = (item, id) => id === "durationMs" ? item.durationMs : item.rendererTrace.counters[id];
+  const summaries = {};
+  for (const id of ["durationMs", "scriptDurationMs", "styleRecalcDurationMs", "layoutDurationMs", "taskDurationMs"]) {
+    const values = [];
+    for (const repetition of repetitions) {
+      const matches = (profile) => observations.find((item) => item.case?.repetition === repetition
+        && item.case?.panelProfile === profile
+        && item.case?.workspaceRelation === lane.workspaceRelation
+        && item.case?.sessionState === lane.sessionState
+        && item.status === "valid" && item.rendererTrace);
+      const closed = matches("closed");
+      const open = matches(panelProfile);
+      if (closed && open) values.push(metric(open, id) - metric(closed, id));
+    }
+    summaries[id] = signedSummary(values, repetitions.size);
+  }
+  return summaries;
+}
+
+function signedSummary(values, attempted) {
+  if (values.length !== attempted || values.length === 0) return { status: "invalid", valid: values.length, attempted, reason: `Only ${values.length} of ${attempted} required pairs were valid.` };
+  const sorted = values.toSorted((left, right) => left - right);
+  return {
+    status: "valid",
+    average: round(values.reduce((total, value) => total + value, 0) / values.length),
+    maximum: round(Math.max(...values)),
+    p95: round(sorted[Math.max(0, Math.ceil(0.95 * sorted.length) - 1)]),
+    valid: values.length,
+    attempted,
+  };
+}
+
+function frameIntervals(clock, timestamps) {
+  const boundaries = [clock.start, ...timestamps.filter((timestamp) => timestamp > clock.start && timestamp < clock.end), clock.end];
+  return boundaries.slice(1).map((timestamp, index) => timestamp - boundaries[index]);
 }
 
 export function summarizeResources(samples, windows, boundaryPoints) {

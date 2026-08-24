@@ -13,6 +13,8 @@ test("all public registry entries satisfy strict schemas and cross references", 
     "scenario:session-switch-v1",
     "scenario:session-switch-v2",
     "scenario:session-switch-v3",
+    "scenario:session-switch-workspace-panel-v1",
+    "scenario:workspace-panel-v1",
     "corpus:opencode-completed-sessions-v2",
     "corpus:opencode-completed-sessions-v3",
     "corpus:opencode-completed-transcripts-v1",
@@ -58,4 +60,29 @@ test("driver response must contain exactly one result or error", () => {
     result: {},
     error: { code: "bad", message: "bad" },
   }), /schema validation/);
+});
+
+test("prepare requests carry the exact scenario definition and corpus fixture seed", () => {
+  const request = {
+    protocolVersion: 1,
+    kind: "request",
+    correlationId: "request-0",
+    method: "prepare",
+    params: {
+      scenarioId: "workspace-panel-v1",
+      scenarioDigestSha256: "a".repeat(64),
+      scenarioDefinition: { id: "workspace-panel-v1" },
+      fixtureSeed: "canonical-seed",
+      corpusDirectory: "/private/corpus",
+      corpusManifestPath: "/private/corpus/manifest.json",
+      corpusDigestSha256: "b".repeat(64),
+      corpusDefinitionDigestSha256: "c".repeat(64),
+      eventSchemaDigestSha256: "d".repeat(64),
+      runDirectory: "/private/run",
+    },
+  };
+  assertContract("driverMessage", request);
+  const missingSeed = structuredClone(request);
+  delete missingSeed.params.fixtureSeed;
+  assert.throws(() => assertContract("driverMessage", missingSeed), /fixtureSeed/u);
 });

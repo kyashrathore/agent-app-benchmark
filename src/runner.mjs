@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { digest } from "./canonical-json.mjs";
-import { buildLatencyGroups, buildResourceSequence, buildResourceSequences, expandCases, repetitionsFor } from "./cases.mjs";
+import { buildLatencyGroups, buildPanelSwitchGroups, buildResourceSequence, buildResourceSequences, buildWorkspacePanelGroups, expandCases, repetitionsFor } from "./cases.mjs";
 import { assertContract } from "./contracts.mjs";
 import { verifyCorpus, writeCorpus } from "./corpus.mjs";
 import { DriverProcess } from "./driver-process.mjs";
@@ -48,6 +48,8 @@ export async function runBenchmark(input, dependencies = {}) {
     prepared = assertPrepared(await driver.request("prepare", {
       scenarioId: input.scenario.value.id,
       scenarioDigestSha256: input.scenario.digest,
+      scenarioDefinition: input.scenario.value,
+      fixtureSeed: input.corpus.value.seed,
       corpusDirectory: corpus.path,
       corpusManifestPath: path.join(corpus.path, "manifest.json"),
       corpusDigestSha256: corpus.digestSha256,
@@ -62,7 +64,7 @@ export async function runBenchmark(input, dependencies = {}) {
     if (!input.app.materializationModes.includes(prepared.materializationMode)) throw new Error(`${input.app.id} is not registered for ${prepared.materializationMode} materialization.`);
     if (input.scenario.value.kind === "app-start") {
       await runAppStart({ driver, scenario: input.scenario.value, runProfile: input.runProfile, repetitions, prepared, observations });
-    } else {
+    } else if (input.scenario.value.kind === "session-switch") {
       await runSessionLatency({ driver, scenario: input.scenario.value, runProfile: input.runProfile, repetitions, prepared, observations, seed: input.corpus.value.seed });
       const resourceRun = await runResourceWorkloads({
         driver,
@@ -78,6 +80,12 @@ export async function runBenchmark(input, dependencies = {}) {
       });
       resources = resourceRun.resources;
       resourceTrace = resourceRun.trace;
+    } else if (input.scenario.value.kind === "workspace-panel") {
+      await runInteractiveGroups({ driver, scenario: input.scenario.value, prepared, observations, groups: buildWorkspacePanelGroups(input.scenario.value, input.runProfile, repetitions) });
+    } else if (input.scenario.value.kind === "session-switch-workspace-panel") {
+      await runInteractiveGroups({ driver, scenario: input.scenario.value, prepared, observations, groups: buildPanelSwitchGroups(input.scenario.value, input.runProfile, input.corpus.value.seed, repetitions) });
+    } else {
+      throw new Error(`Unsupported scenario kind ${input.scenario.value.kind}.`);
     }
   } finally {
     if (driver) await driver.close();
@@ -168,6 +176,31 @@ async function runSessionLatency({ driver, scenario, runProfile, repetitions, pr
       for (const benchmarkCase of group.cases.slice(completed)) {
         observations.push(invalidObservation(benchmarkCase, error));
       }
+    } finally {
+      if (launchAttempted) {
+        const cleanup = await shutdownSafely(driver, group.groupId);
+        if (!cleanup.valid) {
+          for (let index = firstObservation; index < observations.length; index += 1) observations[index] = invalidateForCleanup(observations[index], cleanup.reason);
+        }
+      }
+    }
+  }
+}
+
+async function runInteractiveGroups({ driver, scenario, prepared, observations, groups }) {
+  for (const group of groups) {
+    let launchAttempted = false;
+    let completed = 0;
+    const firstObservation = observations.length;
+    try {
+      launchAttempted = true;
+      assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: group.groupId }, 5 * 60_000), { requireProcessRoles: true });
+      for (const benchmarkCase of group.cases) {
+        observations.push(await executeSafely(driver, scenario.id, benchmarkCase, { requireRendererTrace: true }));
+        completed += 1;
+      }
+    } catch (error) {
+      for (const benchmarkCase of group.cases.slice(completed)) observations.push(invalidObservation(benchmarkCase, error));
     } finally {
       if (launchAttempted) {
         const cleanup = await shutdownSafely(driver, group.groupId);
@@ -334,8 +367,9 @@ function deriveSingleResourceRun(trace, scenario, observations) {
 
 async function executeSafely(driver, scenarioId, benchmarkCase, extra = {}) {
   try {
-    const result = await driver.request("execute", { scenarioId, case: benchmarkCase, ...extra }, 5 * 60_000);
-    return normalizeExecution(result, benchmarkCase, { requireTimingEvidence: scenarioId.endsWith("-v3") });
+    const { requireRendererTrace = false, ...requestExtra } = extra;
+    const result = await driver.request("execute", { scenarioId, case: benchmarkCase, ...requestExtra }, 5 * 60_000);
+    return normalizeExecution(result, benchmarkCase, { requireTimingEvidence: scenarioId.endsWith("-v3") || requireRendererTrace, requireRendererTrace });
   } catch (error) {
     return invalidObservation(benchmarkCase, error);
   }

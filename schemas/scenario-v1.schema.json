@@ -10,7 +10,7 @@
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
     "title": { "type": "string", "minLength": 1, "maxLength": 160 },
     "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
-    "kind": { "enum": ["app-start", "session-switch"] },
+    "kind": { "enum": ["app-start", "session-switch", "workspace-panel", "session-switch-workspace-panel"] },
     "corpusId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
     "cases": { "type": "object" },
     "metrics": {
@@ -90,6 +90,59 @@
           }
         }
       }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "workspace-panel" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workspaceLoad", "actions"],
+            "properties": {
+              "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" },
+              "actions": {
+                "const": ["open-cold", "interrupt-open-close", "interrupt-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "session-switch-workspace-panel" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workspaceRelations", "sessionStates", "panelProfiles", "transcriptBytes", "workspaceLoad"],
+            "properties": {
+              "workspaceRelations": { "const": ["within-workspace", "across-workspaces"] },
+              "sessionStates": { "const": ["cold", "warm"] },
+              "panelProfiles": { "const": ["closed", "files", "diff"] },
+              "transcriptBytes": { "type": "integer", "minimum": 1, "maximum": 268435456 },
+              "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" }
+            }
+          }
+        }
+      }
     }
-  ]
+  ],
+  "$defs": {
+    "workspaceLoad": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directoryCount", "sourceFileCount", "sourceFileBytes", "changedFileCount", "diffHunksPerFile", "diffLinesPerHunk", "openFileTabCount"],
+      "properties": {
+        "directoryCount": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "sourceFileCount": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "sourceFileBytes": { "type": "integer", "minimum": 1, "maximum": 10485760 },
+        "changedFileCount": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "diffHunksPerFile": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "diffLinesPerHunk": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "openFileTabCount": { "type": "integer", "minimum": 1, "maximum": 1000 }
+      }
+    }
+  }
 }
