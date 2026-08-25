@@ -32,7 +32,7 @@ export async function buildSite(comparisonFile, outputDirectory) {
 }
 
 function renderIndex(model) {
-  const cards = model.apps.map((app) => `<a class="app-card" href="apps/${app.id}/index.html"><span>${escapeHtml(app.name)}</span><small>${escapeHtml(app.version)} · ${escapeHtml(app.guiFramework)} · ${escapeHtml(app.materializationModes.join(", "))}</small></a>`).join("");
+  const cards = model.apps.map((app, index) => `<a class="app-card app-tone-${index}" href="apps/${app.id}/index.html"><span><i aria-hidden="true"></i>${escapeHtml(app.name)}</span><small>${escapeHtml(app.version)} · ${escapeHtml(app.guiFramework)} · ${escapeHtml(app.materializationModes.join(", "))}</small></a>`).join("");
   const startScenarioId = model.apps.find((app) => app.appStart)?.appStart.scenario.id;
   const switchScenarioId = model.apps.find((app) => app.sessionSwitch)?.sessionSwitch.scenario.id;
   const startStatus = model.compatibility[startScenarioId] ?? { status: "unpaired", reason: "No app-start results were supplied." };
@@ -58,7 +58,17 @@ function renderIndex(model) {
     : comparisonUnavailable("Session switching", switchStatus, model.apps, "sessionSwitch");
   const navigationComparison = pairedScenarioSection(model, "sessionNavigation", "Session navigation", renderSessionNavigationComparison);
   const workspacePanelComparison = pairedScenarioSection(model, "workspacePanel", "Workspace panel", renderWorkspacePanelComparison);
-  const body = `<section class="hero"><p class="eyebrow">Public comparison · ${escapeHtml(model.provenance)}</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="notice">This corpus uses pinned OpenCode events. Apps with production OpenCode history support should use it; translations are allowed and disclosed. The current entries are Electron apps, but other GUI frameworks are welcome.</div></section><nav class="app-grid" aria-label="Application reports">${cards}</nav>${appStart}${sessionComparison}${navigationComparison}${workspacePanelComparison}<section class="panel"><h2>What this benchmark does not measure</h2><p>It does not measure Web Vitals, model or harness speed, live streaming output, live tool execution, or terminal coding agents. Those require separately reviewed scenarios.</p><p>Have another useful metric? Propose its definition and scenario version in a pull request.</p></section>`;
+  const hasLegacyScenarios = model.apps.some((app) => app.appStart || app.sessionSwitch);
+  const environment = model.apps[0]?.environment;
+  const validScenarios = Object.values(model.compatibility).filter((item) => item.status === "valid").length;
+  const totalScenarios = Object.keys(model.compatibility).length;
+  const scheduleOrder = model.schedule.map((step) => `${step.ordinal}. ${step.appId} / ${step.scenarioId}`).join(" → ");
+  const revisions = model.frameworkRevisions.map((revision) => `<code>${escapeHtml(shortRevision(revision))}</code>`).join(", ");
+  const repetitionLabel = `${model.repetitions ?? "—"} ${model.repetitions === 1 ? "repetition" : "repetitions"}`;
+  const statisticExplanation = model.primaryStatistic === "p50"
+    ? `p50 is the primary statistic because this run has ${repetitionLabel}. p95 is withheld until 20 valid observations.`
+    : "p95 is the primary statistic because each case has at least 20 scheduled repetitions.";
+  const body = `<section class="hero" id="overview"><p class="eyebrow">Controlled desktop comparison · lower is better</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="run-stamp"><span><b>${model.repetitions ?? "—"}</b> ${model.repetitions === 1 ? "repetition" : "repetitions"}</span><span><b>${escapeHtml(model.primaryStatistic)}</b> primary</span><span><b>${validScenarios}/${totalScenarios}</b> paired scenarios</span><span><b>${escapeHtml(model.runProfile ?? "—")}</b> profile</span></div></section><nav class="section-nav" aria-label="Report sections"><a href="#overview">Overview</a><a href="#session-navigation">Session navigation</a><a href="#workspace-panel">Workspace panel</a><a href="#method">Method</a></nav><section class="fairness" aria-labelledby="fairness-title"><div><p class="kicker">Fairness ledger</p><h2 id="fairness-title">Same work, same machine, mirrored order.</h2><p>${escapeHtml(statisticExplanation)}</p></div><dl><div><dt>Host</dt><dd>${escapeHtml(environment ? `${environment.cpuModel} · ${environment.logicalCpuCount} logical CPUs · ${formatMemory(environment.totalMemoryBytes)} RAM · ${environment.platform}/${environment.architecture}` : "Not supplied")}</dd></div><div><dt>Order control</dt><dd>Balanced mirrored schedule; each app runs first once across the two flows.</dd></div><div><dt>Corpus and cases</dt><dd>Compatibility validation requires identical framework revision, scenario, corpus, profile, repetition count, and host identity.</dd></div><div><dt>Materialization</dt><dd>Each app uses its registered production path. Native and translated mappings are disclosed; unsupported product contracts are not scored as zero.</dd></div></dl></section><nav class="app-grid" aria-label="Application identity and individual reports">${cards}</nav>${hasLegacyScenarios ? `<section class="legacy"><div class="flow-heading"><p class="kicker">Additional scenarios</p><h2>Process launch and legacy session switching</h2></div>${appStart}${sessionComparison}</section>` : ""}${navigationComparison}${workspacePanelComparison}<section class="method" id="method"><div class="flow-heading"><p class="kicker">Method and provenance</p><h2>What makes the comparison comparable</h2></div><div class="method-grid"><section><h3>Run identity</h3><dl class="compact-list"><div><dt>Provenance</dt><dd>${escapeHtml(model.provenance)}</dd></div><div><dt>Framework revision</dt><dd>${revisions || "—"}</dd></div><div><dt>Run profile</dt><dd>${escapeHtml(model.runProfile ?? "—")}</dd></div><div><dt>Primary statistic</dt><dd>${escapeHtml(model.primaryStatistic)}</dd></div></dl></section><section><h3>Execution order</h3><p class="schedule">${escapeHtml(scheduleOrder || "No paired schedule supplied.")}</p></section></div><div class="notice"><strong>Scope.</strong> This report measures packaged GUI flows over pinned completed-session data. It does not measure Web Vitals, model or harness speed, live streaming output, live tool execution, or terminal coding agents.</div></section>`;
   return page({ title: model.title, current: "index", body });
 }
 
@@ -95,58 +105,157 @@ function pairedScenarioSection(model, property, title, render) {
   if (apps.length === 0) return "";
   const scenarioId = apps[0][property].scenario.id;
   const compatibility = model.compatibility[scenarioId] ?? { status: "unpaired", reason: `No paired ${title.toLowerCase()} results were supplied.` };
-  return compatibility.status === "valid" ? render(apps) : comparisonUnavailable(title, compatibility, model.apps, property);
+  return compatibility.status === "valid" ? render(apps, model) : comparisonUnavailable(title, compatibility, model.apps, property);
 }
 
-function renderSessionNavigationComparison(apps) {
+function renderSessionNavigationComparison(apps, model = {}) {
+  const statistic = model.primaryStatistic ?? primaryStatisticFor(apps[0]?.sessionNavigation?.repetitions);
+  const statisticLabel = statistic.toUpperCase();
   const historySeries = apps.flatMap((app) => {
     const trend = app.sessionNavigation.derivation.summary.historySizeTrend;
+    const colorIndex = apps.indexOf(app);
     return [
-      { label: `${app.name} — first visit`, points: trend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.firstVisit.p95 })) },
-      { label: `${app.name} — return to visited session`, points: trend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.returnVisitedPanelClosed.p95 })) },
+      { label: `${app.name} — first visit`, colorIndex, points: trend.map((point) => ({ x: point.transcriptBytes / 1048576, y: metricValue(point.firstVisit, statistic) })) },
+      { label: `${app.name} — return to visited session`, colorIndex, variant: "return", points: trend.map((point) => ({ x: point.transcriptBytes / 1048576, y: metricValue(point.returnVisitedPanelClosed, statistic) })) },
     ];
   });
-  const panelSeries = apps.map((app) => ({
+  const panelSeries = apps.map((app, colorIndex) => ({
     label: app.name,
+    colorIndex,
     points: app.sessionNavigation.derivation.summary.panelLoadTrend.map((point, index) => ({
       x: index + 1,
-      y: point.returnVisitedPanelOpen.durationMs.p95,
+      y: metricValue(point.returnVisitedPanelOpen.durationMs, statistic),
     })),
   }));
-  const historyRows = apps.flatMap((app) => app.sessionNavigation.derivation.summary.historySizeTrend.flatMap((point) => [
-    { app: app.name, flow: `First visit · ${formatBytes(point.transcriptBytes)}`, metric: point.firstVisit },
-    { app: app.name, flow: `Return · ${formatBytes(point.transcriptBytes)}`, metric: point.returnVisitedPanelClosed },
-  ]));
-  const panelRows = apps.flatMap((app) => app.sessionNavigation.derivation.summary.panelLoadTrend.map((point) => ({
-    app: app.name,
-    flow: `Return with panel open · ${point.loadProfile}`,
-    metric: point.returnVisitedPanelOpen.durationMs,
-  })));
-  return `<section class="flow-heading"><h2>Session navigation</h2><p>Only session activation is timed. Workspace setup is excluded. Review readiness keeps complete non-truncated 24-file data and exact logical expansion state while allowing offscreen body virtualization.</p></section>${p50P95Table("Session-navigation values", [...historyRows, ...panelRows])}${chart("First visit and return by history size — p95", historySeries, "History size (MiB)", "p95 latency (ms)")}${chart("Return with workspace panel open by seeded load — p95", panelSeries, "Load profile (1 light, 2 moderate, 3 heavy)", "p95 latency (ms)")}`;
+  const historyTrend = apps[0]?.sessionNavigation.derivation.summary.historySizeTrend ?? [];
+  const historyRows = historyTrend.flatMap((point, index) => [
+    navigationMatrixRow(`First visit`, formatBytes(point.transcriptBytes), apps, (app) => app.sessionNavigation.derivation.summary.historySizeTrend[index]?.firstVisit, statistic),
+    navigationMatrixRow(`Return`, formatBytes(point.transcriptBytes), apps, (app) => app.sessionNavigation.derivation.summary.historySizeTrend[index]?.returnVisitedPanelClosed, statistic),
+  ]).join("");
+  const panelTrend = apps[0]?.sessionNavigation.derivation.summary.panelLoadTrend ?? [];
+  const panelRows = panelTrend.map((point, index) => navigationMatrixRow(
+    "Return with panel open",
+    point.loadProfile,
+    apps,
+    (app) => app.sessionNavigation.derivation.summary.panelLoadTrend[index]?.returnVisitedPanelOpen.durationMs,
+    statistic,
+  )).join("");
+  const headers = comparisonHeaders(apps, statisticLabel);
+  const rendererRows = apps.flatMap((app) => app.sessionNavigation.derivation.summary.panelLoadTrend.map((point) => rendererWorkRow(
+    app,
+    `Return with panel open · ${point.loadProfile}`,
+    point.returnVisitedPanelOpen,
+    statistic,
+  ))).join("");
+  return `<section class="benchmark-section" id="session-navigation"><div class="flow-heading"><p class="kicker">Flow 01</p><h2>Session navigation</h2><p>First visit means a session surface has not been mounted before. Return means revisiting a previously rendered session with the workspace panel closed. Panel-open returns are isolated as a separate seeded-load trend.</p></div><div class="result-note"><strong>${statisticLabel} shown.</strong> ${statistic === "p50" ? "The median is the honest comparison at this run depth; p95 remains withheld." : "Publication-depth tail latency is available."} Valid / attempted counts remain attached to every value.</div><section class="matrix"><div class="matrix-heading"><h3>History-size trend</h3><p>Solid lines are first visit; dashed lines are return.</p></div><div class="table-scroll"><table><caption>Session navigation ${statisticLabel} latency in milliseconds by history size</caption><thead><tr><th scope="col">Visit state</th><th scope="col">History</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>${chart(`First visit and return by history size — ${statistic}`, historySeries, "History size (MiB)", `${statistic} latency (ms)`)}<section class="matrix"><div class="matrix-heading"><h3>Return with workspace panel open</h3><p>The panel begins open with light, moderate, or heavy seeded content.</p></div><div class="table-scroll"><table><caption>Panel-open session return ${statisticLabel} latency in milliseconds</caption><thead><tr><th scope="col">Visit state</th><th scope="col">Seeded load</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${panelRows}</tbody></table></div></section>${chart(`Return with workspace panel open by seeded load — ${statistic}`, panelSeries, "Load profile (1 light, 2 moderate, 3 heavy)", `${statistic} latency (ms)`)}${unsupportedReasons(apps, "sessionNavigation")}<details class="technical"><summary>Renderer work for panel-open returns</summary><p>Durations use ${statisticLabel}; renderer counters and worst frames show their declared aggregate from the same observations.</p><div class="table-scroll"><table><caption>Panel-open renderer work</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">Duration</th><th scope="col">JavaScript</th><th scope="col">Style</th><th scope="col">Layout</th><th scope="col">Worst frame</th></tr></thead><tbody>${rendererRows}</tbody></table></div></details></section>`;
 }
 
-function renderWorkspacePanelComparison(apps) {
+function renderWorkspacePanelComparison(apps, model = {}) {
+  const statistic = model.primaryStatistic ?? primaryStatisticFor(apps[0]?.workspacePanel?.repetitions);
+  const statisticLabel = statistic.toUpperCase();
   const actions = apps[0]?.workspacePanel?.derivation.summary.loadTrend[0]?.interactions
     ? Object.keys(apps[0].workspacePanel.derivation.summary.loadTrend[0].interactions)
     : [];
-  const charts = actions.map((action) => chart(
-    `${workspaceActionLabel(action)} by seeded load — p95`,
-    apps.map((app) => ({
-      label: app.name,
-      points: app.workspacePanel.derivation.summary.loadTrend.map((point, index) => ({
-        x: index + 1,
-        y: point.interactions[action].durationMs.p95,
-      })),
+  const loadTrend = apps[0]?.workspacePanel?.derivation.summary.loadTrend ?? [];
+  const matrices = loadTrend.map((point, loadIndex) => {
+    const rows = actions.map((action) => navigationMatrixRow(
+      workspaceActionLabel(action),
+      point.loadProfile,
+      apps,
+      (app) => app.workspacePanel.derivation.summary.loadTrend[loadIndex]?.interactions[action]?.durationMs,
+      statistic,
+    )).join("");
+    return `<section class="matrix"><div class="matrix-heading"><h3>${escapeHtml(workspaceLoadLabel(point.loadProfile))} load</h3><p>${escapeHtml(point.loadProfile)} fixture</p></div><div class="table-scroll"><table><caption>Workspace actions under ${escapeHtml(point.loadProfile)} load; ${statisticLabel} latency in milliseconds</caption><thead><tr><th scope="col">Action</th><th scope="col">Load</th>${comparisonHeaders(apps, statisticLabel)}<th scope="col">Relative result</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  }).join("");
+  const shellActions = actions.filter((action) => action === "open-panel" || action === "close-panel");
+  const shellSeries = apps.flatMap((app, colorIndex) => shellActions.map((action) => ({
+    label: `${app.name} — ${workspaceActionLabel(action)}`,
+    colorIndex,
+    variant: action === "close-panel" ? "return" : undefined,
+    points: app.workspacePanel.derivation.summary.loadTrend.map((point, index) => ({
+      x: index + 1,
+      y: metricValue(point.interactions[action]?.durationMs, statistic),
     })),
-    "Load profile (1 light, 2 moderate, 3 heavy)",
-    "p95 latency (ms)",
-  )).join("");
-  const rows = apps.flatMap((app) => app.workspacePanel.derivation.summary.loadTrend.flatMap((point) => Object.entries(point.interactions).map(([action, metric]) => ({
-    app: app.name,
-    flow: `${workspaceActionLabel(action)} · ${point.loadProfile}`,
-    metric: metric.durationMs,
-  }))));
-  return `<section class="flow-heading"><h2>Workspace panel</h2><p>Each chart is one ordinary user action; setup is seeded before timing. Review endpoints require complete non-truncated data, exact logical expansion counts, and painted interactive bodies for the current viewport—not concurrent offscreen DOM. Open-file starts with production target bytes warm but its tab and preview never mounted, so the measured input owns first surface creation and paint.</p></section>${p50P95Table("Workspace-panel values", rows)}${charts}`;
+  })));
+  const rendererRows = apps.flatMap((app) => app.workspacePanel.derivation.summary.loadTrend.flatMap((point) => Object.entries(point.interactions).map(([action, metric]) => rendererWorkRow(
+    app,
+    `${workspaceActionLabel(action)} · ${point.loadProfile}`,
+    metric,
+    statistic,
+  )))).join("");
+  return `<section class="benchmark-section" id="workspace-panel"><div class="flow-heading"><p class="kicker">Flow 02</p><h2>Workspace panel</h2><p>The panel shell and each ordinary interaction are timed separately after their declared fixture is seeded. Review readiness requires complete non-truncated data, exact logical expansion state, and painted interactive bodies for the current viewport—not concurrent offscreen DOM.</p></div><div class="result-note"><strong>Data-warm, surface-cold.</strong> Open-file begins with production target bytes warm, but its tab and preview have never mounted. The measured input owns first surface creation and paint.</div>${matrices}${shellSeries.length > 0 ? chart(`Panel shell open and close by seeded load — ${statistic}`, shellSeries, "Load profile (1 light, 2 moderate, 3 heavy)", `${statistic} latency (ms)`) : ""}${unsupportedReasons(apps, "workspacePanel")}<details class="technical"><summary>All renderer work and frame measurements</summary><p>This audit table keeps CPU attribution available without making it the reading path for the user-facing latency result.</p><div class="table-scroll"><table><caption>Workspace-panel renderer work</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">Duration</th><th scope="col">JavaScript</th><th scope="col">Style</th><th scope="col">Layout</th><th scope="col">Worst frame</th></tr></thead><tbody>${rendererRows}</tbody></table></div></details></section>`;
+}
+
+function comparisonHeaders(apps, statisticLabel) {
+  return apps.map((app) => `<th scope="col"><span class="app-key app-tone-${apps.indexOf(app)}"><i aria-hidden="true"></i>${escapeHtml(app.name)}</span><small>${escapeHtml(statisticLabel)} · valid / attempted</small></th>`).join("");
+}
+
+function navigationMatrixRow(flow, context, apps, metricForApp, statistic) {
+  const metrics = apps.map(metricForApp);
+  return `<tr><th scope="row">${escapeHtml(flow)}</th><td class="context">${escapeHtml(context)}</td>${metrics.map((metric) => metricCell(metric, statistic)).join("")}<td class="verdict">${relativeResult(apps, metrics, statistic)}</td></tr>`;
+}
+
+function metricCell(metric, statistic) {
+  const value = metricValue(metric, statistic);
+  if (!Number.isFinite(value)) {
+    const label = metric?.status === "invalid" ? "Unsupported" : statistic === "p95" ? "Withheld" : "Unavailable";
+    return `<td class="metric status invalid"><strong>${label}</strong><small>${metric?.valid ?? 0} / ${metric?.attempted ?? 0}</small></td>`;
+  }
+  return `<td class="metric"><strong>${format(value)} ms</strong><small>${metric.valid} / ${metric.attempted}</small></td>`;
+}
+
+function metricValue(metric, statistic) {
+  if (!metric || metric.status !== "valid") return null;
+  return Number.isFinite(metric[statistic]) ? metric[statistic] : null;
+}
+
+function relativeResult(apps, metrics, statistic) {
+  if (apps.length !== 2) return "—";
+  const values = metrics.map((metric) => metricValue(metric, statistic));
+  if (!values.every(Number.isFinite)) return `<span class="status invalid">Not comparable</span>`;
+  const [left, right] = values;
+  if (left === right) return "Tie";
+  const winnerIndex = left < right ? 0 : 1;
+  const ratio = Math.max(left, right) / Math.min(left, right);
+  return `<strong>${escapeHtml(apps[winnerIndex].name)}</strong><small>${formatRatio(ratio)}× faster</small>`;
+}
+
+function rendererWorkRow(app, flow, metric, statistic) {
+  return `<tr><th scope="row">${escapeHtml(flow)}</th><td>${escapeHtml(app.name)}</td>${technicalMetricCell(metric?.durationMs, statistic)}${technicalMetricCell(metric?.rendererWork?.scriptDurationMs, "average")}${technicalMetricCell(metric?.rendererWork?.styleRecalcDurationMs, "average")}${technicalMetricCell(metric?.rendererWork?.layoutDurationMs, "average")}${technicalMetricCell(metric?.frames?.worstIntervalMs, "maximum")}</tr>`;
+}
+
+function technicalMetricCell(metric, statistic) {
+  const value = metricValue(metric, statistic);
+  return `<td class="${Number.isFinite(value) ? "" : "status invalid"}">${Number.isFinite(value) ? `${format(value)} ms` : "—"}</td>`;
+}
+
+function unsupportedReasons(apps, property) {
+  const rows = apps.flatMap((app) => {
+    const scenarioId = app[property]?.scenario.id;
+    return (app.invalidReasons?.[scenarioId] ?? []).map((reason) => `<li><strong>${escapeHtml(app.name)}</strong><code>${escapeHtml(reason)}</code></li>`);
+  });
+  if (rows.length === 0) return "";
+  return `<aside class="unsupported" aria-labelledby="${escapeHtml(property)}-unsupported"><p class="kicker">Unsupported is not zero</p><h3 id="${escapeHtml(property)}-unsupported">Product-contract exclusions</h3><p>These observations are excluded from ratios and winner statements. The benchmark recorded the exact driver reason:</p><ul>${rows.join("")}</ul></aside>`;
+}
+
+function primaryStatisticFor(repetitions) {
+  return Number.isInteger(repetitions) && repetitions >= 20 ? "p95" : "p50";
+}
+
+function workspaceLoadLabel(loadProfile) {
+  return ({ light: "Light", moderate: "Moderate", heavy: "Heavy" })[loadProfile] ?? workspaceActionLabel(loadProfile);
+}
+
+function formatRatio(value) {
+  return value >= 10 ? value.toFixed(0) : value.toFixed(2).replace(/0+$/u, "").replace(/\.$/u, "");
+}
+
+function shortRevision(revision) {
+  return revision?.length > 12 ? revision.slice(0, 12) : revision;
+}
+
+function formatMemory(bytes) {
+  return Number.isFinite(bytes) ? `${format(bytes / 1073741824)} GiB` : "unknown";
 }
 
 function p50P95Table(title, rows) {
@@ -237,4 +346,4 @@ async function replaceGeneratedDirectory(output, temporary) {
   }
 }
 
-const SITE_CSS = `:root{--bg:#f4f2ed;--ink:#191816;--muted:#67635d;--panel:#fffefa;--line:#d9d4ca;--accent:#5a45ea;--bad:#a22934;font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg)}*{box-sizing:border-box}body{margin:0;line-height:1.55}.shell{width:min(1180px,calc(100% - 32px));margin-inline:auto}.masthead{display:flex;justify-content:space-between;align-items:center;padding:22px 0}.brand{font-weight:800;color:inherit;text-decoration:none}.version,.eyebrow{font-size:.8rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}.hero{padding:70px 0 36px}.hero.compact{padding-top:42px}.hero h1{font-size:clamp(2.4rem,7vw,5.6rem);line-height:.95;max-width:980px;margin:.25em 0}.hero p{max-width:760px;font-size:1.08rem}.notice{max-width:900px;border-left:4px solid var(--accent);padding:14px 18px;background:color-mix(in srgb,var(--panel) 85%,var(--accent));border-radius:0 10px 10px 0}.app-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0 36px}.app-card{display:flex;flex-direction:column;padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:inherit;text-decoration:none}.app-card:hover,.app-card:focus-visible{border-color:var(--accent);outline:3px solid color-mix(in srgb,var(--accent) 25%,transparent)}.app-card span{font-size:1.35rem;font-weight:750}.app-card small{color:var(--muted)}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:clamp(16px,3vw,28px);margin:18px 0}.panel h2,.panel h3{margin-top:0}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:640px}caption{text-align:left;font-weight:650;padding:0 0 10px}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}.status.invalid{color:var(--bad)}.chart svg{width:100%;height:auto;overflow:visible}.axis{stroke:var(--muted);stroke-width:1}.chart text{fill:var(--muted);font-size:12px;text-anchor:middle}.series polyline{fill:none;stroke-width:3;stroke-linejoin:round}.series circle{fill:var(--panel);stroke-width:3}.series-0 polyline,.series-0 circle{stroke:#6f5cff}.series-1 polyline,.series-1 circle{stroke:#00a884}.series-2 polyline,.series-2 circle{stroke:#e36b34}.series-3 polyline,.series-3 circle{stroke:#b142c7}.series-4 polyline,.series-4 circle{stroke:#2878d0}.series-5 polyline,.series-5 circle{stroke:#b38b00}.series-6 polyline,.series-6 circle{stroke:#d3495f}.series-7 polyline,.series-7 circle{stroke:#087e8b}.legend{display:flex;gap:16px;flex-wrap:wrap;list-style:none;padding:0}.swatch{display:inline-block;width:18px;height:4px;vertical-align:middle;margin-right:7px}.swatch.series-0{background:#6f5cff}.swatch.series-1{background:#00a884}.swatch.series-2{background:#e36b34}.swatch.series-3{background:#b142c7}.swatch.series-4{background:#2878d0}.swatch.series-5{background:#b38b00}.swatch.series-6{background:#d3495f}.swatch.series-7{background:#087e8b}.disclosures{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.disclosures div{padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px}.disclosures dt{color:var(--muted);font-size:.8rem;text-transform:uppercase}.disclosures dd{margin:4px 0 0;font-weight:650;overflow-wrap:anywhere}footer{padding:42px 0;color:var(--muted)}a{color:var(--accent)}.skip{position:absolute;left:-999px}.skip:focus{left:16px;top:16px;background:var(--panel);padding:10px;z-index:5}@media(max-width:700px){.hero{padding-top:40px}.panel{border-radius:10px}.shell{width:min(100% - 20px,1180px)}}@media(prefers-reduced-motion:no-preference){.app-card{transition:border-color .15s ease,transform .15s ease}.app-card:hover{transform:translateY(-2px)}}@media(prefers-color-scheme:dark){:root{--bg:#141311;--ink:#f4f0e8;--muted:#aaa49a;--panel:#1c1a17;--line:#38342e;--accent:#9c8dff;--bad:#ff8491}}`;
+const SITE_CSS = `:root{--paper:#f3f0e8;--surface:#fbfaf6;--ink:#171816;--muted:#676a63;--line:#cbc9bf;--line-strong:#96988f;--clax:#4258c9;--t3:#19856e;--accent:#4258c9;--bad:#9b3434;--soft-bad:#f6e8e5;font-family:"Avenir Next",Avenir,"Segoe UI",ui-sans-serif,system-ui,sans-serif;color:var(--ink);background:var(--paper);font-variant-numeric:tabular-nums}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:72px}body{margin:0;line-height:1.5;background:linear-gradient(180deg,#ebe7db 0,#f3f0e8 340px)}.shell{width:min(1220px,calc(100% - 40px));margin-inline:auto}.masthead{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid var(--line)}.brand{font-weight:750;letter-spacing:-.01em;color:inherit;text-decoration:none}.version,.eyebrow,.kicker{font-size:.72rem;font-weight:750;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}.hero{padding:68px 0 26px}.hero.compact{padding-top:42px}.hero h1,.flow-heading h2,.fairness h2{font-family:Iowan Old Style,Palatino Linotype,Book Antiqua,Palatino,ui-serif,serif;font-weight:600;letter-spacing:-.035em}.hero h1{font-size:clamp(2.65rem,7vw,6.4rem);line-height:.91;max-width:1080px;margin:.16em 0 .24em}.hero>p:not(.eyebrow){max-width:760px;font-size:1.08rem;color:var(--muted)}.run-stamp{display:flex;flex-wrap:wrap;border-top:1px solid var(--line-strong);border-bottom:1px solid var(--line);margin-top:34px}.run-stamp span{padding:12px 22px 12px 0;margin-right:22px;color:var(--muted)}.run-stamp b{display:block;color:var(--ink);font-size:1.12rem}.section-nav{position:sticky;top:0;z-index:4;display:flex;gap:4px;overflow-x:auto;margin:0 -10px;padding:8px 10px;border-bottom:1px solid var(--line);background:rgba(243,240,232,.94);backdrop-filter:blur(12px)}.section-nav a{padding:8px 12px;color:var(--muted);font-size:.84rem;font-weight:700;text-decoration:none;white-space:nowrap}.section-nav a:hover,.section-nav a:focus-visible{color:var(--ink);background:var(--surface)}.fairness{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.6fr);gap:clamp(28px,6vw,86px);padding:56px 0 38px;border-bottom:1px solid var(--line-strong)}.fairness h2{font-size:clamp(2rem,4vw,3.7rem);line-height:1;margin:.25em 0}.fairness p{color:var(--muted)}.fairness dl,.compact-list{margin:0}.fairness dl div,.compact-list div{display:grid;grid-template-columns:150px 1fr;gap:18px;padding:12px 0;border-bottom:1px solid var(--line)}dt{color:var(--muted);font-size:.75rem;font-weight:750;text-transform:uppercase;letter-spacing:.08em}dd{margin:0;overflow-wrap:anywhere}.app-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0;margin:28px 0 72px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.app-card{display:flex;flex-direction:column;padding:16px 18px;color:inherit;text-decoration:none;border-right:1px solid var(--line)}.app-card:last-child{border-right:0}.app-card:hover,.app-card:focus-visible{background:var(--surface);outline:2px solid var(--accent);outline-offset:-2px}.app-card span{font-size:1.1rem;font-weight:750}.app-card small,.app-key small{color:var(--muted)}.app-card i,.app-key i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:9px;background:var(--accent)}.app-tone-0 i{background:var(--clax)}.app-tone-1 i{background:var(--t3)}.benchmark-section,.method,.legacy{padding:30px 0 72px;border-bottom:1px solid var(--line-strong)}.flow-heading{display:grid;grid-template-columns:120px minmax(260px,.75fr) minmax(300px,1fr);gap:22px;align-items:start;margin:34px 0}.flow-heading .kicker{margin-top:14px}.flow-heading h2{font-size:clamp(2.2rem,4.5vw,4.4rem);line-height:.95;margin:0}.flow-heading>p:last-child{margin:8px 0;color:var(--muted);max-width:620px}.result-note,.notice{border-left:3px solid var(--accent);padding:13px 18px;margin:20px 0 32px;background:var(--surface)}.matrix,.panel,.chart{margin:24px 0;padding:0;background:transparent;border:0;border-radius:0}.matrix-heading{display:flex;justify-content:space-between;align-items:baseline;gap:20px;padding-bottom:10px;border-bottom:1px solid var(--line-strong)}.matrix-heading h3,.panel h2,.panel h3,.chart h3{margin:0;font-size:1.12rem}.matrix-heading p{margin:0;color:var(--muted);font-size:.85rem}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:720px}caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--line-strong)}th:first-child,td:first-child{text-align:left}tbody th{font-weight:700}.context{color:var(--muted);text-align:left}.metric strong,.verdict strong{display:block;white-space:nowrap}.metric small,.verdict small,th small{display:block;margin-top:2px;color:var(--muted);font-size:.72rem;font-weight:500;text-transform:none;letter-spacing:0}.app-key{white-space:nowrap}.status.invalid{color:var(--bad)}.unsupported{margin:32px 0;padding:22px 24px;background:var(--soft-bad);border-top:2px solid var(--bad)}.unsupported h3{margin:.2em 0}.unsupported>p:not(.kicker){color:#6d4742}.unsupported ul{padding-left:20px}.unsupported li+li{margin-top:14px}.unsupported code{display:block;margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.74rem;color:var(--ink)}.technical{margin:24px 0;border-top:1px solid var(--line-strong);border-bottom:1px solid var(--line-strong);padding:14px 0}.technical summary{cursor:pointer;font-weight:750}.technical>p{color:var(--muted)}.chart{padding:18px 0 28px}.chart svg{width:100%;max-height:430px;overflow:visible}.axis{stroke:var(--line-strong);stroke-width:1}.chart text{fill:var(--muted);font-size:12px;text-anchor:middle}.series polyline{fill:none;stroke-width:3;stroke-linejoin:round}.series circle{fill:var(--surface);stroke-width:3}.series-return polyline{stroke-dasharray:8 6}.series-return circle{fill:var(--paper)}.series-0 polyline,.series-0 circle{stroke:var(--clax)}.series-1 polyline,.series-1 circle{stroke:var(--t3)}.series-2 polyline,.series-2 circle{stroke:#bd6b2f}.series-3 polyline,.series-3 circle{stroke:#9741a8}.series-4 polyline,.series-4 circle{stroke:#2678a8}.series-5 polyline,.series-5 circle{stroke:#9c7b17}.series-6 polyline,.series-6 circle{stroke:#b14a5e}.series-7 polyline,.series-7 circle{stroke:#596b2b}.legend{display:flex;gap:16px;flex-wrap:wrap;list-style:none;padding:0}.swatch{display:inline-block;width:20px;height:3px;vertical-align:middle;margin-right:7px;background:var(--line-strong)}.swatch.series-0{background:var(--clax)}.swatch.series-1{background:var(--t3)}.swatch.series-2{background:#bd6b2f}.swatch.series-3{background:#9741a8}.swatch.series-4{background:#2678a8}.swatch.series-5{background:#9c7b17}.swatch.series-6{background:#b14a5e}.swatch.series-7{background:#596b2b}.swatch.series-return{height:2px;background:repeating-linear-gradient(90deg,currentColor 0 7px,transparent 7px 11px)}.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px}.method-grid section{border-top:1px solid var(--line-strong);padding-top:14px}.schedule,code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}.schedule{font-size:.8rem;line-height:1.8;overflow-wrap:anywhere}.disclosures{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:24px 0}.disclosures div{padding:14px;border-right:1px solid var(--line)}.disclosures dd{margin:4px 0 0;font-weight:650}.panel{padding:18px 0}.panel>p{color:var(--muted)}footer{padding:42px 0;color:var(--muted);font-size:.8rem}a{color:var(--accent)}:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.skip{position:absolute;left:-999px}.skip:focus{left:16px;top:16px;background:var(--surface);padding:10px;z-index:8}@media(max-width:800px){.shell{width:min(100% - 24px,1220px)}.hero{padding-top:42px}.fairness,.flow-heading,.method-grid{grid-template-columns:1fr}.flow-heading{gap:8px}.flow-heading .kicker{margin-bottom:0}.fairness dl div{grid-template-columns:110px 1fr}.app-grid{grid-template-columns:1fr}.app-card{border-right:0;border-bottom:1px solid var(--line)}.app-card:last-child{border-bottom:0}.section-nav{margin-inline:-12px}.matrix-heading{display:block}.matrix-heading p{margin-top:4px}}@media(prefers-reduced-motion:no-preference){.hero,.fairness,.app-grid{animation:reveal .35s ease both}.fairness{animation-delay:.05s}.app-grid{animation-delay:.1s}@keyframes reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media(prefers-color-scheme:dark){:root{--paper:#151714;--surface:#1d201c;--ink:#f0eee6;--muted:#a8aaa1;--line:#343830;--line-strong:#686d62;--clax:#8da0ff;--t3:#63c8ae;--accent:#8da0ff;--bad:#ff9992;--soft-bad:#321f1d}body{background:linear-gradient(180deg,#10120f 0,#151714 340px)}.section-nav{background:rgba(21,23,20,.94)}.unsupported>p:not(.kicker){color:#d2aaa4}}`;

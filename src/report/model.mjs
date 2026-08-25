@@ -14,6 +14,10 @@ export function buildSiteModel(comparison) {
       sourceEventFormat: first.sourceEventFormat,
       materializationModes: [...new Set(entries.map((entry) => entry.result.materialization.mode))],
       environment: first.environment,
+      invalidReasons: Object.fromEntries(entries.map(({ result }) => [
+        result.scenario.id,
+        [...new Set(result.observations.filter((observation) => observation.status === "invalid").map((observation) => observation.reason))],
+      ])),
       scenarioProvenance: entries.map(({ result }) => ({
         scenarioId: result.scenario.id,
         driver: result.driver,
@@ -27,12 +31,28 @@ export function buildSiteModel(comparison) {
       workspacePanel: entries.find((entry) => entry.result.scenario.id === "workspace-panel-v2")?.result,
     });
   }
+  const repetitions = comparison.results[0]?.result.repetitions ?? null;
+  const runProfile = comparison.results[0]?.result.runProfile ?? null;
+  const primaryStatistic = Number.isInteger(repetitions) && repetitions >= 20 ? "p95" : "p50";
+  const frameworkRevisions = [...new Set(comparison.results.map((item) => item.result.provenance.frameworkRevision))];
+  const schedule = [...comparison.results]
+    .toSorted((left, right) => left.result.provenance.scheduleOrdinal - right.result.provenance.scheduleOrdinal)
+    .map((item) => ({
+      ordinal: item.result.provenance.scheduleOrdinal,
+      appId: item.result.app.id,
+      scenarioId: item.result.scenario.id,
+    }));
   return {
     id: comparison.manifest.id,
     title: comparison.manifest.title,
     description: comparison.manifest.description,
     provenance: comparison.manifest.provenance,
     compatibility: comparison.compatibility,
+    repetitions,
+    runProfile,
+    primaryStatistic,
+    frameworkRevisions,
+    schedule,
     apps,
   };
 }

@@ -25,21 +25,23 @@ export function metricTable(title, rows, caption = title) {
 }
 
 export function chart(title, series, xLabel, yLabel) {
-  const points = series.flatMap((item) => item.points).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  const visibleSeries = series.filter((item) => item.points.some((point) => Number.isFinite(point.x) && Number.isFinite(point.y)));
+  const points = visibleSeries.flatMap((item) => item.points).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
   if (points.length === 0) return `<section class="panel"><h3>${escapeHtml(title)}</h3><p class="status invalid">No valid chart points.</p></section>`;
   const minX = Math.min(...points.map((point) => point.x));
   const maxX = Math.max(...points.map((point) => point.x));
   const maxY = Math.max(1, ...points.map((point) => point.y));
   const x = (value) => 64 + ((value - minX) / Math.max(1, maxX - minX)) * 520;
   const y = (value) => 220 - (value / maxY) * 180;
-  const lines = series.map((item, index) => {
-    const colorIndex = index % COLORS.length;
+  const lines = visibleSeries.map((item, index) => {
+    const colorIndex = (item.colorIndex ?? index) % COLORS.length;
+    const variant = item.variant === "return" ? " series-return" : "";
     const coordinates = item.points.filter((point) => Number.isFinite(point.y)).map((point) => `${x(point.x).toFixed(1)},${y(point.y).toFixed(1)}`).join(" ");
     const dots = item.points.filter((point) => Number.isFinite(point.y)).map((point) => `<circle cx="${x(point.x).toFixed(1)}" cy="${y(point.y).toFixed(1)}" r="3.5"><title>${escapeHtml(item.label)}: ${point.x} ${escapeHtml(xLabel)}, ${format(point.y)} ${escapeHtml(yLabel)}</title></circle>`).join("");
-    return `<g class="series series-${colorIndex}"><polyline points="${coordinates}"/>${dots}</g>`;
+    return `<g class="series series-${colorIndex}${variant}"><polyline points="${coordinates}"/>${dots}</g>`;
   }).join("");
-  const legend = series.map((item, index) => `<li><span class="swatch series-${index % COLORS.length}"></span>${escapeHtml(item.label)}</li>`).join("");
-  const dataRows = series.flatMap((item) => item.points.map((point) => `<tr><th scope="row">${escapeHtml(item.label)}</th><td>${format(point.x)}</td><td>${format(point.y)}</td></tr>`)).join("");
+  const legend = visibleSeries.map((item, index) => `<li><span class="swatch series-${(item.colorIndex ?? index) % COLORS.length}${item.variant === "return" ? " series-return" : ""}"></span>${escapeHtml(item.label)}</li>`).join("");
+  const dataRows = visibleSeries.flatMap((item) => item.points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y)).map((point) => `<tr><th scope="row">${escapeHtml(item.label)}</th><td>${format(point.x)}</td><td>${format(point.y)}</td></tr>`)).join("");
   return `<section class="panel chart"><h3>${escapeHtml(title)}</h3><svg role="img" aria-labelledby="${slug(title)}-title ${slug(title)}-desc" viewBox="0 0 640 260"><title id="${slug(title)}-title">${escapeHtml(title)}</title><desc id="${slug(title)}-desc">Line chart. The adjacent table contains every plotted value.</desc><line class="axis" x1="64" y1="220" x2="584" y2="220"/><line class="axis" x1="64" y1="40" x2="64" y2="220"/><text x="324" y="252">${escapeHtml(xLabel)}</text><text x="12" y="130" transform="rotate(-90 12 130)">${escapeHtml(yLabel)}</text>${lines}</svg><ul class="legend">${legend}</ul><details><summary>Chart data</summary><div class="table-scroll"><table><caption>${escapeHtml(title)} data</caption><thead><tr><th scope="col">Series</th><th scope="col">${escapeHtml(xLabel)}</th><th scope="col">${escapeHtml(yLabel)}</th></tr></thead><tbody>${dataRows}</tbody></table></div></details></section>`;
 }
 

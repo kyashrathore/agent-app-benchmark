@@ -28,8 +28,8 @@ test("static site builds comparison and stable individual app pages from raw res
     assert.match(index, /class="swatch series-0"/);
     assert.doesNotMatch(index, /style="--series:/);
     const stylesheet = await readFile(path.join(output, "assets", "site.css"), "utf8");
-    assert.match(stylesheet, /\.series-0 polyline,.series-0 circle\{stroke:#6f5cff\}/);
-    assert.match(stylesheet, /\.swatch\.series-1\{background:#00a884\}/);
+    assert.match(stylesheet, /\.series-0 polyline,.series-0 circle\{stroke:var\(--clax\)\}/);
+    assert.match(stylesheet, /\.swatch\.series-1\{background:var\(--t3\)\}/);
     const switchTables = [...index.matchAll(/<section class="panel"><h3>(?:Warm|Cold) session switch[^<]*<\/h3>[\s\S]*?<\/section>/g)];
     assert.equal(switchTables.length, 4);
     for (const [table] of switchTables) {
@@ -55,27 +55,58 @@ test("static site builds comparison and stable individual app pages from raw res
   }
 });
 
-test("comparison site renders p50/p95 navigation and workspace trends", async () => {
+test("comparison site renders compact navigation and workspace trend matrices", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-trends-"));
   try {
     const comparisonFile = await writeTrendComparisonFixture(root);
     const output = path.join(root, "site");
     await buildSite(comparisonFile, output);
     const index = await readFile(path.join(output, "index.html"), "utf8");
+    assert.match(index, /Fairness ledger/);
+    assert.match(index, /Balanced mirrored schedule/);
     assert.match(index, /Session navigation/);
-    assert.match(index, /Session-navigation values/);
+    assert.match(index, /History-size trend/);
     assert.match(index, /First visit and return by history size — p95/);
     assert.match(index, /Return with workspace panel open by seeded load — p95/);
-    assert.match(index, /Workspace-panel values/);
-    assert.match(index, /complete non-truncated data, exact logical expansion counts/u);
+    assert.match(index, /Light load/);
+    assert.match(index, /Moderate load/);
+    assert.match(index, /Heavy load/);
+    assert.match(index, /complete non-truncated data, exact logical expansion state/u);
     assert.match(index, /not concurrent offscreen DOM/u);
-    assert.match(index, /production target bytes warm but its tab and preview never mounted/u);
+    assert.match(index, /production target bytes warm, but its tab and preview have never mounted/u);
     assert.match(index, /measured input owns first surface creation and paint/u);
     for (const action of ["Open Panel", "Close Panel", "Files To Review", "Review To Files", "Open File", "Switch File Tab", "Expand All", "Collapse All"]) {
-      assert.match(index, new RegExp(`${action} by seeded load — p95`, "u"));
+      assert.match(index, new RegExp(action, "u"));
     }
-    assert.match(index, /<th scope="col">p50<\/th><th scope="col">p95<\/th>/);
+    assert.match(index, /P95 · valid \/ attempted/);
+    assert.match(index, /class="series series-0 series-return"/);
+    assert.match(index, /class="series series-1 series-return"/);
+    assert.doesNotMatch(index, /class="series series-2"/);
+    assert.match(index, /All renderer work and frame measurements/);
     assert.doesNotMatch(index, /Cold session|Warm session/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("five-repetition comparison uses p50 and preserves exact unsupported reasons", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-five-"));
+  try {
+    const reason = "T3 product Review preview limit cannot represent the canonical 24-file workspace fixture.";
+    const comparisonFile = await writeTrendComparisonFixture(root, { repetitions: 5, invalidReason: reason });
+    const output = path.join(root, "site");
+    await buildSite(comparisonFile, output);
+    const index = await readFile(path.join(output, "index.html"), "utf8");
+    assert.match(index, /<b>5<\/b> repetitions/);
+    assert.match(index, /<b>p50<\/b> primary/);
+    assert.match(index, /p50 is the primary statistic because this run has 5 repetitions/);
+    assert.match(index, /First visit and return by history size — p50/);
+    assert.match(index, /Return with workspace panel open by seeded load — p50/);
+    assert.doesNotMatch(index, /No valid chart points/);
+    assert.match(index, /Unsupported is not zero/);
+    assert.match(index, new RegExp(reason.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
+    assert.match(index, /Not comparable/);
+    assert.doesNotMatch(index, /<script/i);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -229,7 +260,7 @@ async function writeComparisonFixture(root) {
   return file;
 }
 
-async function writeTrendComparisonFixture(root) {
+async function writeTrendComparisonFixture(root, options = {}) {
   const resultDirectory = path.join(root, "results", "runs");
   const comparisonDirectory = path.join(root, "results", "comparisons", "fixture-trends");
   await mkdir(resultDirectory, { recursive: true });
@@ -245,7 +276,7 @@ async function writeTrendComparisonFixture(root) {
   const entries = [];
   for (let index = 0; index < steps.length; index += 1) {
     const { app, scenarioId } = steps[index];
-    const result = await trendResultFixture(app, scenarioId, index + 1, scheduleDigest);
+    const result = await trendResultFixture(app, scenarioId, index + 1, scheduleDigest, options);
     const name = `${app.id}-${scenarioId}.json`;
     const bytes = Buffer.from(`${JSON.stringify(result, null, 2)}\n`);
     await writeFile(path.join(resultDirectory, name), bytes);
@@ -256,11 +287,13 @@ async function writeTrendComparisonFixture(root) {
   return file;
 }
 
-async function trendResultFixture(app, scenarioId, scheduleOrdinal, scheduleDigest) {
+async function trendResultFixture(app, scenarioId, scheduleOrdinal, scheduleDigest, options = {}) {
   const scenario = await readRegistered("scenario", scenarioId);
   const corpus = await readRegistered("corpus", scenario.value.corpusId);
   const artifact = await readRegistered("corpusArtifact", corpus.value.id);
-  const observations = trendObservations(expandCases(scenario.value, "publication", corpus.value.seed));
+  const repetitions = options.repetitions ?? scenario.value.runProfiles.publication;
+  const cases = expandCases(scenario.value, "publication", corpus.value.seed, repetitions);
+  const observations = trendObservations(cases, app.id === "t3" && scenarioId === "workspace-panel-v2" ? options.invalidReason : undefined);
   const summary = summarizeObservations(scenario.value, observations);
   const fixture = buildWorkspaceFixtureManifest(scenario.value.cases.workspaceLoad, corpus.value.seed);
   return {
@@ -276,7 +309,7 @@ async function trendResultFixture(app, scenarioId, scheduleOrdinal, scheduleDige
     scenario: { id: scenarioId, kind: scenario.value.kind, digestSha256: scenario.digest, status: "public-comparable" },
     corpus: { id: corpus.value.id, definitionDigestSha256: corpus.digest, digestSha256: artifact.value.corpusDigestSha256, status: "public-comparable" },
     runProfile: "publication",
-    repetitions: scenario.value.runProfiles.publication,
+    repetitions,
     observations,
     resources: null,
     resourceTrace: null,
@@ -284,8 +317,16 @@ async function trendResultFixture(app, scenarioId, scheduleOrdinal, scheduleDige
   };
 }
 
-function trendObservations(cases) {
+function trendObservations(cases, invalidReason) {
   return cases.map((benchmarkCase, index) => {
+    if (invalidReason && benchmarkCase.loadProfile === "heavy" && benchmarkCase.action === "open-file") {
+      return {
+        case: benchmarkCase,
+        status: "invalid",
+        reason: invalidReason,
+        receivedAt: "2026-08-23T00:00:00.000Z",
+      };
+    }
     const start = 1000 + index * 100;
     const durationMs = 20 + (index % 11);
     const end = start + durationMs;
