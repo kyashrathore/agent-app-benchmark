@@ -74,7 +74,7 @@ function renderSessionNavigation(lines, summary) {
     const metric = point.returnVisitedPanelOpen;
     lines.push(`| ${point.loadProfile} | ${metricValue(metric.durationMs, "p50")} | ${metricValue(metric.durationMs, "p95")} | ${metricValue(metric.milestones.inputToSessionReadyMs, "average")} | ${metricValue(metric.milestones.inputToPanelReadyMs, "average")} | ${metricValue(metric.frames.worstIntervalMs, "maximum")} | ${metricValue(metric.rendererWork.scriptDurationMs, "average")} | ${metricValue(metric.rendererWork.styleRecalcDurationMs, "average")} | ${metricValue(metric.rendererWork.layoutDurationMs, "average")} | ${validity(metric.durationMs)} |`);
   }
-  lines.push("", "The panel load is established before timing. Session and panel readiness are observed concurrently; the endpoint is the later complete painted and input-ready state.", "");
+  lines.push("", "The panel load is established before timing. Session and panel readiness are observed concurrently; the endpoint is the later complete painted and input-ready state. Review readiness preserves all 24 canonical files and exact logical expansion state; only currently materialized viewport bodies must be painted because offscreen content may remain virtualized.", "");
 }
 
 function renderWorkspacePanelTrend(lines, summary) {
@@ -89,7 +89,7 @@ function renderWorkspacePanelTrend(lines, summary) {
       lines.push(`| ${point.loadProfile} | ${panelActionLabel(action)} | ${metricValue(metric.durationMs, "p50")} | ${metricValue(metric.durationMs, "p95")} | ${metricValue(metric.milestones.inputToShellMs, "average")} | ${metricValue(metric.milestones.dataReadyToInteractiveMs, "average")} | ${metricValue(metric.frames.worstIntervalMs, "maximum")} | ${metricValue(metric.frames.overBudgetIntervalCount, "average")} | ${metricValue(metric.rendererWork.scriptDurationMs, "average")} | ${metricValue(metric.rendererWork.styleRecalcDurationMs, "average")} | ${metricValue(metric.rendererWork.layoutDurationMs, "average")} | ${validity(metric.durationMs)} |`);
     }
   }
-  lines.push("", "Each row is one ordinary user action. The declared panel state is seeded before timing; setup is excluded. Opening reports shell, animation, data, paint, and interactive milestones.", "");
+  lines.push("", "Each row is one ordinary user action. The declared logical panel state is seeded before timing; setup is excluded. Review requires complete non-truncated 24-file data and exact logical expansion counts, while production-virtualized offscreen bodies need not be mounted. The current viewport must be painted and interactive. Opening reports shell, animation, data, paint, and interactive milestones.", "");
 }
 
 function renderPanelSessionSwitch(lines, summary) {

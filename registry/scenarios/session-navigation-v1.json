@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "session-navigation-v1",
   "title": "Session navigation",
-  "description": "Measure only trusted session navigation. First visits and returns to previously visited sessions are plotted across history size with the workspace panel closed. A separate trend measures returns with an already-open workspace panel across identical light, moderate, and heavy seeded panel states.",
+  "description": "Measure only trusted session navigation. First visits and returns to previously visited sessions are plotted across history size with the workspace panel closed. A separate trend measures returns with an already-open workspace panel across identical light, moderate, and heavy seeded panel states. Review-backed panel readiness requires the complete non-truncated 24-file authoritative model, exact logical expansion state, and painted interactive content for the currently materialized viewport rather than concurrent offscreen DOM.",
   "kind": "session-navigation",
   "corpusId": "opencode-completed-sessions-v3",
   "cases": {
@@ -44,7 +44,7 @@
   "metrics": [
     {
       "id": "navigation.duration_ms",
-      "description": "One trusted session-row activation to the destination session's correct painted and input-ready endpoint; when the panel is already open, both session and seeded panel state must be ready.",
+      "description": "One trusted session-row activation to the destination session's correct painted and input-ready endpoint; when the panel is already open, both session and seeded logical panel state must be ready, the full canonical Review data must be non-truncated, and every currently materialized viewport body must be painted and interactive.",
       "unit": "ms"
     },
     {

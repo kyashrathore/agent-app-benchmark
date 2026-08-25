@@ -37,6 +37,18 @@ test("registered scenario bytes are public-comparable", async () => {
   assert.equal(scenario.value.corpusId, "opencode-completed-transcripts-v1");
 });
 
+test("V2 scenarios define virtualized Review readiness without weakening authoritative state", async () => {
+  for (const scenarioId of ["session-navigation-v1", "workspace-panel-v2"]) {
+    const scenario = (await readRegistered("scenario", scenarioId)).value;
+    assert.match(scenario.description, /complete non-truncated 24-file authoritative model/u);
+    assert.match(scenario.description, /exact logical expansion state/u);
+    assert.match(scenario.description, /currently materialized viewport/u);
+  }
+  const panel = (await readRegistered("scenario", "workspace-panel-v2")).value;
+  assert.match(panel.metrics[0].description, /all 24 canonical files without truncation/u);
+  assert.match(panel.metrics[0].description, /offscreen virtualized bodies need not exist concurrently/u);
+});
+
 test("desktop apps advertise the same canonical workspace-panel scenarios", async () => {
   const panelScenarios = ["workspace-panel-v1", "session-switch-workspace-panel-v1", "session-navigation-v1", "workspace-panel-v2"];
   for (const appId of ["claxedo", "t3"]) {

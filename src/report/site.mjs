@@ -122,7 +122,7 @@ function renderSessionNavigationComparison(apps) {
     flow: `Return with panel open · ${point.loadProfile}`,
     metric: point.returnVisitedPanelOpen.durationMs,
   })));
-  return `<section class="flow-heading"><h2>Session navigation</h2><p>Only session activation is timed. Workspace setup is excluded.</p></section>${p50P95Table("Session-navigation values", [...historyRows, ...panelRows])}${chart("First visit and return by history size — p95", historySeries, "History size (MiB)", "p95 latency (ms)")}${chart("Return with workspace panel open by seeded load — p95", panelSeries, "Load profile (1 light, 2 moderate, 3 heavy)", "p95 latency (ms)")}`;
+  return `<section class="flow-heading"><h2>Session navigation</h2><p>Only session activation is timed. Workspace setup is excluded. Review readiness keeps complete non-truncated 24-file data and exact logical expansion state while allowing offscreen body virtualization.</p></section>${p50P95Table("Session-navigation values", [...historyRows, ...panelRows])}${chart("First visit and return by history size — p95", historySeries, "History size (MiB)", "p95 latency (ms)")}${chart("Return with workspace panel open by seeded load — p95", panelSeries, "Load profile (1 light, 2 moderate, 3 heavy)", "p95 latency (ms)")}`;
 }
 
 function renderWorkspacePanelComparison(apps) {
@@ -146,7 +146,7 @@ function renderWorkspacePanelComparison(apps) {
     flow: `${workspaceActionLabel(action)} · ${point.loadProfile}`,
     metric: metric.durationMs,
   }))));
-  return `<section class="flow-heading"><h2>Workspace panel</h2><p>Each chart is one ordinary user action; setup is seeded before timing.</p></section>${p50P95Table("Workspace-panel values", rows)}${charts}`;
+  return `<section class="flow-heading"><h2>Workspace panel</h2><p>Each chart is one ordinary user action; setup is seeded before timing. Review endpoints require complete non-truncated data, exact logical expansion counts, and painted interactive bodies for the current viewport—not concurrent offscreen DOM.</p></section>${p50P95Table("Workspace-panel values", rows)}${charts}`;
 }
 
 function p50P95Table(title, rows) {
