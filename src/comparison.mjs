@@ -51,7 +51,8 @@ export async function loadComparison(manifestFile) {
 export function validatePairedSchedule(results) {
   assertSharedComparisonRepetitions(results);
   const scenarioCounts = Map.groupBy(results, (item) => item.result.scenario.id);
-  if (scenarioCounts.size !== 2 || [...scenarioCounts.values()].some((members) => members.length < 2)) return;
+  if (scenarioCounts.size < 2 || [...scenarioCounts.values()].some((members) => members.length < 2)) return;
+  if (scenarioCounts.size % 2 !== 0) throw new Error("A balanced mirrored comparison requires an even number of scenarios.");
   const kindIds = Map.groupBy(results, (item) => item.result.scenario.kind);
   if ([...kindIds.values()].some((members) => new Set(members.map((item) => item.result.scenario.id)).size > 1)) {
     throw new Error("Comparison cannot mix scenario versions for the same scenario kind.");
@@ -60,19 +61,22 @@ export function validatePairedSchedule(results) {
   const steps = ordered.map((item, index) => ({ ordinal: index + 1, appId: item.result.app.id, scenarioId: item.result.scenario.id }));
   if (ordered.some((item, index) => item.result.provenance.scheduleOrdinal !== index + 1)) throw new Error("Comparison schedule ordinals must be unique and contiguous.");
   const scenarioIds = [...new Set(steps.map((step) => step.scenarioId))];
-  const [firstId, secondId] = scenarioIds;
+  const [firstId] = scenarioIds;
   const firstSteps = steps.filter((step) => step.scenarioId === firstId);
-  const secondSteps = steps.filter((step) => step.scenarioId === secondId);
   const apps = firstSteps.map((step) => step.appId);
-  if (new Set(apps).size !== apps.length || apps.length < 2
-    || secondSteps.length !== apps.length || new Set(secondSteps.map((step) => step.appId)).size !== apps.length
-    || secondSteps.some((step) => !apps.includes(step.appId))) {
+  const invalidScenario = scenarioIds.some((scenarioId) => {
+    const scenarioSteps = steps.filter((step) => step.scenarioId === scenarioId);
+    return scenarioSteps.length !== apps.length
+      || new Set(scenarioSteps.map((step) => step.appId)).size !== apps.length
+      || scenarioSteps.some((step) => !apps.includes(step.appId));
+  });
+  if (new Set(apps).size !== apps.length || apps.length < 2 || invalidScenario) {
     throw new Error("Comparison scenarios must contain the same distinct applications exactly once.");
   }
-  const expected = [
-    ...apps.map((appId, index) => ({ ordinal: index + 1, appId, scenarioId: firstId })),
-    ...[...apps].reverse().map((appId, index) => ({ ordinal: apps.length + index + 1, appId, scenarioId: secondId })),
-  ];
+  const expected = scenarioIds.flatMap((scenarioId, scenarioIndex) => {
+    const orderedApps = scenarioIndex % 2 === 0 ? apps : [...apps].reverse();
+    return orderedApps.map((appId) => ({ appId, scenarioId }));
+  }).map((step, index) => ({ ordinal: index + 1, ...step }));
   if (digest(steps) !== digest(expected)) throw new Error("Comparison does not follow the balanced mirrored schedule.");
   const versions = scenarioIds.map((id) => Number(id.match(/-v(\d+)$/)?.[1] ?? 1));
   const version = new Set(versions).size === 1 ? versions[0] : 1;

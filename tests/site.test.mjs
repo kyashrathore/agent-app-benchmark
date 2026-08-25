@@ -63,12 +63,15 @@ test("comparison site renders compact navigation and workspace trend matrices", 
     assert.match(index, /First visit and return by history size — p95/);
     assert.match(index, /Return with workspace panel open by seeded load — p95/);
     assert.match(index, /All workspace interactions/);
-    assert.match(index, /One table · light → moderate → heavy/);
-    assert.equal((index.match(/<caption>Workspace actions across retained load/g) ?? []).length, 1);
+    assert.match(index, /One table · latency and 60 Hz health/);
+    assert.equal((index.match(/<caption>Workspace interaction responsiveness and frame health across retained load/g) ?? []).length, 1);
     assert.match(index, /same complete 24-file Review model/u);
     assert.match(index, /Setup does not scroll Review/u);
     assert.match(index, /Each load profile owns a distinct canonical target/u);
     assert.match(index, /measured input owns first surface creation and paint/u);
+    assert.match(index, /Animation is presentation, not speed/u);
+    assert.match(index, /Frames &gt; 16\.67 ms/u);
+    assert.match(index, /Open and close frame health by retained load — p95/u);
     for (const action of ["Open Panel", "Close Panel", "Files To Review", "Review To Files", "Open File", "Switch File Tab", "Expand All", "Collapse All"]) {
       assert.match(index, new RegExp(action, "u"));
     }
@@ -97,6 +100,7 @@ test("five-repetition comparison uses p50 and preserves exact unsupported reason
     assert.match(index, /First visit and return by history size — p50/);
     assert.match(index, /Return with workspace panel open by seeded load — p50/);
     assert.doesNotMatch(index, /No valid chart points/);
+    assert.match(index, /Frame-health p95 is withheld until 20 valid observations/u);
     assert.match(index, /Unsupported is not zero/);
     assert.match(index, new RegExp(reason.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
     assert.match(index, /Not comparable/);

@@ -191,20 +191,17 @@ function renderSessionNavigationComparison(apps, model = {}) {
 function renderWorkspacePanelComparison(apps, model = {}) {
   const statistic = model.primaryStatistic ?? primaryStatisticFor(apps[0]?.workspacePanel?.repetitions);
   const statisticLabel = statistic.toUpperCase();
+  const frameStatistic = "p95";
   const actions = apps[0]?.workspacePanel?.derivation.summary.loadTrend[0]?.interactions
     ? Object.keys(apps[0].workspacePanel.derivation.summary.loadTrend[0].interactions)
     : [];
   const loadTrend = apps[0]?.workspacePanel?.derivation.summary.loadTrend ?? [];
   const rows = loadTrend.flatMap((point, loadIndex) =>
-    actions.map((action) => navigationMatrixRow(
-      workspaceActionLabel(action),
-      workspacePresentationContext(apps, loadIndex, action, point.loadProfile),
-      apps,
-      (app) => app.workspacePanel.derivation.summary.loadTrend[loadIndex]?.interactions[action]?.durationMs,
-      statistic,
-    )),
+    actions.map((action) => workspaceInteractionRow(apps, loadIndex, action, point.loadProfile, statistic, frameStatistic)),
   ).join("");
-  const matrix = `<section class="matrix"><div class="matrix-heading"><h3>All workspace interactions</h3><p>One table · light → moderate → heavy</p></div><div class="table-scroll"><table><caption>Workspace actions across retained load; ${statisticLabel} latency in milliseconds</caption><thead><tr><th scope="col">Action</th><th scope="col">Load / presentation</th>${comparisonHeaders(apps, statisticLabel)}<th scope="col">Relative result</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  const appHeaders = apps.map((app) => `<th scope="colgroup" colspan="3"><span class="app-key app-tone-${apps.indexOf(app)}"><i aria-hidden="true"></i>${escapeHtml(app.name)}</span></th>`).join("");
+  const metricHeaders = apps.map(() => `<th scope="col">Response / complete<small>${statisticLabel}</small></th><th scope="col">Frame interval<small>P95</small></th><th scope="col">Frames &gt; 16.67 ms<small>P95</small></th>`).join("");
+  const matrix = `<section class="matrix"><div class="matrix-heading"><h3>All workspace interactions</h3><p>One table · latency and 60 Hz health</p></div><div class="table-scroll"><table><caption>Workspace interaction responsiveness and frame health across retained load</caption><thead><tr><th scope="col" rowspan="2">Action</th><th scope="col" rowspan="2">Load / presentation</th>${appHeaders}<th scope="col" rowspan="2">Result</th></tr><tr>${metricHeaders}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
   const shellActions = actions.filter((action) => action === "open-panel" || action === "close-panel");
   const shellSeries = apps.flatMap((app, colorIndex) => shellActions.map((action) => ({
     label: `${app.name} — ${workspaceActionLabel(action)}`,
@@ -212,16 +209,58 @@ function renderWorkspacePanelComparison(apps, model = {}) {
     variant: action === "close-panel" ? "return" : undefined,
     points: app.workspacePanel.derivation.summary.loadTrend.map((point, index) => ({
       x: index + 1,
-      y: metricValue(point.interactions[action]?.durationMs, statistic),
+      y: metricValue(point.interactions[action]?.frames?.p95IntervalMs, frameStatistic),
     })),
   })));
+  const hasFrameTrend = shellSeries.some((series) => series.points.some((point) => Number.isFinite(point.y)));
+  const frameTrend = hasFrameTrend
+    ? chart("Open and close frame health by retained load — p95", shellSeries, "Load profile (1 light, 2 moderate, 3 heavy)", "p95 frame interval (ms; 16.67 budget)")
+    : `<section class="panel"><h3>Open and close frame health by retained load — p95</h3><p class="status invalid">Frame-health p95 is withheld until 20 valid observations are available for every plotted point.</p></section>`;
   const rendererRows = apps.flatMap((app) => app.workspacePanel.derivation.summary.loadTrend.flatMap((point) => Object.entries(point.interactions).map(([action, metric]) => rendererWorkRow(
     app,
     `${workspaceActionLabel(action)} · ${point.loadProfile}`,
     metric,
     statistic,
   )))).join("");
-  return `<section class="benchmark-section" id="workspace-panel"><div class="flow-heading"><p class="kicker">Flow 02</p><h2>Workspace panel</h2><p>The panel shell and every ordinary interaction are timed separately. Light, moderate, and heavy vary retained directory and file-tab state; all three keep the same complete 24-file Review model. Setup does not scroll Review. Expand All and Collapse All remain ordinary workspace actions.</p></div><div class="result-note"><strong>Data-warm, surface-cold.</strong> Each load profile owns a distinct canonical target whose bytes are warm but whose tab and preview have never mounted. The measured input owns first surface creation and paint. Open and close rows disclose whether each product animated the full-screen transition.</div>${matrix}${shellSeries.length > 0 ? chart(`Panel shell open and close by retained load — ${statistic}`, shellSeries, "Load profile (1 light, 2 moderate, 3 heavy)", `${statistic} latency (ms)`) : ""}${unsupportedReasons(apps, "workspacePanel")}<details class="technical"><summary>Renderer work and frame measurements</summary><p>Every duration, renderer-work, and frame column uses ${statisticLabel} from the same observations.</p><div class="table-scroll"><table><caption>Workspace-panel renderer work</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">Duration</th><th scope="col">JavaScript</th><th scope="col">Style</th><th scope="col">Layout</th><th scope="col">Frame interval</th></tr></thead><tbody>${rendererRows}</tbody></table></div></details></section>`;
+  return `<section class="benchmark-section" id="workspace-panel"><div class="flow-heading"><p class="kicker">Flow 02</p><h2>Workspace panel</h2><p>Every interaction answers two user-facing questions: how quickly did the requested surface respond or become usable, and did rendering remain inside the 16.67 ms frame budget? Light, moderate, and heavy vary retained directory and file-tab state while keeping the same complete 24-file Review model.</p></div><div class="result-note"><strong>Animation is presentation, not speed.</strong> Open and close keep each product's production behavior. Their intentional animation duration is not used to name a latency winner; only trusted-input response and p95 frame health are scored. Other actions compare interactive completion and the same 60 Hz evidence. Setup does not scroll Review.</div><div class="result-note"><strong>Data-warm, surface-cold file opening.</strong> Each load profile owns a distinct canonical target whose bytes are warm but whose tab and preview have never mounted. The measured input owns first surface creation and paint.</div>${matrix}${frameTrend}${unsupportedReasons(apps, "workspacePanel")}<details class="technical"><summary>Renderer work and frame measurements</summary><p>Durations and renderer work use ${statisticLabel}; frame columns use P95 from the same observations. Total open/close duration remains available here as diagnostic context only.</p><div class="table-scroll"><table><caption>Workspace-panel renderer work</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">Duration</th><th scope="col">JavaScript</th><th scope="col">Style</th><th scope="col">Layout</th><th scope="col">Frame interval</th></tr></thead><tbody>${rendererRows}</tbody></table></div></details></section>`;
+}
+
+function workspaceInteractionRow(apps, loadIndex, action, loadProfile, statistic, frameStatistic) {
+  const interactions = apps.map((app) => app.workspacePanel.derivation.summary.loadTrend[loadIndex]?.interactions[action]);
+  const cells = interactions.map((interaction) => workspaceInteractionCells(interaction, action, statistic, frameStatistic)).join("");
+  return `<tr><th scope="row">${escapeHtml(workspaceActionLabel(action))}</th><td class="context">${escapeHtml(workspacePresentationContext(apps, loadIndex, action, loadProfile))}</td>${cells}<td class="verdict">${workspaceInteractionResult(apps, interactions, action, statistic, frameStatistic)}</td></tr>`;
+}
+
+function workspaceInteractionCells(interaction, action, statistic, frameStatistic) {
+  const response = action === "open-panel"
+    ? interaction?.milestones?.inputToShellMs
+    : action === "close-panel"
+      ? interaction?.milestones?.inputToActionPaintMs
+      : interaction?.durationMs;
+  const responseLabel = action === "open-panel" ? "input → shell" : action === "close-panel" ? "input → closed paint · not ranked" : "interactive completion";
+  return `${workspaceMetricCell(response, statistic, "ms", responseLabel)}${workspaceMetricCell(interaction?.frames?.p95IntervalMs, frameStatistic, "ms", "frame pacing")}${workspaceMetricCell(interaction?.frames?.overBudgetIntervalCount, frameStatistic, "", "over-budget frames")}`;
+}
+
+function workspaceMetricCell(metric, statistic, unit, label) {
+  const value = metricValue(metric, statistic);
+  if (!Number.isFinite(value)) return `<td class="metric status invalid"><strong>Withheld</strong><small>${metric?.valid ?? 0} / ${metric?.attempted ?? 0} · ${escapeHtml(label)}</small></td>`;
+  return `<td class="metric"><strong>${format(value)}${unit ? ` ${escapeHtml(unit)}` : ""}</strong><small>${metric.valid} / ${metric.attempted} · ${escapeHtml(label)}</small></td>`;
+}
+
+function workspaceInteractionResult(apps, interactions, action, statistic, frameStatistic) {
+  const frameValues = interactions.map((interaction) => metricValue(interaction?.frames?.p95IntervalMs, frameStatistic));
+  const overBudgetValues = interactions.map((interaction) => metricValue(interaction?.frames?.overBudgetIntervalCount, frameStatistic));
+  if (![...frameValues, ...overBudgetValues].every(Number.isFinite)) return `<span class="status invalid">Not comparable</span>`;
+  const held = frameValues.map((value, index) => value <= 16.667 && overBudgetValues[index] === 0);
+  const frameResult = held.every(Boolean)
+    ? "Both held 60 Hz"
+    : held.some(Boolean)
+      ? `${apps[held.findIndex(Boolean)].name} held 60 Hz`
+      : "Both exceeded 60 Hz budget";
+  if (action === "open-panel" || action === "close-panel") return `<strong>${escapeHtml(frameResult)}</strong><small>animation length not scored</small>`;
+  const durations = interactions.map((interaction) => interaction?.durationMs);
+  const latency = relativeResult(apps, durations, statistic);
+  return `${latency}<small>${escapeHtml(frameResult)}</small>`;
 }
 
 function workspacePresentationContext(apps, loadIndex, action, loadProfile) {

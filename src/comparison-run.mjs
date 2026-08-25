@@ -13,9 +13,12 @@ const execute = promisify(execFile);
 
 export function buildComparisonSchedule(appIds, scenarioIds = ["app-start-v1", "session-switch-v1"]) {
   if (!Array.isArray(appIds) || appIds.length < 2 || new Set(appIds).size !== appIds.length) throw new Error("A comparison requires at least two distinct applications.");
-  if (scenarioIds.length !== 2) throw new Error("Comparison scheduling requires exactly two scenarios.");
-  const ordered = [appIds, [...appIds].reverse()];
-  const steps = scenarioIds.flatMap((scenarioId, scenarioIndex) => ordered[scenarioIndex].map((appId) => ({ appId, scenarioId })));
+  if (!Array.isArray(scenarioIds) || scenarioIds.length < 2 || scenarioIds.length % 2 !== 0 || new Set(scenarioIds).size !== scenarioIds.length) throw new Error("Comparison scheduling requires an even collection of at least two distinct scenarios.");
+  if (scenarioIds.length * appIds.length > 64) throw new Error("Comparison scheduling supports at most 64 application-scenario results.");
+  const steps = scenarioIds.flatMap((scenarioId, scenarioIndex) => {
+    const orderedApps = scenarioIndex % 2 === 0 ? appIds : [...appIds].reverse();
+    return orderedApps.map((appId) => ({ appId, scenarioId }));
+  });
   const versions = scenarioIds.map((id) => Number(id.match(/-v(\d+)$/)?.[1] ?? 1));
   const version = new Set(versions).size === 1 ? versions[0] : 1;
   return { version, policy: `balanced-mirrored-v${version}`, steps: steps.map((step, index) => ({ ordinal: index + 1, ...step })) };
