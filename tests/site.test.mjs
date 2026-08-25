@@ -71,8 +71,8 @@ test("comparison site renders compact navigation and workspace trend matrices", 
     assert.match(index, /Light load/);
     assert.match(index, /Moderate load/);
     assert.match(index, /Heavy load/);
-    assert.match(index, /complete non-truncated data, exact logical expansion state/u);
-    assert.match(index, /not concurrent offscreen DOM/u);
+    assert.match(index, /same complete 24-file Review model/u);
+    assert.match(index, /Setup does not scroll Review/u);
     assert.match(index, /production target bytes warm, but its tab and preview have never mounted/u);
     assert.match(index, /measured input owns first surface creation and paint/u);
     for (const action of ["Open Panel", "Close Panel", "Files To Review", "Review To Files", "Open File", "Switch File Tab", "Expand All", "Collapse All"]) {
@@ -82,7 +82,7 @@ test("comparison site renders compact navigation and workspace trend matrices", 
     assert.match(index, /class="series series-0 series-return"/);
     assert.match(index, /class="series series-1 series-return"/);
     assert.doesNotMatch(index, /class="series series-2"/);
-    assert.match(index, /All renderer work and frame measurements/);
+    assert.match(index, /Renderer work and frame measurements/);
     assert.doesNotMatch(index, /Cold session|Warm session/u);
   } finally {
     await rm(root, { recursive: true, force: true });

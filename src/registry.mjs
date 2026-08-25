@@ -140,8 +140,8 @@ function validateScenario(value) {
 
 function validatePanelLoads(loads, workspaceLoad) {
   const expected = [
-    { id: "light", expandedDirectoryCount: 2, retainedFileTabCount: 2, expandedReviewFileCount: 1 },
-    { id: "moderate", expandedDirectoryCount: 8, retainedFileTabCount: 3, expandedReviewFileCount: 6 },
+    { id: "light", expandedDirectoryCount: 2, retainedFileTabCount: 2, expandedReviewFileCount: 24 },
+    { id: "moderate", expandedDirectoryCount: 8, retainedFileTabCount: 3, expandedReviewFileCount: 24 },
     { id: "heavy", expandedDirectoryCount: 16, retainedFileTabCount: 4, expandedReviewFileCount: 24 },
   ];
   if (JSON.stringify(loads) !== JSON.stringify(expected)) throw new Error("Panel load profiles are not canonical.");

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "session-navigation-v1",
   "title": "Session navigation",
-  "description": "Measure only trusted session navigation. First visits and returns to previously visited sessions are plotted across history size with the workspace panel closed. A separate trend measures returns with an already-open workspace panel across identical light, moderate, and heavy seeded panel states. Review-backed panel readiness requires the complete non-truncated 24-file authoritative model, exact logical expansion state, and painted interactive content for the currently materialized viewport rather than concurrent offscreen DOM.",
+  "description": "Measure only trusted session navigation. First visits and returns to previously visited sessions are plotted across history size with the workspace panel closed. A separate trend measures returns with an already-open workspace panel across light, moderate, and heavy retained directory/tab states. Every panel-open profile keeps the same complete, non-truncated 24-file fully expanded Review model, so setup never scrolls a virtualized surface merely to manufacture partial expansion state.",
   "kind": "session-navigation",
   "corpusId": "opencode-completed-sessions-v3",
   "cases": {
@@ -15,13 +15,13 @@
         "id": "light",
         "expandedDirectoryCount": 2,
         "retainedFileTabCount": 2,
-        "expandedReviewFileCount": 1
+        "expandedReviewFileCount": 24
       },
       {
         "id": "moderate",
         "expandedDirectoryCount": 8,
         "retainedFileTabCount": 3,
-        "expandedReviewFileCount": 6
+        "expandedReviewFileCount": 24
       },
       {
         "id": "heavy",

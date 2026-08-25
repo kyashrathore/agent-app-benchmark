@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "workspace-panel-v2",
   "title": "Workspace panel user flows",
-  "description": "Measure ordinary workspace-panel interactions independently across explicit light, moderate, and heavy seeded UI states. Review readiness requires the complete non-truncated 24-file authoritative model and exact logical expansion state while permitting production virtualization: only currently materialized viewport bodies must be painted. Open-file is data-warm and surface-cold: exact target bytes load through the production file-data path while its tab and preview never mount during setup, so measured pointerdown owns first surface creation and paint. Opening exposes shell, animation, data, paint, and interactive milestones. No interrupted or double-toggle action is included.",
+  "description": "Measure ordinary workspace-panel interactions independently across explicit light, moderate, and heavy retained directory/tab states. Every profile uses the same complete, non-truncated 24-file fully expanded Review model, so load variation never requires scrolling a virtualized surface during setup. Expand All independently starts collapsed and Collapse All independently starts expanded. Open-file is data-warm and surface-cold: exact target bytes load through the production file-data path while its tab and preview never mount during setup, so measured pointerdown owns first surface creation and paint. Opening exposes shell, animation, data, paint, and interactive milestones. No interrupted or double-toggle action is included.",
   "kind": "workspace-panel",
   "corpusId": "opencode-completed-sessions-v3",
   "cases": {
@@ -21,13 +21,13 @@
         "id": "light",
         "expandedDirectoryCount": 2,
         "retainedFileTabCount": 2,
-        "expandedReviewFileCount": 1
+        "expandedReviewFileCount": 24
       },
       {
         "id": "moderate",
         "expandedDirectoryCount": 8,
         "retainedFileTabCount": 3,
-        "expandedReviewFileCount": 6
+        "expandedReviewFileCount": 24
       },
       {
         "id": "heavy",
