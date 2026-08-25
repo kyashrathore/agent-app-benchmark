@@ -1,13 +1,13 @@
 import { SESSION_LANES } from "./cases.mjs";
+import { cpuDeltaMsBetween } from "./resource-monitor.mjs";
 import { average, maximum, percentile, round, summaryOrUnavailable } from "./statistics.mjs";
 
 export function summarizeObservations(scenario, observations) {
   if (scenario.kind === "app-start") {
-    const honestP95 = scenario.id.endsWith("-v3") ? { minimumP95Samples: 20 } : {};
     return Object.fromEntries(scenario.cases.startModes.map((startMode) => {
       const attempted = observations.filter((item) => item.case?.startMode === startMode);
       const valid = attempted.filter(isValid).map((item) => item.durationMs);
-      return [startMode, summaryOrUnavailable(valid, attempted.length, "No valid observations.", honestP95)];
+      return [startMode, summaryOrUnavailable(valid, attempted.length, "No valid observations.")];
     }));
   }
   if (scenario.kind === "session-navigation") return summarizeSessionNavigation(scenario, observations);
@@ -16,7 +16,7 @@ export function summarizeObservations(scenario, observations) {
       loadProfile,
       interactions: Object.fromEntries(scenario.cases.actions.map((action) => {
         const attempted = observations.filter((item) => item.case?.loadProfile === loadProfile && item.case?.action === action);
-        return [action, summarizeRendererGroup(attempted, { includeP50: true, minimumP95Samples: 20 })];
+        return [action, summarizeRendererGroup(attempted, { includeP50: true })];
       })),
     })),
   };
@@ -26,12 +26,11 @@ export function summarizeObservations(scenario, observations) {
   }));
   if (scenario.kind === "session-switch-workspace-panel") return summarizePanelSwitches(observations);
   const lanes = {};
-  const honestP95 = scenario.cases.latencySamplesPerProcess ? { minimumP95Samples: 20 } : {};
   for (const lane of SESSION_LANES) {
     const attempted = observations.filter((item) => item.case?.workspaceRelation === lane.workspaceRelation && item.case?.sessionState === lane.sessionState && item.case?.workload === "isolated-latency");
     const valid = attempted.filter(isValid).map((item) => item.durationMs);
     lanes[lane.id] = {
-      ...summaryOrUnavailable(valid, attempted.length, "No valid observations.", honestP95),
+      ...summaryOrUnavailable(valid, attempted.length, "No valid observations."),
       transcriptBytes: scenario.cases.standardTranscriptBytes ?? scenario.cases.transcriptBytes[0],
     };
   }
@@ -40,19 +39,18 @@ export function summarizeObservations(scenario, observations) {
     const attempted = progression.filter((item) => item.case.transcriptBytes === transcriptBytes);
     return {
       transcriptBytes,
-      ...summaryOrUnavailable(attempted.filter(isValid).map((item) => item.durationMs), attempted.length, "No valid observations.", honestP95),
+      ...summaryOrUnavailable(attempted.filter(isValid).map((item) => item.durationMs), attempted.length, "No valid observations."),
     };
   });
   return lanes;
 }
 
 function summarizeSessionNavigation(scenario, observations) {
-  const honestP95 = { minimumP95Samples: 20 };
   const summarizeLatency = (attempted) => summaryOrUnavailable(
     attempted.filter(isValid).map((item) => item.durationMs),
     attempted.length,
     "No valid navigation observations.",
-    { ...honestP95, includeP50: true },
+    { includeP50: true },
   );
   return {
     historySizeTrend: scenario.cases.transcriptBytes.map((transcriptBytes) => ({
@@ -65,7 +63,7 @@ function summarizeSessionNavigation(scenario, observations) {
     panelLoadTrend: scenario.cases.panelLoads.map(({ id: loadProfile }) => ({
       loadProfile,
       returnVisitedPanelOpen: summarizeRendererGroup(observations.filter((item) => item.case?.trend === "panel-load"
-        && item.case?.navigationType === "return-visited-panel-open" && item.case?.loadProfile === loadProfile), { includeP50: true, minimumP95Samples: 20 }),
+        && item.case?.navigationType === "return-visited-panel-open" && item.case?.loadProfile === loadProfile), { includeP50: true }),
     })),
   };
 }
@@ -190,7 +188,7 @@ export function summarizeResources(samples, windows, boundaryPoints) {
   return {
     status: "valid",
     scope: "summed application process-family RSS",
-    cpuDefinition: "sampled cumulative CPU delta for descendants observed inside each boundary, divided by wall time; newborn descendants count from birth and exited descendants through their final sample; 100% equals one logical core",
+    cpuDefinition: PROCESS_FAMILY_CPU_DEFINITION,
     baselineIdleAverageRssMiB: round(baselineIdleAverage),
     activeAverageRssMiB: round(average(active.map((sample) => sample.rssBytes)) / MIB),
     activeMaximumRssMiB: round(maximum(active.map((sample) => sample.rssBytes)) / MIB),
@@ -218,7 +216,7 @@ export function summarizeResourceRuns(runs) {
   return {
     status: "valid",
     scope: "summed application process-family RSS",
-    cpuDefinition: "sampled cumulative CPU delta for descendants observed inside each boundary, divided by wall time; newborn descendants count from birth and exited descendants through their final sample; 100% equals one logical core",
+    cpuDefinition: PROCESS_FAMILY_CPU_DEFINITION,
     baselineIdleAverageRssMiB: round(baselineIdleAverage),
     activeAverageRssMiB: round(average(active.map((sample) => sample.rssBytes)) / MIB),
     activeMaximumRssMiB: round(maximum(active.map((sample) => sample.rssBytes)) / MIB),
@@ -234,6 +232,143 @@ export function summarizeResourceRuns(runs) {
     }))),
   };
 }
+
+// Nearest-rank p95 inventory for the idle/active/idle resource windows and the per-step boundary
+// trend. `summarizeResources` owns the persisted `result.resources` contract and reports window
+// averages; this function reads the same preserved raw trace and is the single owner of the
+// distributional (p95) memory and CPU statistics the comparison report presents. Every validity
+// gate the runner already applied to `resources` (cadence, monitor errors, invalid workload
+// observations, incomplete process family) is inherited here, never re-litigated or relaxed.
+export const RESOURCE_WINDOW_IDS = ["baseline", "active", "ending"];
+
+export const PROCESS_FAMILY_CPU_DEFINITION = "sampled cumulative CPU delta for descendants observed inside each boundary, divided by wall time; newborn descendants count from birth and exited descendants through their final sample; 100% equals one logical core";
+
+export const PROCESS_FAMILY_DEFINITION = "The declared application root process, every descendant it spawns, and every driver-declared external application process, summed within each sample.";
+
+export function summarizeResourceWindows(trace, resources) {
+  const runs = resourceTraceRuns(trace);
+  const failure = runs.length === 0
+    ? "Raw resource trace is missing."
+    : resources && resources.status !== "valid"
+      ? resources.reason ?? "The derived resource result is invalid."
+      : runs.map((run) => run.failure).find(Boolean) ?? null;
+  const windows = Object.fromEntries(RESOURCE_WINDOW_IDS.map((id) => [id, summarizeResourceWindow(id, runs, failure)]));
+  return {
+    status: failure ? "invalid" : "valid",
+    ...(failure ? { reason: failure } : {}),
+    runCount: runs.length,
+    rawSampleCount: runs.reduce((total, run) => total + run.samples.length, 0),
+    windows,
+    retainedRssGrowthMiB: retainedRssGrowth(windows.baseline.rssP95MiB, windows.ending.rssP95MiB),
+    processFamily: { definition: PROCESS_FAMILY_DEFINITION, ...processFamilyEvidence(runs) },
+  };
+}
+
+export function summarizeResourceTrendP95(trend) {
+  const grouped = Map.groupBy(trend ?? [], (point) => point.transcriptBytes);
+  return [...grouped.entries()]
+    .filter(([transcriptBytes]) => Number.isFinite(transcriptBytes))
+    .toSorted(([left], [right]) => left - right)
+    .map(([transcriptBytes, points]) => ({
+      transcriptBytes,
+      rssMiB: trendMetric(points.map((point) => point.rssMiB), points.length),
+      cpuPercent: trendMetric(points.map((point) => point.cpuPercent), points.length),
+    }));
+}
+
+function trendMetric(values, attempted) {
+  const finite = values.filter((value) => Number.isFinite(value) && value >= 0);
+  if (finite.length === 0) return invalidMetric("No valid boundary observation at this step.", 0, attempted);
+  return validMetric({ p95: round(percentile(finite, 95)) }, finite.length, attempted);
+}
+
+function resourceTraceRuns(trace) {
+  if (trace?.version === 2 && Array.isArray(trace.runs)) return trace.runs.filter((run) => run?.version === 1 && Array.isArray(run.samples));
+  return trace?.version === 1 && Array.isArray(trace.samples) ? [trace] : [];
+}
+
+function summarizeResourceWindow(id, runs, failure) {
+  const perRun = runs.map((run) => ({
+    window: run.windows?.[id] ?? null,
+    samples: run.windows?.[id] ? within(run.samples, run.windows[id]).toSorted((left, right) => left.atMs - right.atMs) : [],
+  }));
+  const samples = perRun.flatMap((run) => run.samples);
+  const attempted = samples.length;
+  const complete = samples.filter(isCompleteFamilySample);
+  const bounded = perRun.length > 0 && perRun.every((run) => run.window);
+  const reason = failure
+    ?? (bounded ? null : `The ${id} resource window was never recorded.`)
+    ?? (attempted === 0 ? `The ${id} resource window contains no samples.` : null)
+    ?? (complete.length === attempted ? null : `The resource monitor lost part of the declared application process family during the ${id} window.`);
+  const rssBytes = complete.map((sample) => sample.rssBytes);
+  const cpu = windowCpuPercent(perRun);
+  const cpuReason = reason ?? cpu.reason;
+  return {
+    sampleCount: attempted,
+    observedWindowDurationMs: bounded ? round(median(perRun.map((run) => run.window.endMs - run.window.startMs))) : null,
+    observedSampleIntervalMs: observedSampleInterval(perRun),
+    rssP95MiB: reason ? invalidMetric(reason, complete.length, attempted) : validMetric({ p95: round(percentile(rssBytes, 95) / MIB) }, complete.length, attempted),
+    rssMaximumMiB: reason ? invalidMetric(reason, complete.length, attempted) : validMetric({ maximum: round(maximum(rssBytes) / MIB) }, complete.length, attempted),
+    cpuP95Percent: cpuReason ? invalidMetric(cpuReason, cpu.values.length, cpu.attempted) : validMetric({ p95: round(percentile(cpu.values, 95)) }, cpu.values.length, cpu.attempted),
+  };
+}
+
+function windowCpuPercent(perRun) {
+  const values = [];
+  let attempted = 0;
+  let reason = null;
+  for (const run of perRun) {
+    for (let index = 1; index < run.samples.length; index += 1) {
+      const before = run.samples[index - 1];
+      const after = run.samples[index];
+      attempted += 1;
+      // Two snapshots sharing one millisecond carry no measurable interval; they stay in the
+      // attempted count so the reported valid/attempted pair discloses them.
+      if (after.atMs <= before.atMs) continue;
+      try {
+        values.push((cpuDeltaMsBetween(before, after) / (after.atMs - before.atMs)) * 100);
+      } catch (error) {
+        reason ??= error instanceof Error ? error.message : String(error);
+      }
+    }
+  }
+  if (!reason && attempted === 0) reason = "The window has no consecutive sample pair to measure CPU across.";
+  if (!reason && values.length === 0) reason = "No measurable CPU interval was observed in the window.";
+  return { values, attempted, reason };
+}
+
+function retainedRssGrowth(baseline, ending) {
+  const valid = Math.min(baseline.valid, ending.valid);
+  const attempted = Math.min(baseline.attempted, ending.attempted);
+  if (baseline.status !== "valid" || ending.status !== "valid") {
+    return invalidMetric(baseline.status === "valid" ? ending.reason : baseline.reason, valid, attempted);
+  }
+  return { status: "valid", signed: true, p95: round(ending.p95 - baseline.p95), valid, attempted };
+}
+
+function processFamilyEvidence(runs) {
+  const samples = runs.flatMap((run) => run.samples);
+  return {
+    samplesMissingRootProcess: samples.filter((sample) => sample.rootProcessFound === false).length,
+    samplesWithInaccessibleProcesses: samples.filter((sample) => (sample.inaccessibleProcessCount ?? 0) > 0).length,
+    samplesMissingExternalProcesses: samples.filter((sample) => (sample.missingExternalProcessCount ?? 0) > 0).length,
+    monitorErrorCount: runs.reduce((total, run) => total + (run.monitorErrors?.length ?? 0), 0),
+    observedProcessNames: [...new Set(samples.flatMap((sample) => sample.processes.map((process) => process.name)).filter(Boolean))].toSorted().slice(0, 12),
+    maximumObservedProcessCount: samples.reduce((most, sample) => Math.max(most, sample.processes.length), 0),
+  };
+}
+
+function observedSampleInterval(perRun) {
+  const gaps = perRun.flatMap((run) => run.samples.slice(1).map((sample, index) => sample.atMs - run.samples[index].atMs)).filter((gap) => gap > 0);
+  return gaps.length === 0 ? null : round(median(gaps));
+}
+
+const median = (values) => percentile(values, 50);
+const validMetric = (fields, valid, attempted) => ({ status: "valid", ...fields, valid, attempted });
+const invalidMetric = (reason, valid, attempted) => ({ status: "invalid", reason, valid, attempted });
+const isCompleteFamilySample = (sample) => sample.rootProcessFound !== false
+  && (sample.inaccessibleProcessCount ?? 0) === 0
+  && (sample.missingExternalProcessCount ?? 0) === 0;
 
 const MIB = 1024 * 1024;
 const isValid = (observation) => observation.status === "valid" && Number.isFinite(observation.durationMs) && observation.durationMs >= 0;

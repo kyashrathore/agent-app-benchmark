@@ -225,6 +225,24 @@ function assertNonnegativeInteger(value, field) {
 }
 
 export function deriveBoundaryPoint(before, after, benchmarkCase, switchSequence, samples = [before, after]) {
+  const cpuDeltaMs = cpuDeltaMsBetween(before, after, samples);
+  const wallMs = after.atMs - before.atMs;
+  return {
+    caseId: benchmarkCase.caseId,
+    switchSequence,
+    lane: `${benchmarkCase.workspaceRelation}-${benchmarkCase.sessionState}`,
+    transcriptBytes: benchmarkCase.transcriptBytes,
+    atMs: after.atMs,
+    rssBytes: after.rssBytes,
+    cpuPercent: (cpuDeltaMs / wallMs) * 100,
+    wallMs,
+    cpuDeltaMs,
+  };
+}
+
+// Identity-aware cumulative CPU consumed by the declared process family between two snapshots.
+// Newborn descendants count from birth and exited descendants through their final observed sample.
+export function cpuDeltaMsBetween(before, after, samples = [before, after]) {
   if (after.atMs <= before.atMs) throw new Error("Resource boundary timestamps are not increasing.");
   const beforeByIdentity = new Map(before.processes.map((process) => [identity(process), process]));
   const afterByIdentity = new Map(after.processes.map((process) => [identity(process), process]));
@@ -247,18 +265,7 @@ export function deriveBoundaryPoint(before, after, benchmarkCase, switchSequence
     if (last.cpuTimeMs < baselineCpuMs) throw new Error("Application cumulative CPU time moved backwards.");
     cpuDeltaMs += last.cpuTimeMs - baselineCpuMs;
   }
-  const wallMs = after.atMs - before.atMs;
-  return {
-    caseId: benchmarkCase.caseId,
-    switchSequence,
-    lane: `${benchmarkCase.workspaceRelation}-${benchmarkCase.sessionState}`,
-    transcriptBytes: benchmarkCase.transcriptBytes,
-    atMs: after.atMs,
-    rssBytes: after.rssBytes,
-    cpuPercent: (cpuDeltaMs / wallMs) * 100,
-    wallMs,
-    cpuDeltaMs,
-  };
+  return cpuDeltaMs;
 }
 
 function startedWithinBoundary(process, beforeMs, afterMs) {

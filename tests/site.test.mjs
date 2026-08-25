@@ -20,12 +20,35 @@ test("static site builds comparison and stable individual app pages from raw res
     const output = path.join(root, "site");
     const built = await buildSite(comparisonFile, output);
     assert.deepEqual(built.model.apps.map((app) => app.id), ["claxedo", "t3"]);
+    assert.equal(built.model.primaryStatistic, "p95");
+    assert.equal(built.model.primaryStatisticMethod, "nearest-rank");
+    assert.equal(built.model.p95Disclosure.equalsSampledMaximumBelowValidCount, 20);
+    assert.equal(built.model.p95Disclosure.repetitions, 1);
     for (const file of ["index.html", "assets/site.css", "apps/t3/index.html", "apps/claxedo/index.html"]) await stat(path.join(output, file));
     const index = await readFile(path.join(output, "index.html"), "utf8");
     assert.match(index, /Application start/);
     assert.match(index, /Cold app start/);
-    assert.match(index, /Memory under historical-session load/);
-    assert.match(index, /Memory p95 by historical-session size/);
+    assert.match(index, /Memory and CPU under historical-session load/);
+    assert.match(index, /p95 summed RSS by historical-session size/);
+    assert.match(index, /p95 process-family CPU by historical-session size/);
+    for (const row of [
+      "Baseline idle p95 RSS",
+      "Active workload p95 RSS",
+      "Active sampled maximum RSS",
+      "Ending idle p95 RSS",
+      "Retained RSS growth",
+      "Baseline idle p95 CPU",
+      "Active workload p95 CPU",
+      "Ending idle p95 CPU",
+    ]) assert.match(index, new RegExp(`<th scope="row">${row}</th>`, "u"));
+    assert.match(index, /not an operating-system true peak/u);
+    assert.match(index, /Observed sample cadence \(median\)/u);
+    assert.match(index, /Missing-process evidence/u);
+    assert.match(index, /Host memory pressure/u);
+    assert.match(index, /Host power state/u);
+    assert.match(index, /p95 summed process-family RSS after each historical-session step/u);
+    assert.match(index, /p95 process-family CPU during each historical-session step/u);
+    assert.doesNotMatch(index, /No valid chart points/u);
     assert.doesNotMatch(index, /style="--series:/);
     const stylesheet = await readFile(path.join(output, "assets", "site.css"), "utf8");
     assert.match(stylesheet, /\.series-0 polyline,.series-0 circle\{stroke:var\(--clax\)\}/);
@@ -86,7 +109,7 @@ test("comparison site renders compact navigation and workspace trend matrices", 
   }
 });
 
-test("five-repetition comparison uses p50 and preserves exact unsupported reasons", async () => {
+test("five-repetition comparison reports nearest-rank p95 and preserves exact unsupported reasons", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-five-"));
   try {
     const reason = "T3 product Review preview limit cannot represent the canonical 24-file workspace fixture.";
@@ -95,12 +118,15 @@ test("five-repetition comparison uses p50 and preserves exact unsupported reason
     await buildSite(comparisonFile, output);
     const index = await readFile(path.join(output, "index.html"), "utf8");
     assert.match(index, /<b>5<\/b> repetitions/);
-    assert.match(index, /<b>p50<\/b> primary/);
-    assert.match(index, /p50 is the primary statistic because this run has 5 repetitions/);
-    assert.match(index, /First visit and return by history size — p50/);
-    assert.match(index, /Return with workspace panel open by seeded load — p50/);
+    assert.match(index, /<b>p95<\/b> primary/);
+    assert.match(index, /This run schedules 5 repetitions/);
+    assert.match(index, /its p95 is exactly the sampled maximum of those observations/);
+    assert.match(index, /5 \/ 5 · p95 = sampled max/u);
+    assert.match(index, /First visit and return by history size — p95/);
+    assert.match(index, /Return with workspace panel open by seeded load — p95/);
     assert.doesNotMatch(index, /No valid chart points/);
-    assert.match(index, /Frame-health p95 is withheld until 20 valid observations/u);
+    assert.doesNotMatch(index, /withheld until 20 valid observations/u);
+    assert.doesNotMatch(index, /<b>p50<\/b> primary/);
     assert.match(index, /Unsupported is not zero/);
     assert.match(index, new RegExp(reason.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
     assert.match(index, /Not comparable/);
@@ -194,7 +220,33 @@ test("incompatible scenarios and invalid resource measurements are explicit", as
     const resourcePage = await readFile(path.join(resourceOutput, "index.html"), "utf8");
     assert.match(resourcePage, /T3 monitor rejected malformed data/);
     assert.match(resourcePage, /Claxedo/);
-    assert.match(resourcePage, /Memory under historical-session load/);
+    assert.match(resourcePage, /Memory and CPU under historical-session load/);
+    // Invalid stays Invalid with its reason and keeps its sample counts; it is never scored as zero.
+    assert.match(resourcePage, /<strong>Invalid<\/strong><small>241 \/ 241 · T3 monitor rejected malformed data\./u);
+    assert.match(resourcePage, /Baseline idle p95 RSS<\/th><td class="context">[^<]*<\/td><td class="metric"><strong>122\.8 MiB<\/strong>/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("memory and CPU rows carry absolute values with the relative difference between applications", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-memory-"));
+  try {
+    const comparisonFile = await writeComparisonFixture(root);
+    const scenario = await readRegistered("scenario", "session-switch-v1");
+    await rewriteResult(comparisonFile, (entry) => entry.appId === "t3" && entry.scenarioId === "session-switch-v1", (result) => {
+      for (const item of result.resourceTrace.samples) {
+        item.rssBytes *= 2;
+        for (const process of item.processes) process.rssBytes *= 2;
+      }
+      result.resources = deriveResourcesFromTrace(result.resourceTrace, scenario.value, result.observations);
+    });
+    const output = path.join(root, "site");
+    await buildSite(comparisonFile, output);
+    const index = await readFile(path.join(output, "index.html"), "utf8");
+    assert.match(index, /<strong>122\.8 MiB<\/strong>/u);
+    assert.match(index, /<strong>245\.6 MiB<\/strong>/u);
+    assert.match(index, /<strong>Claxedo<\/strong><small>2× lower · 50\.0% lower · Claxedo ÷ &lt;unsafe-app&gt; = 0\.5<\/small>/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -455,9 +507,9 @@ function observationsFor(cases) {
 }
 
 function resourceTraceFixture(scenario) {
-  const baseline = Array.from({ length: 61 }, (_, index) => sample(index * 1000, 100 + index, index * 5));
-  const active = Array.from({ length: 25 }, (_, index) => sample(70000 + index * 250, 170 + index, 400 + index * 5));
-  const ending = Array.from({ length: 61 }, (_, index) => sample(80000 + index * 1000, 112 + index / 100, 600 + index * 5));
+  const baseline = Array.from({ length: 241 }, (_, index) => sample(index * 250, 100 + index / 10, index * 5));
+  const active = Array.from({ length: 25 }, (_, index) => sample(70000 + index * 250, 170 + index, 1210 + index * 5));
+  const ending = Array.from({ length: 241 }, (_, index) => sample(80000 + index * 250, 112 + index / 100, 1340 + index * 5));
   const samples = [...baseline, ...active, ...ending];
   const activeOffset = baseline.length;
   return {

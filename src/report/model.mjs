@@ -1,3 +1,6 @@
+import { P95_EQUALS_SAMPLED_MAXIMUM_BELOW } from "../statistics.mjs";
+import { summarizeResourceTrendP95, summarizeResourceWindows } from "../summarize.mjs";
+
 export function buildSiteModel(comparison) {
   const apps = [];
   const byApp = Map.groupBy(comparison.results, (item) => item.result.app.id);
@@ -31,9 +34,14 @@ export function buildSiteModel(comparison) {
       workspacePanel: entries.find((entry) => entry.result.scenario.id === "workspace-panel-v2")?.result,
     });
   }
+  for (const app of apps) {
+    app.resourceWindows = app.sessionSwitch ? summarizeResourceWindows(app.sessionSwitch.resourceTrace, app.sessionSwitch.resources) : null;
+    app.resourceStepTrend = app.sessionSwitch?.resources?.status === "valid"
+      ? summarizeResourceTrendP95(app.sessionSwitch.resources.trend)
+      : [];
+  }
   const repetitions = comparison.results[0]?.result.repetitions ?? null;
   const runProfile = comparison.results[0]?.result.runProfile ?? null;
-  const primaryStatistic = Number.isInteger(repetitions) && repetitions >= 20 ? "p95" : "p50";
   const frameworkRevisions = [...new Set(comparison.results.map((item) => item.result.provenance.frameworkRevision))];
   const schedule = [...comparison.results]
     .toSorted((left, right) => left.result.provenance.scheduleOrdinal - right.result.provenance.scheduleOrdinal)
@@ -50,9 +58,24 @@ export function buildSiteModel(comparison) {
     compatibility: comparison.compatibility,
     repetitions,
     runProfile,
-    primaryStatistic,
+    // Every distributional comparison is nearest-rank p95 at any repetition count. A short run is
+    // disclosed, never silently downgraded to a different statistic.
+    primaryStatistic: "p95",
+    primaryStatisticMethod: "nearest-rank",
+    p95Disclosure: p95Disclosure(repetitions),
     frameworkRevisions,
     schedule,
     apps,
+  };
+}
+
+function p95Disclosure(repetitions) {
+  const label = Number.isInteger(repetitions) ? `${repetitions} ${repetitions === 1 ? "repetition" : "repetitions"}` : "an unrecorded repetition count";
+  return {
+    statistic: "p95",
+    method: "nearest-rank",
+    repetitions,
+    equalsSampledMaximumBelowValidCount: P95_EQUALS_SAMPLED_MAXIMUM_BELOW,
+    note: `Every distributional comparison reports nearest-rank p95 with its valid / attempted counts. This run schedules ${label}. Nearest-rank p95 selects the ceil(0.95 × n)-th ordered valid observation, so wherever a value has fewer than ${P95_EQUALS_SAMPLED_MAXIMUM_BELOW} valid observations its p95 is exactly the sampled maximum of those observations. Such values are marked "p95 = sampled max"; they remain p95 and are never relabelled as p50. Average, maximum, and p50 stay available as diagnostic drill-down only.`,
   };
 }

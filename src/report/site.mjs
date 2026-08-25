@@ -3,6 +3,8 @@ import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path";
 import { loadComparison } from "../comparison.mjs";
 import { buildSiteModel } from "./model.mjs";
+import { p95EqualsSampledMaximum } from "../statistics.mjs";
+import { PROCESS_FAMILY_CPU_DEFINITION } from "../summarize.mjs";
 import { chart, disclosures, escapeHtml, format, page } from "./html.mjs";
 
 const MARKER = ".agent-app-benchmark-site";
@@ -52,11 +54,10 @@ function renderIndex(model) {
   const scheduleOrder = model.schedule.map((step) => `${step.ordinal}. ${step.appId} / ${step.scenarioId}`).join(" → ");
   const revisions = model.frameworkRevisions.map((revision) => `<code>${escapeHtml(shortRevision(revision))}</code>`).join(", ");
   const repetitionLabel = `${model.repetitions ?? "—"} ${model.repetitions === 1 ? "repetition" : "repetitions"}`;
-  const statisticExplanation = model.primaryStatistic === "p50"
-    ? `p50 is the primary statistic because this run has ${repetitionLabel}. p95 is withheld until 20 valid observations.`
-    : "p95 is the primary statistic because each case has at least 20 scheduled repetitions.";
-  const systemNavigation = hasSystemScenarios ? `<a href="#application-start">App start</a><a href="#memory">Memory</a>` : "";
-  const body = `<section class="hero" id="overview"><p class="eyebrow">Controlled desktop comparison · lower is better</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="run-stamp"><span><b>${model.repetitions ?? "—"}</b> ${model.repetitions === 1 ? "repetition" : "repetitions"}</span><span><b>${escapeHtml(model.primaryStatistic)}</b> primary</span><span><b>${validScenarios}/${totalScenarios}</b> paired scenarios</span><span><b>${escapeHtml(model.runProfile ?? "—")}</b> profile</span></div></section><nav class="section-nav" aria-label="Report sections"><a href="#overview">Overview</a>${systemNavigation}<a href="#session-navigation">Session navigation</a><a href="#workspace-panel">Workspace panel</a><a href="#method">Method</a></nav><section class="fairness" aria-labelledby="fairness-title"><div><p class="kicker">Fairness ledger</p><h2 id="fairness-title">Same work, same machine, mirrored order.</h2><p>${escapeHtml(statisticExplanation)}</p></div><dl><div><dt>Host</dt><dd>${escapeHtml(environment ? `${environment.cpuModel} · ${environment.logicalCpuCount} logical CPUs · ${formatMemory(environment.totalMemoryBytes)} RAM · ${environment.platform}/${environment.architecture}` : "Not supplied")}</dd></div><div><dt>Order control</dt><dd>Balanced mirrored schedule across every paired scenario.</dd></div><div><dt>Corpus and cases</dt><dd>Compatibility validation requires identical framework revision, scenario, corpus, profile, repetition count, and host identity.</dd></div><div><dt>Materialization</dt><dd>Each app uses its registered production path. Native and translated mappings are disclosed; unsupported product contracts are not scored as zero.</dd></div></dl></section><nav class="app-grid" aria-label="Application identity and individual reports">${cards}</nav>${hasSystemScenarios ? `<section class="benchmark-section system-performance"><div class="flow-heading"><p class="kicker">System envelope</p><h2>Launch and memory</h2><p>Cold and initialized process launch are measured separately. Memory is summed across each declared application process family after progressive historical-session loads.</p></div>${appStart}${memory}</section>` : ""}${navigationComparison}${workspacePanelComparison}<section class="method" id="method"><div class="flow-heading"><p class="kicker">Method and provenance</p><h2>What makes the comparison comparable</h2></div><div class="method-grid"><section><h3>Run identity</h3><dl class="compact-list"><div><dt>Provenance</dt><dd>${escapeHtml(model.provenance)}</dd></div><div><dt>Framework revision</dt><dd>${revisions || "—"}</dd></div><div><dt>Run profile</dt><dd>${escapeHtml(model.runProfile ?? "—")}</dd></div><div><dt>Primary statistic</dt><dd>${escapeHtml(model.primaryStatistic)}</dd></div></dl></section><section><h3>Execution order</h3><p class="schedule">${escapeHtml(scheduleOrder || "No paired schedule supplied.")}</p></section></div><div class="notice"><strong>Scope.</strong> This report measures packaged GUI flows over pinned completed-session data. It does not measure Web Vitals, model or harness speed, live streaming output, live tool execution, or terminal coding agents.</div></section>`;
+  const statisticExplanation = model.p95Disclosure?.note
+    ?? `Nearest-rank p95 is the primary statistic for every distributional comparison at ${repetitionLabel}.`;
+  const systemNavigation = hasSystemScenarios ? `<a href="#application-start">App start</a><a href="#memory">Memory &amp; CPU</a>` : "";
+  const body = `<section class="hero" id="overview"><p class="eyebrow">Controlled desktop comparison · lower is better</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="run-stamp"><span><b>${model.repetitions ?? "—"}</b> ${model.repetitions === 1 ? "repetition" : "repetitions"}</span><span><b>${escapeHtml(model.primaryStatistic)}</b> primary</span><span><b>${validScenarios}/${totalScenarios}</b> paired scenarios</span><span><b>${escapeHtml(model.runProfile ?? "—")}</b> profile</span></div></section><nav class="section-nav" aria-label="Report sections"><a href="#overview">Overview</a>${systemNavigation}<a href="#session-navigation">Session navigation</a><a href="#workspace-panel">Workspace panel</a><a href="#method">Method</a></nav><section class="fairness" aria-labelledby="fairness-title"><div><p class="kicker">Fairness ledger</p><h2 id="fairness-title">Same work, same machine, mirrored order.</h2><p>${escapeHtml(statisticExplanation)}</p></div><dl><div><dt>Host</dt><dd>${escapeHtml(environment ? `${environment.cpuModel} · ${environment.logicalCpuCount} logical CPUs · ${formatMemory(environment.totalMemoryBytes)} RAM · ${environment.platform}/${environment.architecture}` : "Not supplied")}</dd></div><div><dt>Order control</dt><dd>Balanced mirrored schedule across every paired scenario.</dd></div><div><dt>Corpus and cases</dt><dd>Compatibility validation requires identical framework revision, scenario, corpus, profile, repetition count, and host identity.</dd></div><div><dt>Materialization</dt><dd>Each app uses its registered production path. Native and translated mappings are disclosed; unsupported product contracts are not scored as zero.</dd></div></dl></section><nav class="app-grid" aria-label="Application identity and individual reports">${cards}</nav>${hasSystemScenarios ? `<section class="benchmark-section system-performance"><div class="flow-heading"><p class="kicker">System envelope</p><h2>Launch, memory, and CPU</h2><p>Cold and initialized process launch are measured separately. Memory and CPU are summed across each declared application process family across a baseline idle window, the progressive historical-session workload, and an ending idle window.</p></div>${appStart}${memory}</section>` : ""}${navigationComparison}${workspacePanelComparison}<section class="method" id="method"><div class="flow-heading"><p class="kicker">Method and provenance</p><h2>What makes the comparison comparable</h2></div><div class="method-grid"><section><h3>Run identity</h3><dl class="compact-list"><div><dt>Provenance</dt><dd>${escapeHtml(model.provenance)}</dd></div><div><dt>Framework revision</dt><dd>${revisions || "—"}</dd></div><div><dt>Run profile</dt><dd>${escapeHtml(model.runProfile ?? "—")}</dd></div><div><dt>Primary statistic</dt><dd>${escapeHtml(model.primaryStatistic)}</dd></div></dl></section><section><h3>Execution order</h3><p class="schedule">${escapeHtml(scheduleOrder || "No paired schedule supplied.")}</p></section></div><div class="notice"><strong>Scope.</strong> This report measures packaged GUI flows over pinned completed-session data. It does not measure Web Vitals, model or harness speed, live streaming output, live tool execution, or terminal coding agents.</div></section>`;
   return page({ title: model.title, current: "index", body });
 }
 
@@ -101,53 +102,85 @@ function renderAppStartP95(apps) {
 }
 
 function renderMemoryP95(apps) {
-  const appTrends = new Map(apps.map((app) => [app.id, resourceP95Trend(app)]));
-  const transcriptBytes = [...new Set([...appTrends.values()].flatMap((trend) => trend.map((point) => point.transcriptBytes)))].toSorted((left, right) => left - right);
-  const rows = transcriptBytes.map((bytes) => navigationMatrixRow(
-    "Post-switch process-family RSS",
-    formatBytes(bytes),
-    apps,
-    (app) => appTrends.get(app.id)?.find((point) => point.transcriptBytes === bytes)?.metric,
-    "p95",
-    "MiB",
-  )).join("");
-  const series = apps.map((app, colorIndex) => ({
+  const window = (app, id, metric) => app.resourceWindows?.windows?.[id]?.[metric];
+  const inventoryRows = [
+    resourceMatrixRow("Baseline idle p95 RSS", "1 MiB control session ready · idle window", apps, (app) => window(app, "baseline", "rssP95MiB"), "p95", "MiB"),
+    resourceMatrixRow("Active workload p95 RSS", "progressive 1 → 128 MiB historical-session switches", apps, (app) => window(app, "active", "rssP95MiB"), "p95", "MiB"),
+    resourceMatrixRow("Active sampled maximum RSS", "diagnostic · largest observed sample, not an operating-system true peak", apps, (app) => window(app, "active", "rssMaximumMiB"), "maximum", "MiB"),
+    resourceMatrixRow("Ending idle p95 RSS", "returned to the same 1 MiB control session · idle window", apps, (app) => window(app, "ending", "rssP95MiB"), "p95", "MiB"),
+    retainedGrowthRow(apps),
+    resourceMatrixRow("Baseline idle p95 CPU", "process-family CPU across the baseline idle window", apps, (app) => window(app, "baseline", "cpuP95Percent"), "p95", "%"),
+    resourceMatrixRow("Active workload p95 CPU", "process-family CPU across the active workload window", apps, (app) => window(app, "active", "cpuP95Percent"), "p95", "%"),
+    resourceMatrixRow("Ending idle p95 CPU", "process-family CPU across the ending idle window", apps, (app) => window(app, "ending", "cpuP95Percent"), "p95", "%"),
+  ].join("");
+  const steps = [...new Set(apps.flatMap((app) => (app.resourceStepTrend ?? []).map((point) => point.transcriptBytes)))].toSorted((left, right) => left - right);
+  const stepMetric = (app, bytes, key) => (app.resourceStepTrend ?? []).find((point) => point.transcriptBytes === bytes)?.[key];
+  const rssStepRows = steps.map((bytes) => resourceMatrixRow("p95 summed RSS after step", formatBytes(bytes), apps, (app) => stepMetric(app, bytes, "rssMiB"), "p95", "MiB")).join("");
+  const cpuStepRows = steps.map((bytes) => resourceMatrixRow("p95 process-family CPU during step", formatBytes(bytes), apps, (app) => stepMetric(app, bytes, "cpuPercent"), "p95", "%")).join("");
+  const stepSeries = (key) => apps.map((app, colorIndex) => ({
     label: app.name,
     colorIndex,
-    points: (appTrends.get(app.id) ?? []).map((point) => ({
-      x: point.transcriptBytes / 1048576,
-      y: metricValue(point.metric, "p95"),
-    })),
+    points: (app.resourceStepTrend ?? []).map((point) => ({ x: point.transcriptBytes / 1048576, y: metricValue(point[key], "p95") })),
   }));
-  const invalid = apps.filter((app) => app.sessionSwitch?.resources?.status !== "valid").map((app) => `${app.name}: ${app.sessionSwitch?.resources?.reason ?? "resource monitor did not produce a valid result"}`);
-  return `<section class="matrix" id="memory"><div class="matrix-heading"><h3>Memory under historical-session load</h3><p>Summed application process family · lower is better</p></div>${invalid.length > 0 ? `<p class="status invalid">${escapeHtml(invalid.join("; "))}</p>` : ""}<div class="table-scroll"><table><caption>Post-switch process-family RSS p95 by transcript size</caption><thead><tr><th scope="col">Metric</th><th scope="col">History</th>${comparisonHeaders(apps, "P95")}<th scope="col">Relative result</th></tr></thead><tbody>${rows}</tbody></table></div>${chart("Memory p95 by historical-session size", series, "History size (MiB)", "p95 RSS (MiB)")}</section>`;
-}
-
-function resourceP95Trend(app) {
-  const resources = app.sessionSwitch?.resources;
-  if (resources?.status !== "valid") return [];
-  const grouped = Map.groupBy(resources.trend, (point) => point.transcriptBytes);
-  return [...grouped.entries()].toSorted(([left], [right]) => left - right).map(([transcriptBytes, points]) => {
-    const values = points.map((point) => point.rssMiB).filter(Number.isFinite);
-    return {
-      transcriptBytes,
-      metric: {
-        status: "valid",
-        p95: values.length >= 20 ? nearestRank(values, 0.95) : null,
-        valid: values.length,
-        attempted: points.length,
-      },
-    };
+  const invalid = apps.flatMap((app) => {
+    const reasons = new Set();
+    if (app.sessionSwitch?.resources?.status !== "valid") reasons.add(app.sessionSwitch?.resources?.reason ?? "the resource monitor did not produce a valid result");
+    if (app.resourceWindows?.status !== "valid") reasons.add(app.resourceWindows?.reason ?? "the raw resource trace could not be summarized");
+    return [...reasons].map((reason) => `${app.name}: ${reason}`);
   });
+  const headers = comparisonHeaders(apps, "P95");
+  return `<section class="matrix" id="memory"><div class="matrix-heading"><h3>Memory and CPU under historical-session load</h3><p>Summed application process family · lower is better</p></div>${invalid.length > 0 ? `<p class="status invalid">${escapeHtml(invalid.join("; "))}</p>` : ""}<div class="result-note"><strong>Idle means ready, not empty.</strong> Both idle windows hold the same fixed 1 MiB control session, fully loaded and visible, with no benchmark input. Sampled maximum is the largest observed framework sample and is diagnostic only; it is not an operating-system true peak. A window that lost the declared process family or recorded no sample stays Invalid with its reason and is never scored as zero.</div><div class="table-scroll"><table><caption>Process-family memory and CPU by measurement window</caption><thead><tr><th scope="col">Metric</th><th scope="col">Measurement window</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${inventoryRows}</tbody></table></div><div class="table-scroll"><table><caption>p95 summed process-family RSS after each historical-session step</caption><thead><tr><th scope="col">Metric</th><th scope="col">History step</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${rssStepRows}</tbody></table></div>${chart("p95 summed RSS by historical-session size", stepSeries("rssMiB"), "History size (MiB)", "p95 RSS (MiB)")}<div class="table-scroll"><table><caption>p95 process-family CPU during each historical-session step</caption><thead><tr><th scope="col">Metric</th><th scope="col">History step</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${cpuStepRows}</tbody></table></div>${chart("p95 process-family CPU by historical-session size", stepSeries("cpuPercent"), "History size (MiB)", "p95 CPU (%)")}${resourceDisclosureTable(apps)}</section>`;
 }
 
-function nearestRank(values, quantile) {
-  const sorted = values.toSorted((left, right) => left - right);
-  return sorted[Math.max(0, Math.ceil(quantile * sorted.length) - 1)];
+function resourceMatrixRow(flow, context, apps, metricForApp, statistic, unit) {
+  const metrics = apps.map(metricForApp);
+  return `<tr><th scope="row">${escapeHtml(flow)}</th><td class="context">${escapeHtml(context)}</td>${metrics.map((metric) => metricCell(metric, statistic, unit)).join("")}<td class="verdict">${relativeResult(apps, metrics, statistic, "magnitude")}</td></tr>`;
+}
+
+function retainedGrowthRow(apps) {
+  const metrics = apps.map((app) => app.resourceWindows?.retainedRssGrowthMiB);
+  const values = metrics.map((metric) => metricValue(metric, "p95"));
+  const verdict = values.every(Number.isFinite) ? signedRelativeResult(apps, values, "MiB") : `<span class="status invalid">Not comparable</span>`;
+  return `<tr><th scope="row">Retained RSS growth</th><td class="context">ending-idle p95 − baseline-idle p95 · negative values stay visible</td>${metrics.map((metric) => metricCell(metric, "p95", "MiB")).join("")}<td class="verdict">${verdict}</td></tr>`;
+}
+
+function resourceDisclosureTable(apps) {
+  const row = (label, render) => `<tr><th scope="row">${escapeHtml(label)}</th>${apps.map((app) => `<td>${escapeHtml(render(app))}</td>`).join("")}</tr>`;
+  const windows = (app) => app.resourceWindows?.windows;
+  const duration = (value) => Number.isFinite(value) ? `${format(value)} ms` : "not recorded";
+  const evidence = (app) => app.resourceWindows?.processFamily;
+  const environment = (app) => app.environment ?? {};
+  const rows = [
+    row("Observed sample cadence (median)", (app) => windows(app)
+      ? `baseline ${duration(windows(app).baseline.observedSampleIntervalMs)} · active ${duration(windows(app).active.observedSampleIntervalMs)} · ending ${duration(windows(app).ending.observedSampleIntervalMs)}`
+      : "no raw trace"),
+    row("Observed window duration", (app) => windows(app)
+      ? `baseline idle ${duration(windows(app).baseline.observedWindowDurationMs)} · active ${duration(windows(app).active.observedWindowDurationMs)} · ending idle ${duration(windows(app).ending.observedWindowDurationMs)}`
+      : "no raw trace"),
+    row("Raw samples", (app) => app.resourceWindows
+      ? `${app.resourceWindows.rawSampleCount} across ${app.resourceWindows.runCount} monitored run${app.resourceWindows.runCount === 1 ? "" : "s"}`
+      : "no raw trace"),
+    row("Samples in each window", (app) => windows(app)
+      ? `baseline ${windows(app).baseline.sampleCount} · active ${windows(app).active.sampleCount} · ending ${windows(app).ending.sampleCount}`
+      : "no raw trace"),
+    row("Process family", (app) => evidence(app)
+      ? `${evidence(app).definition} Up to ${evidence(app).maximumObservedProcessCount} processes observed${evidence(app).observedProcessNames.length > 0 ? `: ${evidence(app).observedProcessNames.join(", ")}` : ""}.`
+      : "no raw trace"),
+    row("Missing-process evidence", (app) => evidence(app)
+      ? `${evidence(app).samplesMissingRootProcess} samples lost the root process · ${evidence(app).samplesWithInaccessibleProcesses} had inaccessible processes · ${evidence(app).samplesMissingExternalProcesses} missed a declared external process · ${evidence(app).monitorErrorCount} monitor errors`
+      : "no raw trace"),
+    row("CPU definition", (app) => `${PROCESS_FAMILY_CPU_DEFINITION}. This host reports ${environment(app).logicalCpuCount ?? "an unrecorded number of"} logical CPUs, so a fully saturated host reads ${Number.isFinite(environment(app).logicalCpuCount) ? `${environment(app).logicalCpuCount * 100}%` : "logical CPU count × 100%"}.`),
+    row("Host memory pressure", (app) => Number.isFinite(environment(app).memoryPressureLevel)
+      ? `level ${environment(app).memoryPressureLevel}`
+      : "not recorded by this run"),
+    row("Host power state", (app) => `${environment(app).powerSource ?? "not recorded"}${environment(app).lowPowerMode === null || environment(app).lowPowerMode === undefined ? "" : ` · low-power mode ${environment(app).lowPowerMode ? "on" : "off"}`}`),
+    row("Host free memory / load at run start", (app) => `${Number.isFinite(environment(app).freeMemoryBytes) ? `${format(environment(app).freeMemoryBytes / 1073741824)} GiB free` : "free memory not recorded"} · ${Number.isFinite(environment(app).loadAverage1mPerCpu) ? `${format(environment(app).loadAverage1mPerCpu)} load per CPU` : "load not recorded"}`),
+  ].join("");
+  return `<details class="technical"><summary>Resource measurement disclosures</summary><div class="table-scroll"><table><caption>Sampling, process-family, and host disclosures for the resource measurement</caption><thead><tr><th scope="col">Disclosure</th>${apps.map((app) => `<th scope="col">${escapeHtml(app.name)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }
 
 function renderSessionNavigationComparison(apps, model = {}) {
-  const statistic = model.primaryStatistic ?? primaryStatisticFor(apps[0]?.sessionNavigation?.repetitions);
+  const statistic = model.primaryStatistic ?? "p95";
   const statisticLabel = statistic.toUpperCase();
   const historySeries = apps.flatMap((app) => {
     const trend = app.sessionNavigation.derivation.summary.historySizeTrend;
@@ -185,11 +218,11 @@ function renderSessionNavigationComparison(apps, model = {}) {
     point.returnVisitedPanelOpen,
     statistic,
   ))).join("");
-  return `<section class="benchmark-section" id="session-navigation"><div class="flow-heading"><p class="kicker">Flow 01</p><h2>Session navigation</h2><p>First visit means a session surface has not been mounted before. Return means revisiting a previously rendered session with the workspace panel closed. Panel-open returns are isolated as a separate seeded-load trend.</p></div><div class="result-note"><strong>${statisticLabel} shown.</strong> ${statistic === "p50" ? "The median is the honest comparison at this run depth; p95 remains withheld." : "Publication-depth tail latency is available."} Valid / attempted counts remain attached to every value.</div><section class="matrix"><div class="matrix-heading"><h3>History-size trend</h3><p>Solid lines are first visit; dashed lines are return.</p></div><div class="table-scroll"><table><caption>Session navigation ${statisticLabel} latency in milliseconds by history size</caption><thead><tr><th scope="col">Visit state</th><th scope="col">History</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>${chart(`First visit and return by history size — ${statistic}`, historySeries, "History size (MiB)", `${statistic} latency (ms)`)}<section class="matrix"><div class="matrix-heading"><h3>Return with workspace panel open</h3><p>The panel begins open with light, moderate, or heavy seeded content.</p></div><div class="table-scroll"><table><caption>Panel-open session return ${statisticLabel} latency in milliseconds</caption><thead><tr><th scope="col">Visit state</th><th scope="col">Seeded load</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${panelRows}</tbody></table></div></section>${chart(`Return with workspace panel open by seeded load — ${statistic}`, panelSeries, "Load profile (1 light, 2 moderate, 3 heavy)", `${statistic} latency (ms)`)}${unsupportedReasons(apps, "sessionNavigation")}<details class="technical"><summary>Renderer work for panel-open returns</summary><p>Durations use ${statisticLabel}; renderer counters and worst frames show their declared aggregate from the same observations.</p><div class="table-scroll"><table><caption>Panel-open renderer work</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">Duration</th><th scope="col">JavaScript</th><th scope="col">Style</th><th scope="col">Layout</th><th scope="col">Worst frame</th></tr></thead><tbody>${rendererRows}</tbody></table></div></details></section>`;
+  return `<section class="benchmark-section" id="session-navigation"><div class="flow-heading"><p class="kicker">Flow 01</p><h2>Session navigation</h2><p>First visit means a session surface has not been mounted before. Return means revisiting a previously rendered session with the workspace panel closed. Panel-open returns are isolated as a separate seeded-load trend.</p></div><div class="result-note"><strong>${statisticLabel} shown.</strong> Nearest-rank p95 is reported at every repetition count, with valid / attempted counts attached to each value. Where a value has fewer than 20 valid observations its nearest-rank p95 is the sampled maximum of those observations and says so; p50, average, and maximum stay in the diagnostic drill-down.</div><section class="matrix"><div class="matrix-heading"><h3>History-size trend</h3><p>Solid lines are first visit; dashed lines are return.</p></div><div class="table-scroll"><table><caption>Session navigation ${statisticLabel} latency in milliseconds by history size</caption><thead><tr><th scope="col">Visit state</th><th scope="col">History</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>${chart(`First visit and return by history size — ${statistic}`, historySeries, "History size (MiB)", `${statistic} latency (ms)`)}<section class="matrix"><div class="matrix-heading"><h3>Return with workspace panel open</h3><p>The panel begins open with light, moderate, or heavy seeded content.</p></div><div class="table-scroll"><table><caption>Panel-open session return ${statisticLabel} latency in milliseconds</caption><thead><tr><th scope="col">Visit state</th><th scope="col">Seeded load</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${panelRows}</tbody></table></div></section>${chart(`Return with workspace panel open by seeded load — ${statistic}`, panelSeries, "Load profile (1 light, 2 moderate, 3 heavy)", `${statistic} latency (ms)`)}${unsupportedReasons(apps, "sessionNavigation")}<details class="technical"><summary>Renderer work for panel-open returns</summary><p>Durations use ${statisticLabel}; renderer counters and worst frames show their declared aggregate from the same observations.</p><div class="table-scroll"><table><caption>Panel-open renderer work</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">Duration</th><th scope="col">JavaScript</th><th scope="col">Style</th><th scope="col">Layout</th><th scope="col">Worst frame</th></tr></thead><tbody>${rendererRows}</tbody></table></div></details></section>`;
 }
 
 function renderWorkspacePanelComparison(apps, model = {}) {
-  const statistic = model.primaryStatistic ?? primaryStatisticFor(apps[0]?.workspacePanel?.repetitions);
+  const statistic = model.primaryStatistic ?? "p95";
   const statisticLabel = statistic.toUpperCase();
   const frameStatistic = "p95";
   const actions = apps[0]?.workspacePanel?.derivation.summary.loadTrend[0]?.interactions
@@ -215,7 +248,7 @@ function renderWorkspacePanelComparison(apps, model = {}) {
   const hasFrameTrend = shellSeries.some((series) => series.points.some((point) => Number.isFinite(point.y)));
   const frameTrend = hasFrameTrend
     ? chart("Open and close frame health by retained load — p95", shellSeries, "Load profile (1 light, 2 moderate, 3 heavy)", "p95 frame interval (ms; 16.67 budget)")
-    : `<section class="panel"><h3>Open and close frame health by retained load — p95</h3><p class="status invalid">Frame-health p95 is withheld until 20 valid observations are available for every plotted point.</p></section>`;
+    : `<section class="panel"><h3>Open and close frame health by retained load — p95</h3><p class="status invalid">No valid frame-health observation was recorded for any plotted point.</p></section>`;
   const rendererRows = apps.flatMap((app) => app.workspacePanel.derivation.summary.loadTrend.flatMap((point) => Object.entries(point.interactions).map(([action, metric]) => rendererWorkRow(
     app,
     `${workspaceActionLabel(action)} · ${point.loadProfile}`,
@@ -244,7 +277,7 @@ function workspaceInteractionCells(interaction, action, statistic, frameStatisti
 function workspaceMetricCell(metric, statistic, unit, label) {
   const value = metricValue(metric, statistic);
   if (!Number.isFinite(value)) return `<td class="metric status invalid"><strong>Withheld</strong><small>${metric?.valid ?? 0} / ${metric?.attempted ?? 0} · ${escapeHtml(label)}</small></td>`;
-  return `<td class="metric"><strong>${format(value)}${unit ? ` ${escapeHtml(unit)}` : ""}</strong><small>${metric.valid} / ${metric.attempted} · ${escapeHtml(label)}</small></td>`;
+  return `<td class="metric"><strong>${formatWithUnit(value, unit)}</strong><small>${metric.valid} / ${metric.attempted} · ${escapeHtml(label)}${escapeHtml(sampledMaximumNote(metric, statistic))}</small></td>`;
 }
 
 function workspaceInteractionResult(apps, interactions, action, statistic, frameStatistic) {
@@ -287,27 +320,49 @@ function navigationMatrixRow(flow, context, apps, metricForApp, statistic, unit 
 function metricCell(metric, statistic, unit = "ms") {
   const value = metricValue(metric, statistic);
   if (!Number.isFinite(value)) {
-    const label = metric?.status === "invalid" ? "Unsupported" : statistic === "p95" ? "Withheld" : "Unavailable";
-    return `<td class="metric status invalid"><strong>${label}</strong><small>${metric?.valid ?? 0} / ${metric?.attempted ?? 0}</small></td>`;
+    const label = metric?.status === "invalid" ? "Invalid" : "Withheld";
+    const reason = metric?.reason ? ` · ${metric.reason}` : "";
+    return `<td class="metric status invalid"><strong>${label}</strong><small>${metric?.valid ?? 0} / ${metric?.attempted ?? 0}${escapeHtml(reason)}</small></td>`;
   }
-  return `<td class="metric"><strong>${format(value)} ${escapeHtml(unit)}</strong><small>${metric.valid} / ${metric.attempted}</small></td>`;
+  return `<td class="metric"><strong>${formatWithUnit(value, unit)}</strong><small>${metric.valid} / ${metric.attempted}${escapeHtml(sampledMaximumNote(metric, statistic))}</small></td>`;
+}
+
+function formatWithUnit(value, unit) {
+  if (!unit) return format(value);
+  return unit === "%" ? `${format(value)}%` : `${format(value)} ${escapeHtml(unit)}`;
 }
 
 function metricValue(metric, statistic) {
   if (!metric || metric.status !== "valid") return null;
-  if (statistic === "p95" && metric.valid < 20) return null;
   return Number.isFinite(metric[statistic]) ? metric[statistic] : null;
 }
 
-function relativeResult(apps, metrics, statistic) {
+// Nearest-rank p95 is reported at any n. Below the threshold the selected rank is the last one, so
+// the value is disclosed as the sampled maximum instead of being withheld or renamed.
+function sampledMaximumNote(metric, statistic) {
+  return statistic === "p95" && metric?.status === "valid" && p95EqualsSampledMaximum(metric.valid) ? " · p95 = sampled max" : "";
+}
+
+function relativeResult(apps, metrics, statistic, comparison = "latency") {
   if (apps.length !== 2) return "—";
   const values = metrics.map((metric) => metricValue(metric, statistic));
   if (!values.every(Number.isFinite)) return `<span class="status invalid">Not comparable</span>`;
   const [left, right] = values;
   if (left === right) return "Tie";
+  if (left <= 0 || right <= 0) return signedRelativeResult(apps, values, "");
   const winnerIndex = left < right ? 0 : 1;
   const ratio = Math.max(left, right) / Math.min(left, right);
-  return `<strong>${escapeHtml(apps[winnerIndex].name)}</strong><small>${formatRatio(ratio)}× faster</small>`;
+  const percent = Math.round((1 - Math.min(left, right) / Math.max(left, right)) * 1000) / 10;
+  const word = comparison === "latency" ? "faster" : "lower";
+  return `<strong>${escapeHtml(apps[winnerIndex].name)}</strong><small>${formatRatio(ratio)}× ${word} · ${format(percent)}% ${word} · ${escapeHtml(apps[0].name)} ÷ ${escapeHtml(apps[1].name)} = ${formatRatio(left / right)}</small>`;
+}
+
+function signedRelativeResult(apps, values, unit) {
+  if (apps.length !== 2 || !values.every(Number.isFinite)) return `<span class="status invalid">Not comparable</span>`;
+  const [left, right] = values;
+  if (left === right) return "Tie";
+  const winnerIndex = left < right ? 0 : 1;
+  return `<strong>${escapeHtml(apps[winnerIndex].name)}</strong><small>${formatWithUnit(Math.abs(left - right), unit)} lower</small>`;
 }
 
 function rendererWorkRow(app, flow, metric, statistic) {
@@ -326,10 +381,6 @@ function unsupportedReasons(apps, property) {
   });
   if (rows.length === 0) return "";
   return `<aside class="unsupported" aria-labelledby="${escapeHtml(property)}-unsupported"><p class="kicker">Unsupported is not zero</p><h3 id="${escapeHtml(property)}-unsupported">Product-contract exclusions</h3><p>These observations are excluded from ratios and winner statements. The benchmark recorded the exact driver reason:</p><ul>${rows.join("")}</ul></aside>`;
-}
-
-function primaryStatisticFor(repetitions) {
-  return Number.isInteger(repetitions) && repetitions >= 20 ? "p95" : "p50";
 }
 
 function formatRatio(value) {

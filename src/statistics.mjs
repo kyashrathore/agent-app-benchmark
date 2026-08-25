@@ -16,6 +16,15 @@ export function percentile(values, percentileRank) {
   return sorted[Math.min(index, sorted.length - 1)];
 }
 
+// Nearest-rank p95 selects the ceil(0.95 * n)-th ordered observation. For every n below this
+// count that rank is n itself, so p95 is exactly the largest valid observation. The value stays
+// p95 and is reported at any n; presentation discloses the equality rather than relabelling it.
+export const P95_EQUALS_SAMPLED_MAXIMUM_BELOW = 20;
+
+export function p95EqualsSampledMaximum(validCount) {
+  return Number.isInteger(validCount) && validCount >= 1 && validCount < P95_EQUALS_SAMPLED_MAXIMUM_BELOW;
+}
+
 export function summary(values, attempted = values.length, options = {}) {
   requireValues(values);
   if (!Number.isInteger(attempted) || attempted < values.length) throw new Error("Attempted count cannot be smaller than valid values.");
@@ -26,9 +35,6 @@ export function summary(values, attempted = values.length, options = {}) {
     attempted,
   };
   if (options.includeP50) result.p50 = round(percentile(values, 50));
-  if (options.minimumP95Samples && values.length < options.minimumP95Samples) {
-    return { ...result, p95: null, p95Status: `requires-${options.minimumP95Samples}-valid-observations` };
-  }
   return { ...result, p95: round(percentile(values, 95)) };
 }
 
