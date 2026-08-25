@@ -73,7 +73,7 @@ test("comparison site renders compact navigation and workspace trend matrices", 
     assert.match(index, /Heavy load/);
     assert.match(index, /same complete 24-file Review model/u);
     assert.match(index, /Setup does not scroll Review/u);
-    assert.match(index, /production target bytes warm, but its tab and preview have never mounted/u);
+    assert.match(index, /Each load profile owns a distinct canonical target/u);
     assert.match(index, /measured input owns first surface creation and paint/u);
     for (const action of ["Open Panel", "Close Panel", "Files To Review", "Review To Files", "Open File", "Switch File Tab", "Expand All", "Collapse All"]) {
       assert.match(index, new RegExp(action, "u"));
