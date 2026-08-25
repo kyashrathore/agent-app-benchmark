@@ -56,7 +56,7 @@ All `session-navigation-v1` and `workspace-panel-v2` action clocks begin at the 
 | Moderate | 8 | 3 | 6 |
 | Heavy | 16 | 4 | 24 |
 
-Review always owns all 24 canonical changed files and their complete, non-truncated authoritative data; the load varies retained logical UI state, not data completeness. Production virtualization is allowed: exact logical expansion counts are required, while only Review bodies currently materialized in the canonical viewport must be painted and interactive. Untimed setup may scan or scroll the real surface to attest all identities and restore the required start position. Opening records shell visibility and animation separately from data readiness, above-fold paint, and interactive readiness. There are no interrupted or double-toggle cases.
+Review always owns all 24 canonical changed files and their complete, non-truncated authoritative data; the load varies retained logical UI state, not data completeness. Production virtualization is allowed: exact logical expansion counts are required, while only Review bodies currently materialized in the canonical viewport must be painted and interactive. Untimed setup may scan or scroll the real surface to attest all identities and restore the required start position. For `open-file`, setup loads the exact target bytes through the application's production file-data path without ever mounting that target's tab or preview; the measured pointerdown owns first surface creation and paint. Opening records shell visibility and animation separately from data readiness, above-fold paint, and interactive readiness. There are no interrupted or double-toggle cases.
 
 The following V1 scenarios remain immutable for already-published results but are superseded for new comparisons:
 

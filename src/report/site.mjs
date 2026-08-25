@@ -146,7 +146,7 @@ function renderWorkspacePanelComparison(apps) {
     flow: `${workspaceActionLabel(action)} · ${point.loadProfile}`,
     metric: metric.durationMs,
   }))));
-  return `<section class="flow-heading"><h2>Workspace panel</h2><p>Each chart is one ordinary user action; setup is seeded before timing. Review endpoints require complete non-truncated data, exact logical expansion counts, and painted interactive bodies for the current viewport—not concurrent offscreen DOM.</p></section>${p50P95Table("Workspace-panel values", rows)}${charts}`;
+  return `<section class="flow-heading"><h2>Workspace panel</h2><p>Each chart is one ordinary user action; setup is seeded before timing. Review endpoints require complete non-truncated data, exact logical expansion counts, and painted interactive bodies for the current viewport—not concurrent offscreen DOM. Open-file starts with production target bytes warm but its tab and preview never mounted, so the measured input owns first surface creation and paint.</p></section>${p50P95Table("Workspace-panel values", rows)}${charts}`;
 }
 
 function p50P95Table(title, rows) {

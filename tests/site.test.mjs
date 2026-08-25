@@ -69,6 +69,8 @@ test("comparison site renders p50/p95 navigation and workspace trends", async ()
     assert.match(index, /Workspace-panel values/);
     assert.match(index, /complete non-truncated data, exact logical expansion counts/u);
     assert.match(index, /not concurrent offscreen DOM/u);
+    assert.match(index, /production target bytes warm but its tab and preview never mounted/u);
+    assert.match(index, /measured input owns first surface creation and paint/u);
     for (const action of ["Open Panel", "Close Panel", "Files To Review", "Review To Files", "Open File", "Switch File Tab", "Expand All", "Collapse All"]) {
       assert.match(index, new RegExp(`${action} by seeded load — p95`, "u"));
     }

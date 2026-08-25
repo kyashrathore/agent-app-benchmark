@@ -47,6 +47,9 @@ test("V2 scenarios define virtualized Review readiness without weakening authori
   const panel = (await readRegistered("scenario", "workspace-panel-v2")).value;
   assert.match(panel.metrics[0].description, /all 24 canonical files without truncation/u);
   assert.match(panel.metrics[0].description, /offscreen virtualized bodies need not exist concurrently/u);
+  assert.match(panel.description, /Open-file is data-warm and surface-cold/u);
+  assert.match(panel.description, /tab and preview never mount during setup/u);
+  assert.match(panel.metrics[0].description, /target bytes warm but its tab and preview surface never previously mounted/u);
 });
 
 test("desktop apps advertise the same canonical workspace-panel scenarios", async () => {

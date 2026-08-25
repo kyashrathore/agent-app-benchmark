@@ -264,6 +264,8 @@ test("workspace-panel V2 runner derives one interaction trend per explicit load"
     assert.match(report, /Workspace panel interactions by seeded load/);
     assert.match(report, /complete non-truncated 24-file data and exact logical expansion counts/u);
     assert.match(report, /offscreen bodies need not be mounted/u);
+    assert.match(report, /target bytes warm through the production data path/u);
+    assert.match(report, /target tab and preview never mounted/u);
     assert.doesNotMatch(report, /double-toggle|mid-animation/u);
   } finally {
     await rm(root, { recursive: true, force: true });
