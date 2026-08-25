@@ -20,6 +20,25 @@ export const WORKSPACE_PANEL_ACTIONS = Object.freeze([
   "expand-all",
 ]);
 
+export const SESSION_NAVIGATION_TYPES = Object.freeze([
+  "first-visit",
+  "return-visited-panel-closed",
+  "return-visited-panel-open",
+]);
+
+export const PANEL_LOAD_PROFILES = Object.freeze(["light", "moderate", "heavy"]);
+
+export const WORKSPACE_PANEL_V2_ACTIONS = Object.freeze([
+  "open-panel",
+  "close-panel",
+  "files-to-review",
+  "review-to-files",
+  "open-file",
+  "switch-file-tab",
+  "expand-all",
+  "collapse-all",
+]);
+
 export const PANEL_PROFILES = Object.freeze(["closed", "files", "diff"]);
 
 export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-public-v1", repetitionOverride) {
@@ -39,6 +58,7 @@ export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-pu
     return cases;
   }
   if (scenario.kind === "session-switch") return buildLatencyGroups(scenario, runProfile, seed, repetitionOverride).flatMap((group) => group.cases);
+  if (scenario.kind === "session-navigation") return buildSessionNavigationGroups(scenario, runProfile, repetitionOverride).flatMap((group) => group.cases);
   if (scenario.kind === "workspace-panel") return buildWorkspacePanelGroups(scenario, runProfile, repetitionOverride).flatMap((group) => group.cases);
   if (scenario.kind === "session-switch-workspace-panel") return buildPanelSwitchGroups(scenario, runProfile, seed, repetitionOverride).flatMap((group) => group.cases);
   throw new Error(`Unsupported scenario kind ${scenario.kind}.`);
@@ -47,17 +67,75 @@ export function expandCases(scenario, runProfile, seed = "agent-app-benchmark-pu
 export function buildWorkspacePanelGroups(scenario, runProfile, repetitionOverride) {
   if (scenario.kind !== "workspace-panel") throw new Error("Workspace-panel groups require a workspace-panel scenario.");
   const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
-  return Array.from({ length: repetitions }, (_, repetition) => ({
-    groupId: `workspace-panel-${repetition}`,
-    repetition,
-    cases: scenario.cases.actions.map((action, sequence) => ({
-      caseId: `workspace-panel-${repetition}-${action}`,
+  return Array.from({ length: repetitions }, (_, repetition) => {
+    if (!scenario.cases.panelLoads) {
+      return {
+        groupId: `workspace-panel-${repetition}`,
+        repetition,
+        cases: scenario.cases.actions.map((action, sequence) => ({
+          caseId: `workspace-panel-${repetition}-${action}`,
+          repetition,
+          sequence,
+          workload: "workspace-panel-action",
+          action,
+        })),
+      };
+    }
+    const cases = rotate(scenario.cases.panelLoads, repetition % scenario.cases.panelLoads.length).flatMap(({ id: loadProfile }) =>
+      scenario.cases.actions.map((action) => ({
+        caseId: `workspace-panel-${repetition}-${loadProfile}-${action}`,
+        repetition,
+        workload: "workspace-panel-interaction",
+        loadProfile,
+        action,
+      })),
+    );
+    return {
+      groupId: `workspace-panel-${repetition}`,
       repetition,
-      sequence,
-      workload: "workspace-panel-action",
-      action,
-    })),
-  }));
+      cases: cases.map((benchmarkCase, sequence) => ({ ...benchmarkCase, sequence })),
+    };
+  });
+}
+
+export function buildSessionNavigationGroups(scenario, runProfile, repetitionOverride) {
+  if (scenario.kind !== "session-navigation") throw new Error("Session-navigation groups require a session-navigation scenario.");
+  const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
+  return Array.from({ length: repetitions }, (_, repetition) => {
+    const sample = repetition % 2;
+    const sizes = counterbalancedSizes(scenario.cases.transcriptBytes, repetition);
+    const historyCases = sizes.flatMap((transcriptBytes) => {
+      const destinationSessionId = `size-latency-${sample}-${transcriptBytes}`;
+      return scenario.cases.historyNavigationTypes.map((navigationType) => ({
+        caseId: `session-navigation-${repetition}-history-${navigationType}-${transcriptBytes}`,
+        repetition,
+        sample,
+        workload: "session-navigation",
+        trend: "history-size",
+        navigationType,
+        transcriptBytes,
+        sourceSessionId: "control",
+        destinationSessionId,
+      }));
+    });
+    const panelCases = rotate(scenario.cases.panelLoads, repetition % scenario.cases.panelLoads.length).map(({ id: loadProfile }) => {
+      const sample = PANEL_LOAD_PROFILES.indexOf(loadProfile);
+      return {
+        caseId: `session-navigation-${repetition}-panel-${loadProfile}`,
+        repetition,
+        sample,
+        workload: "session-navigation",
+        trend: "panel-load",
+        navigationType: scenario.cases.panelNavigationType,
+        loadProfile,
+        transcriptBytes: scenario.cases.standardTranscriptBytes,
+        sourceSessionId: "control",
+        destinationSessionId: `latency-within-workspace-warm-${sample}-${scenario.cases.standardTranscriptBytes}`,
+      };
+    });
+    const cases = [...historyCases, ...panelCases].map((benchmarkCase, sequence) => ({ ...benchmarkCase, sequence }));
+    return { groupId: `session-navigation-${repetition}`, repetition, cases };
+  });
 }
 
 export function buildPanelSwitchGroups(scenario, runProfile, seed = "agent-app-benchmark-public-v1", repetitionOverride) {

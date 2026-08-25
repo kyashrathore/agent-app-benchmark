@@ -162,6 +162,53 @@ test("panel timing ends at the interactive milestone without post-endpoint tail 
   assert.match(observation.reason, /interactive milestone does not match/u);
 });
 
+test("V2 panel opening permits data readiness before animation settle but paints after shell and data", () => {
+  const benchmarkCase = { caseId: "open", workload: "workspace-panel-interaction", action: "open-panel", loadProfile: "moderate" };
+  const result = panelExecution(benchmarkCase, "animated");
+  result.rendererTrace.milestones = [
+    { id: "trusted-input", at: 100 },
+    { id: "shell-visible", at: 102 },
+    { id: "data-ready", at: 106 },
+    { id: "above-fold-painted", at: 112 },
+    { id: "animation-settled", at: 118 },
+    { id: "interactive", at: 120 },
+  ];
+  assert.equal(normalizeExecution(result, benchmarkCase, { requireTimingEvidence: true, requireRendererTrace: true }).status, "valid");
+  result.rendererTrace.milestones.find((item) => item.id === "above-fold-painted").at = 101;
+  result.rendererTrace.milestones.sort((left, right) => left.at - right.at);
+  const invalid = normalizeExecution(result, benchmarkCase, { requireTimingEvidence: true, requireRendererTrace: true });
+  assert.equal(invalid.status, "invalid");
+  assert.match(invalid.reason, /panel-open milestones/u);
+});
+
+test("session navigation requires trusted input at the exact action clock start", () => {
+  const benchmarkCase = {
+    caseId: "navigation-first",
+    workload: "session-navigation",
+    trend: "history-size",
+    navigationType: "first-visit",
+  };
+  const result = panelExecution(benchmarkCase, "none");
+  delete result.rendererTrace;
+  result.timingEvidence = { trustedInputAt: result.clock.start, trustedInputEvent: "pointerdown" };
+  assert.equal(normalizeExecution(result, benchmarkCase, { requireTimingEvidence: true, requireTrustedPointerStart: true }).status, "valid");
+  result.timingEvidence.trustedInputAt = result.clock.start + 1;
+  const displaced = normalizeExecution(result, benchmarkCase, { requireTimingEvidence: true, requireTrustedPointerStart: true });
+  assert.equal(displaced.status, "invalid");
+  assert.match(displaced.reason, /pointerdown start does not match the action clock start/u);
+  assert.deepEqual(displaced.timingEvidence, result.timingEvidence);
+});
+
+test("V2 user-flow timing rejects click as the trusted start event", () => {
+  const benchmarkCase = { caseId: "close", workload: "workspace-panel-interaction", action: "close-panel", loadProfile: "light" };
+  const result = panelExecution(benchmarkCase, "none");
+  result.timingEvidence = { trustedInputAt: result.clock.start, trustedInputEvent: "click" };
+  const observation = normalizeExecution(result, benchmarkCase, { requireTimingEvidence: true, requireRendererTrace: true, requireTrustedPointerStart: true });
+  assert.equal(observation.status, "invalid");
+  assert.match(observation.reason, /must be pointerdown/u);
+  assert.equal(observation.timingEvidence.trustedInputEvent, "click");
+});
+
 function panelExecution(benchmarkCase, transitionMode) {
   return {
     caseId: benchmarkCase.caseId,

@@ -36,7 +36,7 @@ async function dispatch(method, params) {
       protocolVersion: 1,
       application: { id: process.env.BENCHMARK_MOCK_APP_ID ?? "mock-native", name: "Mock Native GUI", version: "1.0.0", buildDigestSha256: SHA },
       driver: { name: "mock-native-driver", version: "1.0.0", sourceCommit: COMMIT, digestSha256: SHA },
-      scenarios: ["app-start-v1", "session-switch-v1", "workspace-panel-v1", "session-switch-workspace-panel-v1", ...(process.env.BENCHMARK_MOCK_SCENARIO_ID ? [process.env.BENCHMARK_MOCK_SCENARIO_ID] : [])],
+      scenarios: ["app-start-v1", "session-switch-v1", "session-navigation-v1", "workspace-panel-v1", "workspace-panel-v2", "session-switch-workspace-panel-v1", ...(process.env.BENCHMARK_MOCK_SCENARIO_ID ? [process.env.BENCHMARK_MOCK_SCENARIO_ID] : [])],
       sourceEventFormats: ["opencode-event-v1", "opencode-event-v2"],
       materializationModes: ["translated"],
       guiFramework: "mock-native",
@@ -47,7 +47,7 @@ async function dispatch(method, params) {
       throw new Error("Mock driver requires corpusDefinitionDigestSha256.");
     }
     const manifest = JSON.parse(await readFile(params.corpusManifestPath, "utf8"));
-    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(params.scenarioDefinition?.kind);
+    const panelScenario = ["session-navigation", "workspace-panel", "session-switch-workspace-panel"].includes(params.scenarioDefinition?.kind);
     let workspaceFixtureDigestSha256;
     if (panelScenario) {
       if (params.scenarioDefinition.id !== params.scenarioId || params.fixtureSeed !== manifest.seed) throw new Error("Mock driver requires the exact scenario definition and corpus fixture seed.");
@@ -80,7 +80,7 @@ async function dispatch(method, params) {
     if (process.env.BENCHMARK_MOCK_MODE === "sensitive-error") throw new Error("failed at /Users/example/private/session.json token=super-secret-value");
     if (params.case.startMode) await startApplication();
     if (!application) throw new Error("Mock application is not running.");
-    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(prepared.params.scenarioDefinition?.kind);
+    const panelScenario = ["session-navigation", "workspace-panel", "session-switch-workspace-panel"].includes(prepared.params.scenarioDefinition?.kind);
     const durationMs = panelScenario ? panelDuration(params.case) : params.case.transcriptBytes ? 4 + Math.log2(params.case.transcriptBytes / 1048576 + 1) : params.case.startMode === "new-application-state" ? 40 : 25;
     const rendererTrace = panelScenario ? mockRendererTrace(params.case, 100, durationMs) : undefined;
     return {
@@ -91,6 +91,9 @@ async function dispatch(method, params) {
         process.env.BENCHMARK_MOCK_MODE !== "wrong-content",
         prepared.params.scenarioId.endsWith("-v3") || panelScenario ? 100 + durationMs : undefined,
       ),
+      ...(["session-navigation", "workspace-panel-interaction"].includes(params.case.workload)
+        ? { timingEvidence: { trustedInputAt: 100, trustedInputEvent: "pointerdown" } }
+        : {}),
       ...(rendererTrace ? { rendererTrace } : {}),
     };
   }
@@ -104,8 +107,10 @@ async function dispatch(method, params) {
 
 function panelDuration(benchmarkCase) {
   if (["toggle-open-close", "toggle-close-open"].includes(benchmarkCase.action)) return 36;
-  if (benchmarkCase.action?.startsWith("open-")) return 70;
-  if (benchmarkCase.workload === "workspace-panel-action") return 16;
+  if (["open-cold", "open-warm-data", "open-panel"].includes(benchmarkCase.action)) return 70;
+  if (["workspace-panel-action", "workspace-panel-interaction"].includes(benchmarkCase.workload)) return 16;
+  if (benchmarkCase.navigationType === "return-visited-panel-open") return benchmarkCase.loadProfile === "heavy" ? 30 : benchmarkCase.loadProfile === "moderate" ? 24 : 18;
+  if (benchmarkCase.workload === "session-navigation") return 12;
   return benchmarkCase.panelProfile === "diff" ? 30 : benchmarkCase.panelProfile === "files" ? 24 : 18;
 }
 
@@ -113,7 +118,7 @@ function mockRendererTrace(benchmarkCase, start, duration) {
   const end = start + duration;
   let transitionMode = "none";
   let milestones;
-  if (["open-cold", "open-warm-data"].includes(benchmarkCase.action)) {
+  if (["open-cold", "open-warm-data", "open-panel"].includes(benchmarkCase.action)) {
     transitionMode = "animated";
     milestones = benchmarkCase.action === "open-warm-data"
       ? [point("data-ready", start), point("trusted-input", start + 1), point("shell-visible", start + 3), point("above-fold-painted", start + 12), point("animation-settled", end - 4), point("interactive", end)]
@@ -121,7 +126,7 @@ function mockRendererTrace(benchmarkCase, start, duration) {
   } else if (["toggle-open-close", "toggle-close-open"].includes(benchmarkCase.action)) {
     transitionMode = "animated";
     milestones = [point("trusted-input", start), point("second-toggle-input", start + 10), point("final-state-presented", start + 16), point("animation-settled", end - 2), point("interactive", end)];
-  } else if (benchmarkCase.workload === "workspace-panel-action") {
+  } else if (["workspace-panel-action", "workspace-panel-interaction"].includes(benchmarkCase.workload)) {
     milestones = [point("trusted-input", start), point("action-painted", end - 2), point("interactive", end)];
   } else {
     milestones = [point("trusted-input", start), point("content-identity", start + 8), point("session-ready", start + 10), point("panel-ready", end - 4), point("above-fold-painted", end - 2), point("interactive", end)];

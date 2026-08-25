@@ -25,6 +25,7 @@ export function summary(values, attempted = values.length, options = {}) {
     valid: values.length,
     attempted,
   };
+  if (options.includeP50) result.p50 = round(percentile(values, 50));
   if (options.minimumP95Samples && values.length < options.minimumP95Samples) {
     return { ...result, p95: null, p95Status: `requires-${options.minimumP95Samples}-valid-observations` };
   }

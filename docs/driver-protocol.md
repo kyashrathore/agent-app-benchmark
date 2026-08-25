@@ -12,7 +12,7 @@ Returns immutable application/build and driver/source identities, supported scen
 
 ## `prepare`
 
-Receives the scenario digest, corpus/event-schema digests, the generated corpus directory and manifest, and a private run directory. The two workspace-panel scenarios additionally receive the exact validated `scenarioDefinition`, corpus `fixtureSeed`, and canonical workspace fixture manifest and digest. Those panel-only fields are omitted for legacy scenarios so existing strict V1 drivers keep their original prepare request shape. The driver materializes every logical session through the app's ordinary production history path and returns:
+Receives the scenario digest, corpus/event-schema digests, the generated corpus directory and manifest, and a private run directory. The workspace-backed scenarios (`workspace-panel-v1`, `workspace-panel-v2`, `session-switch-workspace-panel-v1`, and `session-navigation-v1`) additionally receive the exact validated `scenarioDefinition`, corpus `fixtureSeed`, and canonical workspace fixture manifest and digest. Those fields are omitted for non-workspace scenarios so existing strict V1 drivers keep their original prepare request shape. The driver materializes every logical session through the app's ordinary production history path and returns:
 
 - `native-opencode` or `translated` materialization mode;
 - the exact corpus and event-schema digests received;
@@ -24,7 +24,9 @@ Receives the scenario digest, corpus/event-schema digests, the generated corpus 
 
 For `opencode-event-v2`, `message.part.updated.1` can carry completed `text`, `reasoning`, `tool`, `step-start`, `step-finish`, and `patch` parts. A native OpenCode driver stores those parts unchanged through its production database path. A translated driver uses its ordinary production history model. If that model has no structured tool/reasoning representation, it serializes the byte-accounted payload into the production message representation rather than dropping it. The manifest's `transcriptBytes` is the exact sum of completed text bytes, reasoning bytes, serialized tool-input bytes, and tool-output bytes. IDs, envelopes, and patch metadata are outside that byte total but remain part of the source object-count load. Preparation must reread authoritative storage and match the manifest's total message count and transcript bytes.
 
-`workspace-panel-v1` and `session-switch-workspace-panel-v1` use generator `agent-app-workspace-v1`. The framework expands `scenarioDefinition.cases.workspaceLoad` and `fixtureSeed` into `workspaceFixtureManifest`: exact relative directories and files, exact changed-file and open-tab identities, exact hunk locations, and initial/current SHA-256 for every file. The package export `agent-app-benchmark/workspace-fixture` provides the canonical manifest builder, byte generator, verifier, and `attestWorkspaceFixture(manifest, readRevision)` helper. A driver must attest the committed initial bytes and working-tree current bytes before returning `workspaceFixtureDigestSha256`; echoing an unverified request field is not conformance. It must not replace the public recipe with app-local hard-coded fixtures.
+All four workspace-backed scenarios use generator `agent-app-workspace-v1`. The framework expands `scenarioDefinition.cases.workspaceLoad` and `fixtureSeed` into `workspaceFixtureManifest`: exact relative directories and files, exact changed-file and open-tab identities, exact hunk locations, and initial/current SHA-256 for every file. The package export `agent-app-benchmark/workspace-fixture` provides the canonical manifest builder, byte generator, verifier, and `attestWorkspaceFixture(manifest, readRevision)` helper. A driver must attest the committed initial bytes and working-tree current bytes before returning `workspaceFixtureDigestSha256`; echoing an unverified request field is not conformance. It must not replace the public recipe with app-local hard-coded fixtures.
+
+`session-navigation-v1` and `workspace-panel-v2` also receive the authoritative ordered load definitions at `scenarioDefinition.cases.panelLoads`. Each object is `{id, expandedDirectoryCount, retainedFileTabCount, expandedReviewFileCount}`. The canonical values are light `2/2/1`, moderate `8/3/6`, and heavy `16/4/24`. Review still loads all 24 canonical changed files. An execute case carries only `loadProfile`; the driver resolves it against this prepared array and seeds the exact retained UI state before starting the action clock.
 
 ## `launch`
 
@@ -41,9 +43,40 @@ The readiness receipt endpoint is exactly `correct-content-painted-and-input-rea
 
 Performs exactly one manifest-defined action and returns one raw observation. For app start, process spawn occurs inside this method because spawn is the start timestamp. For session switching, the app is already launched.
 
-The response contains the exact case ID, duration, a single-monotonic-clock interval, and the readiness receipt. The framework requires `durationMs` to equal `clock.end - clock.start` within 0.5 ms. V3 also requires a same-clock `observedAt` timestamp for every readiness check; every milestone must lie inside the interval, first-fold paint must precede or equal the second presentation, and the reported end must equal the final readiness milestone. A warm switch includes exactly one unmeasured valid activation before its measured revisit. Drivers never return average, maximum, p95, or report HTML.
+The response contains the exact case ID, duration, a single-monotonic-clock interval, and the readiness receipt. The framework requires `durationMs` to equal `clock.end - clock.start` within 0.5 ms. V3 also requires a same-clock `observedAt` timestamp for every readiness check; every milestone must lie inside the interval, first-fold paint must precede or equal the second presentation, and the reported end must equal the final readiness milestone. Every `session-navigation-v1` and `workspace-panel-v2` result additionally returns `timingEvidence: {trustedInputAt, trustedInputEvent: "pointerdown"}` from the same clock. The measured boundary is trusted `pointerdown`, never `click`, `mousedown`, or a post-handler mark. The framework requires `trustedInputAt` to equal `clock.start` within 0.5 ms; when a renderer trace is present, its `trusted-input` milestone must equal the same timestamp. A warm switch includes exactly one unmeasured valid activation before its measured revisit. Drivers never return average, maximum, p95, or report HTML.
 
-The two workspace-panel scenarios additionally return one `rendererTrace` per action. Its `clock` is the execution clock; absolute milestone, frame, and long-animation-frame timestamps remain inside that action's interval, and `interactive` is the clock endpoint rather than an earlier milestone followed by unmeasured tail frames. `transitionMode` is `animated` or `none`. A non-animated open reports `shell-visible` and `animation-settled` at the same time. The neutral toggle-pair actions are animated reversals when a transition exists and immediate double-toggles when it does not; both report the second trusted input and final opposite state without describing an inline, non-animated panel as a reversal. Settled surface, file, tab, and diff interactions are never issued during the opening transition.
+### `session-navigation-v1`
+
+Every case has `workload: "session-navigation"` and contains one of two trends:
+
+| Trend | `navigationType` | Timed user action |
+|---|---|---|
+| `history-size` | `first-visit` | Trusted click from `control` to a size-sweep destination that has not been displayed in this process. |
+| `history-size` | `return-visited-panel-closed` | After the paired destination was displayed once and the driver returned to `control` outside timing, trusted click back to it with the panel closed. |
+| `panel-load` | `return-visited-panel-open` | After visiting the destination and seeding the declared `loadProfile`, navigate to `control` outside timing while keeping the panel open, then time the trusted click back. |
+
+History cases are adjacent first/return pairs for each counterbalanced 1, 8, 32, and 128 MiB size. In a pair, the first measured case is the destination's first and only display before the return measurement. Between the two clocks, the driver may only navigate back to `control`; it must not display the destination again or perform any other destination setup. The panel trend uses the fixed standard transcript and one existing destination per light/moderate/heavy profile. The driver must not include panel opening, load seeding, navigation away, or any other setup in the clock.
+
+The first two cases use the ordinary correct-content readiness receipt. `return-visited-panel-open` additionally returns a renderer trace with `trusted-input`, `content-identity`, `session-ready`, `panel-ready`, `above-fold-painted`, and `interactive`. Session and panel observers start from the same trusted input; `interactive` is the later complete painted/input-ready endpoint, not a sequential session-then-panel observation.
+
+### `workspace-panel-v2`
+
+Each case has `workload: "workspace-panel-interaction"`, `loadProfile`, and one ordinary action. The driver seeds the exact load before timing every action:
+
+| Action | Untimed precondition | Measured input and endpoint |
+|---|---|---|
+| `open-panel` | Panel closed; target UI state and canonical data prepared for the load. | Toggle open through shell visibility, animation settle, data readiness, above-fold paint, and input readiness. |
+| `close-panel` | Panel open, loaded, and settled at the load. | Toggle close through painted, settled closed state. |
+| `files-to-review` | Files open and settled at the load. | Select Review through painted interactive Review state. |
+| `review-to-files` | Review open and settled at the load. | Select Files through painted interactive Files state. |
+| `open-file` | Files open with canonical target file not active. | Select that file through painted interactive content. |
+| `switch-file-tab` | Declared retained tabs are open and the first is active. | Select the second canonical tab through painted interactive content. |
+| `expand-all` | Review open with canonical file bodies collapsed. | Expand all through every declared expanded Review body painted and interactive. |
+| `collapse-all` | Review open with the declared bodies expanded. | Collapse all through painted interactive collapsed state. |
+
+`open-panel` milestones obey independent shell/animation and data/render paths: `trusted-input <= shell-visible`; `data-ready` is independently after input; `above-fold-painted >= max(shell-visible, data-ready)`; and `interactive >= max(animation-settled, above-fold-painted)`. Data may become ready before animation settles. Other V2 actions report `trusted-input`, `action-painted`, and `interactive`. No content interaction is sent during panel animation.
+
+Workspace-panel scenarios return one `rendererTrace` per action. Its `clock` is the execution clock; absolute milestone, frame, and long-animation-frame timestamps remain inside that action's interval, and `interactive` is the clock endpoint rather than an earlier milestone followed by unmeasured tail frames. `transitionMode` is `animated` or `none`. A non-animated open reports `shell-visible` and `animation-settled` at the same time. In legacy V1, neutral toggle-pair actions are animated reversals when a transition exists and immediate double-toggles when it does not. Settled surface, file, tab, and diff interactions are never issued during the opening transition.
 
 The trace preserves at most 600 frame timestamps and 100 long-animation frames. Each long-animation frame preserves at most 32 script attributions with function name, invoker type, sanitized package-asset identifier in `sourceURL`, duration, and forced style/layout duration. Drivers must not serialize URL schemes or local absolute paths in `sourceURL`; use a stable value such as `renderer-assets/panel.js`. Renderer task, script, style-recalculation, and layout counters are raw deltas over the exact execution interval, never cumulative across actions. `counterInterval.start` and `.end` use the trace clock and must equal `clock.start` and `.end` within 0.5 ms. The framework derives milestone intervals, frame-budget misses, transition counts, long-animation-frame counts/worst duration/worst blocking duration, renderer task/script/style/layout summaries, and reports.
 

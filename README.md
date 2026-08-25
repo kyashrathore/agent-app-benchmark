@@ -39,6 +39,27 @@ No live session stream, model call, agent run, or terminal activity occurs durin
 
 ### Workspace panel
 
+`session-navigation-v1` is the primary user-facing navigation scenario. It reports two trends and times only a session-row activation:
+
+- **History-size trend:** first visit and return to that previously visited session with the panel closed, at 1, 8, 32, and 128 MiB. The destination is displayed exactly once by the measured first visit; only navigation back to control is untimed before the paired return.
+- **Already-open-panel trend:** return to a previously visited fixed 1 MiB session with the panel left open in explicit light, moderate, and heavy seeded UI states.
+
+The already-open-panel endpoint is the later of session readiness and panel readiness. Panel setup is outside the clock. Reports use p50 and p95 as primary values and contain no cold/warm matrix.
+
+All `session-navigation-v1` and `workspace-panel-v2` action clocks begin at the trusted `pointerdown` timestamp. Drivers attest both the timestamp and event type; `click` or a later application mark is invalid.
+
+`workspace-panel-v2` independently measures ordinary user actions: open, close, Files → Review, Review → Files, open file, switch file tab, expand all, and collapse all. Every action is plotted across the same explicit panel loads:
+
+| Load | Expanded directories | Retained file tabs | Expanded Review files |
+|---|---:|---:|---:|
+| Light | 2 | 2 | 1 |
+| Moderate | 8 | 3 | 6 |
+| Heavy | 16 | 4 | 24 |
+
+Review always owns all 24 canonical changed files; the load varies retained UI state, not how much authoritative Review data is loaded. Opening records shell visibility and animation separately from data readiness, above-fold paint, and interactive readiness. Setup is untimed and there are no interrupted or double-toggle cases.
+
+The following V1 scenarios remain immutable for already-published results but are superseded for new comparisons:
+
 `workspace-panel-v1` measures one trusted action at a time against a deterministic substantial workspace: cold-surface opening, both directions of a toggle pair, warm-data/cold-surface reopening, surface navigation, opening a file, switching an already open file tab, diff view mode, and collapse/expand all. A toggle pair is an interrupted reversal for an animated panel and an immediate double-toggle for a non-animated inline panel. Opening reports shell animation separately from data-ready-to-paint and data-ready-to-interactive. All content interactions begin after loaded state has settled.
 
 `session-switch-workspace-panel-v1` repeats the four cold/warm and within/across session-switch lanes with the panel closed, with Files open, and with Diff open. Within each lane the three profiles stay adjacent and rotate through every schedule position across repetitions. Files-minus-closed and Diff-minus-closed penalties are derived from matched valid observations. Both scenarios preserve raw per-action renderer milestones, frame timestamps, long-animation-frame script attribution, exact-interval counter timestamps, and task/script/style/layout work; the framework, not the driver, derives every summary and report row. The public workspace manifest fixes every path, file revision, diff hunk, and initial open tab and is driver-attested after materialization.

@@ -52,6 +52,17 @@ export function normalizeExecution(result, benchmarkCase, options = {}) {
     if (Math.abs((result.clock.end - result.clock.start) - result.durationMs) > 0.5) {
       return invalidExecution(base, result, "Driver duration does not match its monotonic clock interval.");
     }
+    if (options.requireTrustedPointerStart) {
+      if (!result.timingEvidence || !Number.isFinite(result.timingEvidence.trustedInputAt) || typeof result.timingEvidence.trustedInputEvent !== "string") {
+        return invalidExecution(base, result, "Driver pointerdown start evidence is missing.");
+      }
+      if (result.timingEvidence.trustedInputEvent !== "pointerdown") {
+        return invalidExecution(base, result, "Driver trusted input event must be pointerdown.");
+      }
+      if (Math.abs(result.timingEvidence.trustedInputAt - result.clock.start) > 0.5) {
+        return invalidExecution(base, result, "Driver pointerdown start does not match the action clock start.");
+      }
+    }
     if (options.requireTimingEvidence) {
       for (const check of result.readiness.checks) {
         if (!Number.isFinite(check.observedAt) || check.observedAt < result.clock.start || check.observedAt > result.clock.end + 0.5) {
@@ -65,6 +76,12 @@ export function normalizeExecution(result, benchmarkCase, options = {}) {
       }
     }
     if (options.requireRendererTrace) assertRendererTrace(result.rendererTrace, result.clock, benchmarkCase);
+    if (options.requireTrustedPointerStart && result.rendererTrace) {
+      const trustedInput = result.rendererTrace.milestones.find((milestone) => milestone.id === "trusted-input")?.at;
+      if (!Number.isFinite(trustedInput) || Math.abs(trustedInput - result.timingEvidence.trustedInputAt) > 0.5) {
+        return invalidExecution(base, result, "Renderer trusted-input milestone does not match start evidence.");
+      }
+    }
   } catch (error) {
     return invalidExecution(base, result, error.message);
   }
@@ -74,6 +91,7 @@ export function normalizeExecution(result, benchmarkCase, options = {}) {
     durationMs: result.durationMs,
     readiness: result.readiness,
     clock: result.clock,
+    ...(result.timingEvidence === undefined ? {} : { timingEvidence: result.timingEvidence }),
     ...(result.rendererTrace === undefined ? {} : { rendererTrace: result.rendererTrace }),
   };
 }
@@ -86,6 +104,12 @@ function invalidExecution(base, result, reason) {
   } catch {}
   if (result.clock?.kind === "single-monotonic-clock" && typeof result.clock.clock === "string"
     && Number.isFinite(result.clock.start) && Number.isFinite(result.clock.end) && result.clock.end >= result.clock.start) invalid.clock = result.clock;
+  if (result.timingEvidence && Number.isFinite(result.timingEvidence.trustedInputAt) && result.timingEvidence.trustedInputAt >= 0) {
+    invalid.timingEvidence = {
+      trustedInputAt: result.timingEvidence.trustedInputAt,
+      ...(typeof result.timingEvidence.trustedInputEvent === "string" ? { trustedInputEvent: result.timingEvidence.trustedInputEvent } : {}),
+    };
+  }
   try {
     assertContract("rendererTrace", result.rendererTrace, "preserved renderer trace");
     invalid.rendererTrace = result.rendererTrace;
@@ -135,11 +159,19 @@ function assertRendererTrace(trace, clock, benchmarkCase) {
   if (required.some((id) => !Number.isFinite(milestones[id]))) throw new Error(`Driver renderer trace is missing required milestones: ${required.filter((id) => !Number.isFinite(milestones[id])).join(", ")}.`);
   if (Math.abs(milestones.interactive - clock.end) > 0.5) throw new Error("Driver renderer interactive milestone does not match the action endpoint.");
   if (benchmarkCase.workload === "workspace-panel-action") assertPanelMilestoneOrder(benchmarkCase.action, milestones, trace.transitionMode);
+  if (benchmarkCase.workload === "workspace-panel-interaction") assertPanelMilestoneOrder(benchmarkCase.action, milestones, trace.transitionMode);
   if (benchmarkCase.workload === "panel-session-switch" && (milestones["session-ready"] < milestones["trusted-input"]
     || milestones["panel-ready"] < milestones["trusted-input"]
     || milestones["above-fold-painted"] < milestones["content-identity"]
     || milestones.interactive < Math.max(milestones["session-ready"], milestones["panel-ready"], milestones["above-fold-painted"]))) {
     throw new Error("Driver panel-switch milestones are out of order.");
+  }
+  if (benchmarkCase.workload === "session-navigation" && benchmarkCase.navigationType === "return-visited-panel-open"
+    && (milestones["session-ready"] < milestones["trusted-input"]
+      || milestones["panel-ready"] < milestones["trusted-input"]
+      || milestones["above-fold-painted"] < milestones["content-identity"]
+      || milestones.interactive < Math.max(milestones["session-ready"], milestones["panel-ready"], milestones["above-fold-painted"]))) {
+    throw new Error("Driver open-panel navigation milestones are out of order.");
   }
   for (const entry of trace.longAnimationFrames) {
     if (!Number.isFinite(entry.start) || !Number.isFinite(entry.duration) || entry.start < clock.start || entry.start + entry.duration > clock.end + 0.5) throw new Error("Driver long-animation-frame evidence is outside the action interval.");
@@ -149,17 +181,19 @@ function assertRendererTrace(trace, clock, benchmarkCase) {
 }
 
 function requiredMilestones(benchmarkCase) {
+  if (benchmarkCase.workload === "session-navigation" && benchmarkCase.navigationType === "return-visited-panel-open") return ["trusted-input", "session-ready", "panel-ready", "content-identity", "above-fold-painted", "interactive"];
   if (benchmarkCase.workload === "panel-session-switch") return ["trusted-input", "session-ready", "panel-ready", "content-identity", "above-fold-painted", "interactive"];
-  if (["open-cold", "open-warm-data"].includes(benchmarkCase.action)) return ["trusted-input", "shell-visible", "animation-settled", "data-ready", "above-fold-painted", "interactive"];
+  if (["open-cold", "open-warm-data", "open-panel"].includes(benchmarkCase.action)) return ["trusted-input", "shell-visible", "animation-settled", "data-ready", "above-fold-painted", "interactive"];
   if (["toggle-open-close", "toggle-close-open"].includes(benchmarkCase.action)) return ["trusted-input", "second-toggle-input", "final-state-presented", "animation-settled", "interactive"];
   return ["trusted-input", "action-painted", "interactive"];
 }
 
 function assertPanelMilestoneOrder(action, milestones, transitionMode) {
-  if (["open-cold", "open-warm-data"].includes(action)) {
+  if (["open-cold", "open-warm-data", "open-panel"].includes(action)) {
     if (milestones["shell-visible"] < milestones["trusted-input"]
       || milestones["animation-settled"] < milestones["shell-visible"]
-      || milestones["above-fold-painted"] < milestones["data-ready"]
+      || (action === "open-panel" && milestones["data-ready"] < milestones["trusted-input"])
+      || milestones["above-fold-painted"] < Math.max(milestones["shell-visible"], milestones["data-ready"])
       || milestones.interactive < Math.max(milestones["animation-settled"], milestones["above-fold-painted"])) throw new Error("Driver panel-open milestones are out of order.");
     if (transitionMode === "none" && milestones["animation-settled"] !== milestones["shell-visible"]) throw new Error("A non-animated panel open must settle when its shell becomes visible.");
     return;

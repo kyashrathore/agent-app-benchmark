@@ -80,7 +80,7 @@
       "then": { "properties": { "resources": { "type": "object" }, "resourceTrace": { "$ref": "#/$defs/resourceTrace" } } }
     },
     {
-      "if": { "properties": { "scenario": { "type": "object", "properties": { "kind": { "enum": ["workspace-panel", "session-switch-workspace-panel"] } }, "required": ["kind"] } } },
+      "if": { "properties": { "scenario": { "type": "object", "properties": { "kind": { "enum": ["session-navigation", "workspace-panel", "session-switch-workspace-panel"] } }, "required": ["kind"] } } },
       "then": {
         "properties": {
           "resources": { "type": "null" },
@@ -143,7 +143,7 @@
       "required": ["id", "kind", "digestSha256", "status"],
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
-        "kind": { "enum": ["app-start", "session-switch", "workspace-panel", "session-switch-workspace-panel"] },
+        "kind": { "enum": ["app-start", "session-switch", "session-navigation", "workspace-panel", "session-switch-workspace-panel"] },
         "digestSha256": { "$ref": "#/$defs/sha256" },
         "status": { "enum": ["public-comparable", "custom/non-comparable"] }
       }
@@ -167,8 +167,11 @@
         "sample": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "startMode": { "enum": ["new-application-state", "initialized-application-state"] },
         "stateHandle": { "enum": ["P0", "P1"] },
-        "workload": { "enum": ["isolated-latency", "transcript-size-latency", "progressive-resource", "resource-control", "workspace-panel-action", "panel-session-switch"] },
-        "action": { "enum": ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"] },
+        "workload": { "enum": ["isolated-latency", "transcript-size-latency", "progressive-resource", "resource-control", "session-navigation", "workspace-panel-action", "workspace-panel-interaction", "panel-session-switch"] },
+        "action": { "enum": ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"] },
+        "trend": { "enum": ["history-size", "panel-load"] },
+        "navigationType": { "enum": ["first-visit", "return-visited-panel-closed", "return-visited-panel-open"] },
+        "loadProfile": { "enum": ["light", "moderate", "heavy"] },
         "panelProfile": { "enum": ["closed", "files", "diff"] },
         "workspaceRelation": { "enum": ["within-workspace", "across-workspaces"] },
         "sessionState": { "enum": ["cold", "warm"] },
@@ -205,6 +208,20 @@
         "start": { "$ref": "#/$defs/nonnegative" }, "end": { "$ref": "#/$defs/nonnegative" }
       }
     },
+    "timingEvidence": {
+      "type": "object", "additionalProperties": false, "required": ["trustedInputAt", "trustedInputEvent"],
+      "properties": {
+        "trustedInputAt": { "$ref": "#/$defs/nonnegative" },
+        "trustedInputEvent": { "const": "pointerdown" }
+      }
+    },
+    "diagnosticTimingEvidence": {
+      "type": "object", "additionalProperties": false, "required": ["trustedInputAt"],
+      "properties": {
+        "trustedInputAt": { "$ref": "#/$defs/nonnegative" },
+        "trustedInputEvent": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
+    },
     "observation": {
       "oneOf": [
         {
@@ -214,6 +231,7 @@
             "case": { "$ref": "#/$defs/case" }, "receivedAt": { "type": "string", "format": "date-time" },
             "status": { "const": "valid" }, "durationMs": { "$ref": "#/$defs/nonnegative" },
             "readiness": { "$ref": "#/$defs/readiness" }, "clock": { "$ref": "#/$defs/clock" },
+            "timingEvidence": { "$ref": "#/$defs/timingEvidence" },
             "rendererTrace": { "$ref": "#/$defs/rendererTrace" }
           }
         },
@@ -224,6 +242,7 @@
             "case": { "$ref": "#/$defs/case" }, "receivedAt": { "type": "string", "format": "date-time" },
             "status": { "const": "invalid" }, "reason": { "type": "string", "minLength": 1, "maxLength": 512 },
             "durationMs": { "$ref": "#/$defs/nonnegative" }, "readiness": { "$ref": "#/$defs/readiness" }, "clock": { "$ref": "#/$defs/clock" },
+            "timingEvidence": { "$ref": "#/$defs/diagnosticTimingEvidence" },
             "rendererTrace": { "$ref": "#/$defs/rendererTrace" }
           }
         }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildLatencyGroups, buildPanelSwitchGroups, buildResourceSequence, buildResourceSequences, buildWorkspacePanelGroups, expandCases, repetitionsFor, SESSION_LANES, WORKSPACE_PANEL_ACTIONS } from "../src/cases.mjs";
+import { buildLatencyGroups, buildPanelSwitchGroups, buildResourceSequence, buildResourceSequences, buildSessionNavigationGroups, buildWorkspacePanelGroups, expandCases, PANEL_LOAD_PROFILES, repetitionsFor, SESSION_LANES, WORKSPACE_PANEL_ACTIONS, WORKSPACE_PANEL_V2_ACTIONS } from "../src/cases.mjs";
 import { readRegistered } from "../src/registry.mjs";
 
 test("publication schedule emits 2 observations per lane at the fixed standard size", async () => {
@@ -69,6 +69,40 @@ test("workspace panel schedules one raw per-action observation in each process",
   assert.equal(groups.length, 1);
   assert.deepEqual(groups[0].cases.map((item) => item.action), WORKSPACE_PANEL_ACTIONS);
   assert.ok(groups[0].cases.every((item) => item.workload === "workspace-panel-action"));
+});
+
+test("session navigation emits paired first and return visits by history size plus one open-panel trend", async () => {
+  const { value: scenario } = await readRegistered("scenario", "session-navigation-v1");
+  const groups = buildSessionNavigationGroups(scenario, "smoke", 2);
+  assert.equal(groups.length, 2);
+  assert.ok(groups.every((group) => group.cases.length === scenario.cases.transcriptBytes.length * 2 + PANEL_LOAD_PROFILES.length));
+  for (const group of groups) {
+    const history = group.cases.filter((item) => item.trend === "history-size");
+    for (const transcriptBytes of scenario.cases.transcriptBytes) {
+      const pair = history.filter((item) => item.transcriptBytes === transcriptBytes);
+      assert.deepEqual(pair.map((item) => item.navigationType), ["first-visit", "return-visited-panel-closed"]);
+      assert.equal(new Set(pair.map((item) => item.destinationSessionId)).size, 1);
+    }
+    const panel = group.cases.filter((item) => item.trend === "panel-load");
+    assert.deepEqual(new Set(panel.map((item) => item.loadProfile)), new Set(PANEL_LOAD_PROFILES));
+    assert.ok(panel.every((item) => item.navigationType === "return-visited-panel-open"));
+    assert.ok(group.cases.every((item) => item.sessionState === undefined && item.workspaceRelation === undefined));
+  }
+  assert.notDeepEqual(
+    groups[0].cases.filter((item) => item.trend === "history-size").map((item) => item.transcriptBytes),
+    groups[1].cases.filter((item) => item.trend === "history-size").map((item) => item.transcriptBytes),
+  );
+});
+
+test("workspace panel V2 emits ordinary interactions across each explicit load profile", async () => {
+  const { value: scenario } = await readRegistered("scenario", "workspace-panel-v2");
+  const [group] = buildWorkspacePanelGroups(scenario, "smoke");
+  assert.equal(group.cases.length, PANEL_LOAD_PROFILES.length * WORKSPACE_PANEL_V2_ACTIONS.length);
+  for (const loadProfile of PANEL_LOAD_PROFILES) {
+    assert.deepEqual(group.cases.filter((item) => item.loadProfile === loadProfile).map((item) => item.action), WORKSPACE_PANEL_V2_ACTIONS);
+  }
+  assert.ok(group.cases.every((item) => item.workload === "workspace-panel-interaction"));
+  assert.ok(group.cases.every((item) => !item.action.includes("toggle")));
 });
 
 test("panel-open session switching uses distinct real V3 latency-pool destinations", async () => {

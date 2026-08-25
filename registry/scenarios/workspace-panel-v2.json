@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "workspace-panel-v2",
+  "title": "Workspace panel user flows",
+  "description": "Measure ordinary workspace-panel interactions independently across explicit light, moderate, and heavy seeded UI states. Opening exposes shell, animation, data, paint, and interactive milestones. No interrupted or double-toggle action is included.",
+  "kind": "workspace-panel",
+  "corpusId": "opencode-completed-sessions-v3",
+  "cases": {
+    "workspaceLoad": {
+      "generator": "agent-app-workspace-v1",
+      "directoryCount": 16,
+      "sourceFileCount": 160,
+      "sourceFileBytes": 32768,
+      "changedFileCount": 24,
+      "diffHunksPerFile": 8,
+      "diffLinesPerHunk": 24,
+      "openFileTabCount": 4
+    },
+    "panelLoads": [
+      {
+        "id": "light",
+        "expandedDirectoryCount": 2,
+        "retainedFileTabCount": 2,
+        "expandedReviewFileCount": 1
+      },
+      {
+        "id": "moderate",
+        "expandedDirectoryCount": 8,
+        "retainedFileTabCount": 3,
+        "expandedReviewFileCount": 6
+      },
+      {
+        "id": "heavy",
+        "expandedDirectoryCount": 16,
+        "retainedFileTabCount": 4,
+        "expandedReviewFileCount": 24
+      }
+    ],
+    "actions": ["open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "expand-all", "collapse-all"]
+  },
+  "metrics": [
+    {
+      "id": "panel.action_duration_ms",
+      "description": "One ordinary trusted panel interaction to its action-specific painted and interactive endpoint at the declared seeded load.",
+      "unit": "ms"
+    },
+    {
+      "id": "panel.frame_interval_ms",
+      "description": "Per-action worst and p95 frame intervals and counts above the 16.667 ms 60 Hz budget across light, moderate, and heavy panel load.",
+      "unit": "ms"
+    },
+    {
+      "id": "panel.renderer_work_ms",
+      "description": "Per-action renderer task, script, style-recalculation, and layout work with bounded long-animation-frame attribution.",
+      "unit": "ms"
+    }
+  ],
+  "runProfiles": { "smoke": 1, "quick": 5, "publication": 20 }
+}

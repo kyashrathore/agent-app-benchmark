@@ -10,6 +10,16 @@ export function summarizeObservations(scenario, observations) {
       return [startMode, summaryOrUnavailable(valid, attempted.length, "No valid observations.", honestP95)];
     }));
   }
+  if (scenario.kind === "session-navigation") return summarizeSessionNavigation(scenario, observations);
+  if (scenario.kind === "workspace-panel" && scenario.cases.panelLoads) return {
+    loadTrend: scenario.cases.panelLoads.map(({ id: loadProfile }) => ({
+      loadProfile,
+      interactions: Object.fromEntries(scenario.cases.actions.map((action) => {
+        const attempted = observations.filter((item) => item.case?.loadProfile === loadProfile && item.case?.action === action);
+        return [action, summarizeRendererGroup(attempted, { includeP50: true, minimumP95Samples: 20 })];
+      })),
+    })),
+  };
   if (scenario.kind === "workspace-panel") return Object.fromEntries(scenario.cases.actions.map((action) => {
     const attempted = observations.filter((item) => item.case?.action === action);
     return [action, summarizeRendererGroup(attempted)];
@@ -36,6 +46,30 @@ export function summarizeObservations(scenario, observations) {
   return lanes;
 }
 
+function summarizeSessionNavigation(scenario, observations) {
+  const honestP95 = { minimumP95Samples: 20 };
+  const summarizeLatency = (attempted) => summaryOrUnavailable(
+    attempted.filter(isValid).map((item) => item.durationMs),
+    attempted.length,
+    "No valid navigation observations.",
+    { ...honestP95, includeP50: true },
+  );
+  return {
+    historySizeTrend: scenario.cases.transcriptBytes.map((transcriptBytes) => ({
+      transcriptBytes,
+      firstVisit: summarizeLatency(observations.filter((item) => item.case?.trend === "history-size"
+        && item.case?.navigationType === "first-visit" && item.case?.transcriptBytes === transcriptBytes)),
+      returnVisitedPanelClosed: summarizeLatency(observations.filter((item) => item.case?.trend === "history-size"
+        && item.case?.navigationType === "return-visited-panel-closed" && item.case?.transcriptBytes === transcriptBytes)),
+    })),
+    panelLoadTrend: scenario.cases.panelLoads.map(({ id: loadProfile }) => ({
+      loadProfile,
+      returnVisitedPanelOpen: summarizeRendererGroup(observations.filter((item) => item.case?.trend === "panel-load"
+        && item.case?.navigationType === "return-visited-panel-open" && item.case?.loadProfile === loadProfile), { includeP50: true, minimumP95Samples: 20 }),
+    })),
+  };
+}
+
 function summarizePanelSwitches(observations) {
   const result = {};
   for (const panelProfile of ["closed", "files", "diff"]) {
@@ -56,7 +90,7 @@ function summarizePanelSwitches(observations) {
   return result;
 }
 
-function summarizeRendererGroup(attempted) {
+function summarizeRendererGroup(attempted, summaryOptions = {}) {
   const valid = attempted.filter((item) => item.status === "valid" && item.rendererTrace);
   const deltas = (start, end) => valid.flatMap((item) => {
     const milestones = Object.fromEntries(item.rendererTrace.milestones.map((milestone) => [milestone.id, milestone.at]));
@@ -81,7 +115,7 @@ function summarizeRendererGroup(attempted) {
     return values.length === 0 ? [] : [[id, summaryOrUnavailable(values, attempted.length, `No ${id} evidence.`)]];
   }));
   return {
-    durationMs: summaryOrUnavailable(valid.map((item) => item.durationMs), attempted.length),
+    durationMs: summaryOrUnavailable(valid.map((item) => item.durationMs), attempted.length, "No valid observations.", summaryOptions),
     transitionModes: {
       animated: valid.filter((item) => item.rendererTrace.transitionMode === "animated").length,
       none: valid.filter((item) => item.rendererTrace.transitionMode === "none").length,

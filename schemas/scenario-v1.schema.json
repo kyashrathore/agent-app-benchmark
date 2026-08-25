@@ -10,7 +10,7 @@
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
     "title": { "type": "string", "minLength": 1, "maxLength": 160 },
     "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
-    "kind": { "enum": ["app-start", "session-switch", "workspace-panel", "session-switch-workspace-panel"] },
+    "kind": { "enum": ["app-start", "session-switch", "session-navigation", "workspace-panel", "session-switch-workspace-panel"] },
     "corpusId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
     "cases": { "type": "object" },
     "metrics": {
@@ -92,19 +92,61 @@
       }
     },
     {
-      "if": { "properties": { "kind": { "const": "workspace-panel" } }, "required": ["kind"] },
+      "if": { "properties": { "kind": { "const": "session-navigation" } }, "required": ["kind"] },
       "then": {
         "properties": {
           "cases": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["workspaceLoad", "actions"],
+            "required": ["historyNavigationTypes", "panelNavigationType", "transcriptBytes", "standardTranscriptBytes", "panelLoads", "workspaceLoad"],
             "properties": {
-              "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" },
-              "actions": {
-                "const": ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"]
-              }
+              "historyNavigationTypes": { "const": ["first-visit", "return-visited-panel-closed"] },
+              "panelNavigationType": { "const": "return-visited-panel-open" },
+              "transcriptBytes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": { "type": "integer", "minimum": 1, "maximum": 268435456 }
+              },
+              "standardTranscriptBytes": { "type": "integer", "minimum": 1, "maximum": 268435456 },
+              "panelLoads": { "$ref": "#/$defs/panelLoads" },
+              "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" }
             }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "workspace-panel" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "cases": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["workspaceLoad", "actions"],
+                "properties": {
+                  "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" },
+                  "actions": {
+                    "const": ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["workspaceLoad", "panelLoads", "actions"],
+                "properties": {
+                  "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" },
+                  "panelLoads": { "$ref": "#/$defs/panelLoads" },
+                  "actions": {
+                    "const": ["open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "expand-all", "collapse-all"]
+                  }
+                }
+              }
+            ]
           }
         }
       }
@@ -130,6 +172,28 @@
     }
   ],
   "$defs": {
+    "panelLoads": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/panelLoad" },
+        { "$ref": "#/$defs/panelLoad" },
+        { "$ref": "#/$defs/panelLoad" }
+      ],
+      "items": false
+    },
+    "panelLoad": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "expandedDirectoryCount", "retainedFileTabCount", "expandedReviewFileCount"],
+      "properties": {
+        "id": { "enum": ["light", "moderate", "heavy"] },
+        "expandedDirectoryCount": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "retainedFileTabCount": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "expandedReviewFileCount": { "type": "integer", "minimum": 0, "maximum": 10000 }
+      }
+    },
     "workspaceLoad": {
       "type": "object",
       "additionalProperties": false,

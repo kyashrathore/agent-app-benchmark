@@ -15,6 +15,7 @@ export function renderReport(result) {
   ];
   if (result.scenario.kind === "app-start") renderAppStart(lines, result.derivation.summary);
   else if (result.scenario.kind === "session-switch") renderSessionSwitch(lines, result.derivation.summary, result.resources);
+  else if (result.scenario.kind === "session-navigation") renderSessionNavigation(lines, result.derivation.summary);
   else if (result.scenario.kind === "workspace-panel") renderWorkspacePanel(lines, result.derivation.summary);
   else renderPanelSessionSwitch(lines, result.derivation.summary);
   lines.push(
@@ -29,6 +30,10 @@ export function renderReport(result) {
 }
 
 function renderWorkspacePanel(lines, summary) {
+  if (summary.loadTrend) {
+    renderWorkspacePanelTrend(lines, summary);
+    return;
+  }
   lines.push(
     "## Workspace panel actions",
     "",
@@ -44,6 +49,47 @@ function renderWorkspacePanel(lines, summary) {
     "Opening measures the shell transition independently from data-ready-to-paint and data-ready-to-interactive. Only the toggle is exercised during an in-progress transition; all surface, file, tab, and diff actions begin from settled loaded state and are reported separately.",
     "",
   );
+}
+
+function renderSessionNavigation(lines, summary) {
+  lines.push(
+    "## Session navigation by history size",
+    "",
+    "| History size | First visit p50 (ms) | First visit p95 (ms) | Return to visited session p50 (ms) | Return p95 (ms) | Valid first / return |",
+    "|---:|---:|---:|---:|---:|---:|",
+  );
+  for (const point of summary.historySizeTrend) {
+    lines.push(`| ${formatBytes(point.transcriptBytes)} | ${metricValue(point.firstVisit, "p50")} | ${metricValue(point.firstVisit, "p95")} | ${metricValue(point.returnVisitedPanelClosed, "p50")} | ${metricValue(point.returnVisitedPanelClosed, "p95")} | ${validity(point.firstVisit)} / ${validity(point.returnVisitedPanelClosed)} |`);
+  }
+  lines.push(
+    "",
+    "The workspace panel is closed. Every row times only the trusted session activation. First visit means the destination has not previously been displayed in that process; return means that same destination was displayed once and revisited after returning to control.",
+    "",
+    "## Return to a visited session with the workspace panel already open",
+    "",
+    "| Seeded panel load | Duration p50 (ms) | Duration p95 (ms) | Session ready avg (ms) | Panel ready avg (ms) | Worst frame max (ms) | Script avg (ms) | Style avg (ms) | Layout avg (ms) | Valid / attempted |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+  );
+  for (const point of summary.panelLoadTrend) {
+    const metric = point.returnVisitedPanelOpen;
+    lines.push(`| ${point.loadProfile} | ${metricValue(metric.durationMs, "p50")} | ${metricValue(metric.durationMs, "p95")} | ${metricValue(metric.milestones.inputToSessionReadyMs, "average")} | ${metricValue(metric.milestones.inputToPanelReadyMs, "average")} | ${metricValue(metric.frames.worstIntervalMs, "maximum")} | ${metricValue(metric.rendererWork.scriptDurationMs, "average")} | ${metricValue(metric.rendererWork.styleRecalcDurationMs, "average")} | ${metricValue(metric.rendererWork.layoutDurationMs, "average")} | ${validity(metric.durationMs)} |`);
+  }
+  lines.push("", "The panel load is established before timing. Session and panel readiness are observed concurrently; the endpoint is the later complete painted and input-ready state.", "");
+}
+
+function renderWorkspacePanelTrend(lines, summary) {
+  lines.push(
+    "## Workspace panel interactions by seeded load",
+    "",
+    "| Load | Interaction | Duration p50 (ms) | Duration p95 (ms) | Shell avg (ms) | Data-ready to interactive avg (ms) | Worst frame max (ms) | >16.667 ms intervals avg | Script avg (ms) | Style avg (ms) | Layout avg (ms) | Valid / attempted |",
+    "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+  );
+  for (const point of summary.loadTrend) {
+    for (const [action, metric] of Object.entries(point.interactions)) {
+      lines.push(`| ${point.loadProfile} | ${panelActionLabel(action)} | ${metricValue(metric.durationMs, "p50")} | ${metricValue(metric.durationMs, "p95")} | ${metricValue(metric.milestones.inputToShellMs, "average")} | ${metricValue(metric.milestones.dataReadyToInteractiveMs, "average")} | ${metricValue(metric.frames.worstIntervalMs, "maximum")} | ${metricValue(metric.frames.overBudgetIntervalCount, "average")} | ${metricValue(metric.rendererWork.scriptDurationMs, "average")} | ${metricValue(metric.rendererWork.styleRecalcDurationMs, "average")} | ${metricValue(metric.rendererWork.layoutDurationMs, "average")} | ${validity(metric.durationMs)} |`);
+    }
+  }
+  lines.push("", "Each row is one ordinary user action. The declared panel state is seeded before timing; setup is excluded. Opening reports shell, animation, data, paint, and interactive milestones.", "");
 }
 
 function renderPanelSessionSwitch(lines, summary) {

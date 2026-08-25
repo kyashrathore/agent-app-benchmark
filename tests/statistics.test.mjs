@@ -26,3 +26,14 @@ test("p95 is explicitly unavailable below the V3 minimum sample count", () => {
     attempted: 2,
   });
 });
+
+test("p50 is opt-in for user-facing trend summaries", () => {
+  assert.deepEqual(summary([1, 2, 3, 4], 4, { includeP50: true }), {
+    average: 2.5,
+    maximum: 4,
+    p50: 2,
+    p95: 4,
+    valid: 4,
+    attempted: 4,
+  });
+});

@@ -75,7 +75,7 @@
       },
       "allOf": [
         {
-          "if": { "properties": { "scenarioId": { "enum": ["workspace-panel-v1", "session-switch-workspace-panel-v1"] } }, "required": ["scenarioId"] },
+          "if": { "properties": { "scenarioId": { "enum": ["workspace-panel-v1", "workspace-panel-v2", "session-switch-workspace-panel-v1", "session-navigation-v1"] } }, "required": ["scenarioId"] },
           "then": { "required": ["scenarioDefinition", "fixtureSeed", "workspaceFixtureManifest", "workspaceFixtureDigestSha256"] }
         }
       ]

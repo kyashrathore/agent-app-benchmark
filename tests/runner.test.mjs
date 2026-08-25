@@ -55,6 +55,11 @@ const SWITCH_SCENARIO = {
   runProfiles: { smoke: 1, quick: 1, publication: 1 },
 };
 const WORKSPACE_LOAD = { generator: "agent-app-workspace-v1", directoryCount: 16, sourceFileCount: 160, sourceFileBytes: 32768, changedFileCount: 24, diffHunksPerFile: 8, diffLinesPerHunk: 24, openFileTabCount: 4 };
+const PANEL_LOADS = [
+  { id: "light", expandedDirectoryCount: 2, retainedFileTabCount: 2, expandedReviewFileCount: 1 },
+  { id: "moderate", expandedDirectoryCount: 8, retainedFileTabCount: 3, expandedReviewFileCount: 6 },
+  { id: "heavy", expandedDirectoryCount: 16, retainedFileTabCount: 4, expandedReviewFileCount: 24 },
+];
 const PANEL_SCENARIO = {
   schemaVersion: 1,
   id: "workspace-panel-v1",
@@ -75,6 +80,39 @@ const PANEL_SWITCH_SCENARIO = {
   corpusId: CORPUS_VALUE.id,
   cases: { workspaceRelations: ["within-workspace", "across-workspaces"], sessionStates: ["cold", "warm"], panelProfiles: ["closed", "files", "diff"], transcriptBytes: 4096, workspaceLoad: WORKSPACE_LOAD },
   metrics: [{ id: "panel.switch_ms", description: "Panel switch duration.", unit: "ms" }],
+  runProfiles: { smoke: 1, quick: 1, publication: 1 },
+};
+const NAVIGATION_SCENARIO = {
+  schemaVersion: 1,
+  id: "session-navigation-v1",
+  title: "Test navigation",
+  description: "test",
+  kind: "session-navigation",
+  corpusId: CORPUS_VALUE.id,
+  cases: {
+    historyNavigationTypes: ["first-visit", "return-visited-panel-closed"],
+    panelNavigationType: "return-visited-panel-open",
+    transcriptBytes: [4096],
+    standardTranscriptBytes: 4096,
+    panelLoads: PANEL_LOADS,
+    workspaceLoad: WORKSPACE_LOAD,
+  },
+  metrics: [{ id: "navigation.duration_ms", description: "Navigation duration.", unit: "ms" }],
+  runProfiles: { smoke: 1, quick: 1, publication: 20 },
+};
+const PANEL_V2_SCENARIO = {
+  schemaVersion: 1,
+  id: "workspace-panel-v2",
+  title: "Test panel trends",
+  description: "test",
+  kind: "workspace-panel",
+  corpusId: CORPUS_VALUE.id,
+  cases: {
+    workspaceLoad: WORKSPACE_LOAD,
+    panelLoads: PANEL_LOADS,
+    actions: ["open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "expand-all", "collapse-all"],
+  },
+  metrics: [{ id: "panel.duration_ms", description: "Panel duration.", unit: "ms" }],
   runProfiles: { smoke: 1, quick: 1, publication: 1 },
 };
 
@@ -189,6 +227,42 @@ test("panel-switch runner derives closed, Files, Diff, and open-minus-closed cos
     assert.equal(result.derivation.summary["files-minus-closed-within-workspace-cold"].durationMs.average, 6);
     assert.equal(result.derivation.summary["diff-minus-closed-across-workspaces-warm"].durationMs.average, 12);
     assert.equal(result.resources, null);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("session-navigation runner derives user-facing history and panel-load trends", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-runner-navigation-"));
+  try {
+    const output = path.join(root, "result");
+    const result = await runBenchmark(baseInput(output, NAVIGATION_SCENARIO));
+    assert.equal(result.observations.length, 5);
+    assert.equal(result.derivation.summary.historySizeTrend[0].firstVisit.average, 12);
+    assert.equal(result.derivation.summary.historySizeTrend[0].returnVisitedPanelClosed.average, 12);
+    assert.deepEqual(result.derivation.summary.panelLoadTrend.map((point) => point.loadProfile), ["light", "moderate", "heavy"]);
+    assert.equal(result.derivation.summary.panelLoadTrend[2].returnVisitedPanelOpen.durationMs.average, 30);
+    assert.ok(result.observations.every((item) => item.timingEvidence?.trustedInputAt === item.clock.start && item.timingEvidence.trustedInputEvent === "pointerdown"));
+    assert.ok(result.observations.filter((item) => item.case.trend === "panel-load").every((item) => item.rendererTrace));
+    assert.match(await readFile(path.join(output, "report.md"), "utf8"), /Session navigation by history size/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("workspace-panel V2 runner derives one interaction trend per explicit load", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-runner-panel-v2-"));
+  try {
+    const output = path.join(root, "result");
+    const result = await runBenchmark(baseInput(output, PANEL_V2_SCENARIO));
+    assert.equal(result.observations.length, 24);
+    assert.ok(result.observations.every((item) => item.timingEvidence?.trustedInputAt === item.clock.start && item.timingEvidence.trustedInputEvent === "pointerdown"));
+    assert.deepEqual(result.derivation.summary.loadTrend.map((point) => point.loadProfile), ["light", "moderate", "heavy"]);
+    assert.equal(result.derivation.summary.loadTrend[0].interactions["open-panel"].milestones.inputToShellMs.average, 3);
+    assert.equal(result.derivation.summary.loadTrend[2].interactions["switch-file-tab"].durationMs.average, 16);
+    const report = await readFile(path.join(output, "report.md"), "utf8");
+    assert.match(report, /Workspace panel interactions by seeded load/);
+    assert.doesNotMatch(report, /double-toggle|mid-animation/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

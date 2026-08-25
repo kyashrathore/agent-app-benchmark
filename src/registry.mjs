@@ -114,16 +114,41 @@ function validateScenario(value) {
     if (JSON.stringify(value.cases.sessionStates) !== JSON.stringify(expectedStates)) throw new Error("Session cache states are not canonical.");
     assertAscendingIntegers(value.cases.transcriptBytes, "Scenario transcript sizes");
   }
+  if (value.kind === "session-navigation") {
+    if (JSON.stringify(value.cases.historyNavigationTypes) !== JSON.stringify(["first-visit", "return-visited-panel-closed"])) throw new Error("Session-navigation history types are not canonical.");
+    if (value.cases.panelNavigationType !== "return-visited-panel-open") throw new Error("Session-navigation panel type is not canonical.");
+    assertAscendingIntegers(value.cases.transcriptBytes, "Session-navigation transcript sizes");
+    if (!value.cases.transcriptBytes.includes(value.cases.standardTranscriptBytes)) throw new Error("Session-navigation standard transcript size must be in its size trend.");
+    validateWorkspaceLoad(value.cases.workspaceLoad);
+    validatePanelLoads(value.cases.panelLoads, value.cases.workspaceLoad);
+  }
   if (value.kind === "workspace-panel") {
-    const expectedActions = ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"];
+    const expectedActions = value.id === "workspace-panel-v2"
+      ? ["open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "expand-all", "collapse-all"]
+      : ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"];
     if (JSON.stringify(value.cases.actions) !== JSON.stringify(expectedActions)) throw new Error("Workspace-panel actions are not canonical.");
     validateWorkspaceLoad(value.cases.workspaceLoad);
+    if (value.id === "workspace-panel-v2") validatePanelLoads(value.cases.panelLoads, value.cases.workspaceLoad);
   }
   if (value.kind === "session-switch-workspace-panel") {
     if (JSON.stringify(value.cases.workspaceRelations) !== JSON.stringify(["within-workspace", "across-workspaces"])) throw new Error("Panel-switch workspace relations are not canonical.");
     if (JSON.stringify(value.cases.sessionStates) !== JSON.stringify(["cold", "warm"])) throw new Error("Panel-switch cache states are not canonical.");
     if (JSON.stringify(value.cases.panelProfiles) !== JSON.stringify(["closed", "files", "diff"])) throw new Error("Panel-switch profiles are not canonical.");
     validateWorkspaceLoad(value.cases.workspaceLoad);
+  }
+}
+
+function validatePanelLoads(loads, workspaceLoad) {
+  const expected = [
+    { id: "light", expandedDirectoryCount: 2, retainedFileTabCount: 2, expandedReviewFileCount: 1 },
+    { id: "moderate", expandedDirectoryCount: 8, retainedFileTabCount: 3, expandedReviewFileCount: 6 },
+    { id: "heavy", expandedDirectoryCount: 16, retainedFileTabCount: 4, expandedReviewFileCount: 24 },
+  ];
+  if (JSON.stringify(loads) !== JSON.stringify(expected)) throw new Error("Panel load profiles are not canonical.");
+  for (const load of loads) {
+    if (load.expandedDirectoryCount > workspaceLoad.directoryCount) throw new Error("Panel load expands more directories than the fixture contains.");
+    if (load.retainedFileTabCount > workspaceLoad.openFileTabCount) throw new Error("Panel load retains more file tabs than the fixture contains.");
+    if (load.expandedReviewFileCount > workspaceLoad.changedFileCount) throw new Error("Panel review load exceeds the fixture's changed files.");
   }
 }
 

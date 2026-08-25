@@ -2,7 +2,17 @@ import type { Readable, Writable } from "node:stream";
 
 export type DriverMethod = "hello" | "prepare" | "launch" | "execute" | "shutdown";
 export type WorkspacePanelAction = "open-cold" | "toggle-open-close" | "toggle-close-open" | "open-warm-data" | "switch-surface" | "open-file" | "switch-file-tab" | "toggle-diff-view" | "collapse-all" | "expand-all";
+export type WorkspacePanelV2Action = "open-panel" | "close-panel" | "files-to-review" | "review-to-files" | "open-file" | "switch-file-tab" | "expand-all" | "collapse-all";
 export type WorkspacePanelProfile = "closed" | "files" | "diff";
+export type PanelLoadProfile = "light" | "moderate" | "heavy";
+export type SessionNavigationType = "first-visit" | "return-visited-panel-closed" | "return-visited-panel-open";
+
+export interface PanelLoad {
+  readonly id: PanelLoadProfile;
+  readonly expandedDirectoryCount: number;
+  readonly retainedFileTabCount: number;
+  readonly expandedReviewFileCount: number;
+}
 
 export interface WorkspaceLoad {
   readonly generator: "agent-app-workspace-v1";
@@ -65,6 +75,11 @@ export interface RendererTrace {
     readonly layoutDurationMs: number;
     readonly taskDurationMs: number;
   };
+}
+
+export interface TimingEvidence {
+  readonly trustedInputAt: number;
+  readonly trustedInputEvent: "pointerdown";
 }
 
 export interface PrepareParams {

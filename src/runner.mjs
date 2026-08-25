@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { digest } from "./canonical-json.mjs";
-import { buildLatencyGroups, buildPanelSwitchGroups, buildResourceSequence, buildResourceSequences, buildWorkspacePanelGroups, expandCases, repetitionsFor } from "./cases.mjs";
+import { buildLatencyGroups, buildPanelSwitchGroups, buildResourceSequence, buildResourceSequences, buildSessionNavigationGroups, buildWorkspacePanelGroups, expandCases, repetitionsFor } from "./cases.mjs";
 import { assertContract } from "./contracts.mjs";
 import { verifyCorpus, writeCorpus } from "./corpus.mjs";
 import { DriverProcess } from "./driver-process.mjs";
@@ -46,7 +46,7 @@ export async function runBenchmark(input, dependencies = {}) {
       scenarioId: input.scenario.value.id,
       sourceEventFormatId: input.corpus.value.sourceEventFormat.id,
     });
-    const panelScenario = ["workspace-panel", "session-switch-workspace-panel"].includes(input.scenario.value.kind);
+    const panelScenario = ["session-navigation", "workspace-panel", "session-switch-workspace-panel"].includes(input.scenario.value.kind);
     const workspaceFixture = panelScenario ? buildWorkspaceFixtureManifest(input.scenario.value.cases.workspaceLoad, input.corpus.value.seed) : null;
     prepared = assertPrepared(await driver.request("prepare", {
       scenarioId: input.scenario.value.id,
@@ -89,7 +89,25 @@ export async function runBenchmark(input, dependencies = {}) {
       resources = resourceRun.resources;
       resourceTrace = resourceRun.trace;
     } else if (input.scenario.value.kind === "workspace-panel") {
-      await runInteractiveGroups({ driver, scenario: input.scenario.value, prepared, observations, groups: buildWorkspacePanelGroups(input.scenario.value, input.runProfile, repetitions) });
+      await runInteractiveGroups({
+        driver,
+        scenario: input.scenario.value,
+        prepared,
+        observations,
+        groups: buildWorkspacePanelGroups(input.scenario.value, input.runProfile, repetitions),
+        requireTrustedPointerStart: Boolean(input.scenario.value.cases.panelLoads),
+      });
+    } else if (input.scenario.value.kind === "session-navigation") {
+      await runInteractiveGroups({
+        driver,
+        scenario: input.scenario.value,
+        prepared,
+        observations,
+        groups: buildSessionNavigationGroups(input.scenario.value, input.runProfile, repetitions),
+        requireRendererTrace: (benchmarkCase) => benchmarkCase.navigationType === "return-visited-panel-open",
+        requireTimingEvidence: true,
+        requireTrustedPointerStart: true,
+      });
     } else if (input.scenario.value.kind === "session-switch-workspace-panel") {
       await runInteractiveGroups({ driver, scenario: input.scenario.value, prepared, observations, groups: buildPanelSwitchGroups(input.scenario.value, input.runProfile, input.corpus.value.seed, repetitions) });
     } else {
@@ -196,7 +214,7 @@ async function runSessionLatency({ driver, scenario, runProfile, repetitions, pr
   }
 }
 
-async function runInteractiveGroups({ driver, scenario, prepared, observations, groups }) {
+async function runInteractiveGroups({ driver, scenario, prepared, observations, groups, requireRendererTrace = () => true, requireTimingEvidence = false, requireTrustedPointerStart = false }) {
   for (const group of groups) {
     let launchAttempted = false;
     let completed = 0;
@@ -205,7 +223,11 @@ async function runInteractiveGroups({ driver, scenario, prepared, observations, 
       launchAttempted = true;
       assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: group.groupId }, 5 * 60_000), { requireProcessRoles: true });
       for (const benchmarkCase of group.cases) {
-        observations.push(await executeSafely(driver, scenario.id, benchmarkCase, { requireRendererTrace: true }));
+        observations.push(await executeSafely(driver, scenario.id, benchmarkCase, {
+          requireRendererTrace: requireRendererTrace(benchmarkCase),
+          requireTimingEvidence,
+          requireTrustedPointerStart,
+        }));
         completed += 1;
       }
     } catch (error) {
@@ -376,9 +398,9 @@ function deriveSingleResourceRun(trace, scenario, observations) {
 
 async function executeSafely(driver, scenarioId, benchmarkCase, extra = {}) {
   try {
-    const { requireRendererTrace = false, ...requestExtra } = extra;
+    const { requireRendererTrace = false, requireTimingEvidence = false, requireTrustedPointerStart = false, ...requestExtra } = extra;
     const result = await driver.request("execute", { scenarioId, case: benchmarkCase, ...requestExtra }, 5 * 60_000);
-    return normalizeExecution(result, benchmarkCase, { requireTimingEvidence: scenarioId.endsWith("-v3") || requireRendererTrace, requireRendererTrace });
+    return normalizeExecution(result, benchmarkCase, { requireTimingEvidence: scenarioId.endsWith("-v3") || requireTimingEvidence || requireRendererTrace, requireRendererTrace, requireTrustedPointerStart });
   } catch (error) {
     return invalidObservation(benchmarkCase, error);
   }
@@ -539,7 +561,7 @@ async function registeredContextFromResult(result) {
     || artifact.value.corpusDigestSha256 !== result.materialization.corpusDigestSha256) {
     throw new Error("Result corpus artifact identity is not canonical.");
   }
-  if (["workspace-panel", "session-switch-workspace-panel"].includes(scenario.value.kind)) {
+  if (["session-navigation", "workspace-panel", "session-switch-workspace-panel"].includes(scenario.value.kind)) {
     const fixture = buildWorkspaceFixtureManifest(scenario.value.cases.workspaceLoad, corpus.value.seed);
     if (result.materialization.workspaceFixtureDigestSha256 !== fixture.manifestDigestSha256) {
       throw new Error("Result workspace fixture attestation is not canonical.");
@@ -570,14 +592,20 @@ function validateObservationSchedule(scenario, runProfile, repetitions, seed, ob
   if (observations.length !== expected.length) throw new Error(`Result contains ${observations.length} observations; ${expected.length} are required.`);
   for (let index = 0; index < expected.length; index += 1) {
     if (digest(observations[index]?.case) !== digest(expected[index])) throw new Error(`Result observation ${index} does not match the required schedule.`);
-    if (["workspace-panel", "session-switch-workspace-panel"].includes(scenario.kind) && observations[index].status === "valid") {
+    if (["session-navigation", "workspace-panel", "session-switch-workspace-panel"].includes(scenario.kind) && observations[index].status === "valid") {
+      const requireRendererTrace = scenario.kind !== "session-navigation" || expected[index].navigationType === "return-visited-panel-open";
       const normalized = normalizeExecution({
         caseId: observations[index].case.caseId,
         durationMs: observations[index].durationMs,
         readiness: observations[index].readiness,
         clock: observations[index].clock,
+        timingEvidence: observations[index].timingEvidence,
         rendererTrace: observations[index].rendererTrace,
-      }, expected[index], { requireTimingEvidence: true, requireRendererTrace: true });
+      }, expected[index], {
+        requireTimingEvidence: true,
+        requireRendererTrace,
+        requireTrustedPointerStart: scenario.kind === "session-navigation" || Boolean(scenario.cases.panelLoads),
+      });
       if (normalized.status !== "valid") throw new Error(`Result observation ${index} has invalid renderer evidence: ${normalized.reason}`);
     }
   }

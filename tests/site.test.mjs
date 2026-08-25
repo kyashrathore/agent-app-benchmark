@@ -6,11 +6,12 @@ import test from "node:test";
 import { digest, digestBytes } from "../src/canonical-json.mjs";
 import { buildResourceSequence, expandCases } from "../src/cases.mjs";
 import { assertSharedComparisonRepetitions, loadComparison } from "../src/comparison.mjs";
-import { OPENCODE_EVENT_SCHEMA_DIGEST } from "../src/corpus.mjs";
+import { eventSchemaDigest, OPENCODE_EVENT_SCHEMA_DIGEST } from "../src/corpus.mjs";
 import { readRegistered } from "../src/registry.mjs";
 import { buildSite } from "../src/report/site.mjs";
 import { deriveResourcesFromTrace } from "../src/runner.mjs";
 import { summarizeObservations } from "../src/summarize.mjs";
+import { buildWorkspaceFixtureManifest } from "../src/workspace-fixture.mjs";
 
 test("static site builds comparison and stable individual app pages from raw results", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-"));
@@ -49,6 +50,28 @@ test("static site builds comparison and stable individual app pages from raw res
     await writeFile(path.join(output, "stale.html"), "stale");
     await buildSite(comparisonFile, output);
     await assert.rejects(stat(path.join(output, "stale.html")), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("comparison site renders p50/p95 navigation and workspace trends", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-site-trends-"));
+  try {
+    const comparisonFile = await writeTrendComparisonFixture(root);
+    const output = path.join(root, "site");
+    await buildSite(comparisonFile, output);
+    const index = await readFile(path.join(output, "index.html"), "utf8");
+    assert.match(index, /Session navigation/);
+    assert.match(index, /Session-navigation values/);
+    assert.match(index, /First visit and return by history size — p95/);
+    assert.match(index, /Return with workspace panel open by seeded load — p95/);
+    assert.match(index, /Workspace-panel values/);
+    for (const action of ["Open Panel", "Close Panel", "Files To Review", "Review To Files", "Open File", "Switch File Tab", "Expand All", "Collapse All"]) {
+      assert.match(index, new RegExp(`${action} by seeded load — p95`, "u"));
+    }
+    assert.match(index, /<th scope="col">p50<\/th><th scope="col">p95<\/th>/);
+    assert.doesNotMatch(index, /Cold session|Warm session/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -200,6 +223,124 @@ async function writeComparisonFixture(root) {
   const file = path.join(comparisonDirectory, "comparison.json");
   await writeFile(file, `${JSON.stringify(manifest, null, 2)}\n`);
   return file;
+}
+
+async function writeTrendComparisonFixture(root) {
+  const resultDirectory = path.join(root, "results", "runs");
+  const comparisonDirectory = path.join(root, "results", "comparisons", "fixture-trends");
+  await mkdir(resultDirectory, { recursive: true });
+  await mkdir(comparisonDirectory, { recursive: true });
+  const steps = [
+    { app: { id: "claxedo", name: "Claxedo" }, scenarioId: "session-navigation-v1" },
+    { app: { id: "t3", name: "T3" }, scenarioId: "session-navigation-v1" },
+    { app: { id: "t3", name: "T3" }, scenarioId: "workspace-panel-v2" },
+    { app: { id: "claxedo", name: "Claxedo" }, scenarioId: "workspace-panel-v2" },
+  ];
+  const schedule = { version: 1, policy: "balanced-mirrored-v1", steps: steps.map((step, index) => ({ ordinal: index + 1, appId: step.app.id, scenarioId: step.scenarioId })) };
+  const scheduleDigest = digest(schedule);
+  const entries = [];
+  for (let index = 0; index < steps.length; index += 1) {
+    const { app, scenarioId } = steps[index];
+    const result = await trendResultFixture(app, scenarioId, index + 1, scheduleDigest);
+    const name = `${app.id}-${scenarioId}.json`;
+    const bytes = Buffer.from(`${JSON.stringify(result, null, 2)}\n`);
+    await writeFile(path.join(resultDirectory, name), bytes);
+    entries.push({ appId: app.id, scenarioId, path: `../../runs/${name}`, digestSha256: digestBytes(bytes) });
+  }
+  const file = path.join(comparisonDirectory, "comparison.json");
+  await writeFile(file, `${JSON.stringify({ schemaVersion: 1, id: "fixture-trends", title: "Trend comparison", description: "User-facing trend fixture.", provenance: "maintainer-observed", results: entries }, null, 2)}\n`);
+  return file;
+}
+
+async function trendResultFixture(app, scenarioId, scheduleOrdinal, scheduleDigest) {
+  const scenario = await readRegistered("scenario", scenarioId);
+  const corpus = await readRegistered("corpus", scenario.value.corpusId);
+  const artifact = await readRegistered("corpusArtifact", corpus.value.id);
+  const observations = trendObservations(expandCases(scenario.value, "publication", corpus.value.seed));
+  const summary = summarizeObservations(scenario.value, observations);
+  const fixture = buildWorkspaceFixtureManifest(scenario.value.cases.workspaceLoad, corpus.value.seed);
+  return {
+    schemaVersion: 1,
+    runId: `${app.id}-${scenarioId}`,
+    createdAt: "2026-08-23T00:00:00.000Z",
+    provenance: { kind: "maintainer-observed", comparisonRunId: "fixture-trends", frameworkRevision: "f".repeat(40), comparisonScheduleDigestSha256: scheduleDigest, scheduleOrdinal },
+    environment: { platform: "darwin", architecture: "arm64", osRelease: "fixture", logicalCpuCount: 10, cpuModel: "fixture", totalMemoryBytes: 1, nodeVersion: "fixture", guiFramework: "electron" },
+    app: { id: app.id, name: app.name, version: "1.0.0", buildDigestSha256: "a".repeat(64) },
+    driver: { name: `${app.id}-driver`, version: "1.0.0", sourceCommit: "b".repeat(40), digestSha256: "c".repeat(64) },
+    sourceEventFormat: { id: corpus.value.sourceEventFormat.id, sourceRevision: corpus.value.sourceEventFormat.sourceRevision, schemaDigestSha256: eventSchemaDigest(corpus.value.sourceEventFormat.id) },
+    materialization: { mode: app.id === "claxedo" ? "native-opencode" : "translated", corpusDigestSha256: artifact.value.corpusDigestSha256, mappingDigestSha256: "e".repeat(64), workspaceFixtureDigestSha256: fixture.manifestDigestSha256 },
+    scenario: { id: scenarioId, kind: scenario.value.kind, digestSha256: scenario.digest, status: "public-comparable" },
+    corpus: { id: corpus.value.id, definitionDigestSha256: corpus.digest, digestSha256: artifact.value.corpusDigestSha256, status: "public-comparable" },
+    runProfile: "publication",
+    repetitions: scenario.value.runProfiles.publication,
+    observations,
+    resources: null,
+    resourceTrace: null,
+    derivation: { version: 1, summaryDigestSha256: digest(summary), summary },
+  };
+}
+
+function trendObservations(cases) {
+  return cases.map((benchmarkCase, index) => {
+    const start = 1000 + index * 100;
+    const durationMs = 20 + (index % 11);
+    const end = start + durationMs;
+    const rendererTrace = benchmarkCase.workload === "workspace-panel-interaction"
+      || benchmarkCase.navigationType === "return-visited-panel-open"
+      ? trendRendererTrace(benchmarkCase, start, end)
+      : undefined;
+    return {
+      case: benchmarkCase,
+      status: "valid",
+      durationMs,
+      readiness: {
+        endpoint: "correct-content-painted-and-input-ready",
+        checks: ["content-identity", "first-fold-painted", "two-presentations", "trusted-input"].map((id) => ({ id, passed: true, observedAt: end })),
+      },
+      clock: { kind: "single-monotonic-clock", clock: "trend-fixture", start, end },
+      timingEvidence: { trustedInputAt: start, trustedInputEvent: "pointerdown" },
+      ...(rendererTrace ? { rendererTrace } : {}),
+      receivedAt: "2026-08-23T00:00:00.000Z",
+    };
+  });
+}
+
+function trendRendererTrace(benchmarkCase, start, end) {
+  const span = end - start;
+  const at = (fraction) => start + span * fraction;
+  let milestones;
+  let transitionMode = "none";
+  if (benchmarkCase.action === "open-panel") {
+    transitionMode = "animated";
+    milestones = [
+      { id: "trusted-input", at: start },
+      { id: "shell-visible", at: at(0.1) },
+      { id: "data-ready", at: at(0.3) },
+      { id: "above-fold-painted", at: at(0.6) },
+      { id: "animation-settled", at: at(0.8) },
+      { id: "interactive", at: end },
+    ];
+  } else if (benchmarkCase.navigationType === "return-visited-panel-open") {
+    milestones = [
+      { id: "trusted-input", at: start },
+      { id: "content-identity", at: at(0.2) },
+      { id: "session-ready", at: at(0.5) },
+      { id: "panel-ready", at: at(0.7) },
+      { id: "above-fold-painted", at: at(0.8) },
+      { id: "interactive", at: end },
+    ];
+  } else {
+    milestones = [{ id: "trusted-input", at: start }, { id: "action-painted", at: at(0.8) }, { id: "interactive", at: end }];
+  }
+  return {
+    clock: "trend-fixture",
+    transitionMode,
+    milestones,
+    frameTimestampsMs: [start, end],
+    longAnimationFrames: [],
+    counterInterval: { start, end },
+    counters: { scriptDurationMs: 4, styleRecalcDurationMs: 2, layoutDurationMs: 1, taskDurationMs: 8 },
+  };
 }
 
 async function rewriteResult(comparisonFile, matches, mutate) {

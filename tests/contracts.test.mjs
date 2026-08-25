@@ -10,11 +10,13 @@ test("all public registry entries satisfy strict schemas and cross references", 
     "scenario:app-start-v1",
     "scenario:app-start-v2",
     "scenario:app-start-v3",
+    "scenario:session-navigation-v1",
     "scenario:session-switch-v1",
     "scenario:session-switch-v2",
     "scenario:session-switch-v3",
     "scenario:session-switch-workspace-panel-v1",
     "scenario:workspace-panel-v1",
+    "scenario:workspace-panel-v2",
     "corpus:opencode-completed-sessions-v2",
     "corpus:opencode-completed-sessions-v3",
     "corpus:opencode-completed-transcripts-v1",
@@ -33,6 +35,17 @@ test("registered scenario bytes are public-comparable", async () => {
   const scenario = await readRegistered("scenario", "session-switch-v1");
   assert.equal(scenario.status, "public-comparable");
   assert.equal(scenario.value.corpusId, "opencode-completed-transcripts-v1");
+});
+
+test("desktop apps advertise the same canonical workspace-panel scenarios", async () => {
+  const panelScenarios = ["workspace-panel-v1", "session-switch-workspace-panel-v1", "session-navigation-v1", "workspace-panel-v2"];
+  for (const appId of ["claxedo", "t3"]) {
+    const app = await readRegistered("app", appId);
+    assert.deepEqual(
+      app.value.scenarios.filter((scenarioId) => panelScenarios.includes(scenarioId)),
+      panelScenarios,
+    );
+  }
 });
 
 test("schema validation rejects unknown definition fields", () => {
