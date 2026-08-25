@@ -3,7 +3,7 @@ import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path";
 import { loadComparison } from "../comparison.mjs";
 import { buildSiteModel } from "./model.mjs";
-import { chart, disclosures, escapeHtml, format, metricTable, page } from "./html.mjs";
+import { chart, disclosures, escapeHtml, format, page } from "./html.mjs";
 
 const MARKER = ".agent-app-benchmark-site";
 
@@ -37,28 +37,15 @@ function renderIndex(model) {
   const switchScenarioId = model.apps.find((app) => app.sessionSwitch)?.sessionSwitch.scenario.id;
   const startStatus = model.compatibility[startScenarioId] ?? { status: "unpaired", reason: "No app-start results were supplied." };
   const switchStatus = model.compatibility[switchScenarioId] ?? { status: "unpaired", reason: "No session-switch results were supplied." };
-  const startRows = model.apps.flatMap((app) => app.appStart ? [
-    { label: `${app.name} — first launch`, metric: app.appStart.derivation.summary["new-application-state"] },
-    { label: `${app.name} — repeat launch`, metric: app.appStart.derivation.summary["initialized-application-state"] },
-  ] : []);
   const appStart = startStatus.status === "valid"
-    ? metricTable("Application start", startRows, "New-process application start results")
+    ? renderAppStartP95(model.apps.filter((app) => app.appStart))
     : comparisonUnavailable("Application start", startStatus, model.apps, "appStart");
-  const laneSections = [
-    ["Warm session switch — within the same workspace", "within-workspace-warm"],
-    ["Cold session switch — within the same workspace", "within-workspace-cold"],
-    ["Warm session switch — across workspaces", "across-workspaces-warm"],
-    ["Cold session switch — across workspaces", "across-workspaces-cold"],
-  ].map(([title, key]) => switchTable(title, model.apps.filter((app) => app.sessionSwitch), key)).join("");
-  const latencySeries = model.apps.flatMap((app) => app.sessionSwitch ? [{ label: app.name, points: app.sessionSwitch.derivation.summary.transcriptSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.average })) }] : []);
-  const cpuSeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: averageRepeatedPoints(app.sessionSwitch.resources.trend, "cpuPercent") }));
-  const memorySeries = model.apps.filter((app) => app.sessionSwitch?.resources?.status === "valid").map((app) => ({ label: app.name, points: averageRepeatedPoints(app.sessionSwitch.resources.trend, "rssMiB") }));
-  const sessionComparison = switchStatus.status === "valid"
-    ? `${laneSections}${chart("Session-switch latency growth", latencySeries, "Transcript size (MiB)", "Average latency (ms)")}${resourceStatus(model.apps)}${chart("CPU growth with session switching", cpuSeries, "Switch sequence", "CPU (%)")}${chart("Memory growth with session switching", memorySeries, "Switch sequence", "RSS (MiB)")}`
-    : comparisonUnavailable("Session switching", switchStatus, model.apps, "sessionSwitch");
+  const memory = switchStatus.status === "valid"
+    ? renderMemoryP95(model.apps.filter((app) => app.sessionSwitch))
+    : comparisonUnavailable("Memory", switchStatus, model.apps, "sessionSwitch");
   const navigationComparison = pairedScenarioSection(model, "sessionNavigation", "Session navigation", renderSessionNavigationComparison);
   const workspacePanelComparison = pairedScenarioSection(model, "workspacePanel", "Workspace panel", renderWorkspacePanelComparison);
-  const hasLegacyScenarios = model.apps.some((app) => app.appStart || app.sessionSwitch);
+  const hasSystemScenarios = model.apps.some((app) => app.appStart || app.sessionSwitch);
   const environment = model.apps[0]?.environment;
   const validScenarios = Object.values(model.compatibility).filter((item) => item.status === "valid").length;
   const totalScenarios = Object.keys(model.compatibility).length;
@@ -68,30 +55,15 @@ function renderIndex(model) {
   const statisticExplanation = model.primaryStatistic === "p50"
     ? `p50 is the primary statistic because this run has ${repetitionLabel}. p95 is withheld until 20 valid observations.`
     : "p95 is the primary statistic because each case has at least 20 scheduled repetitions.";
-  const body = `<section class="hero" id="overview"><p class="eyebrow">Controlled desktop comparison · lower is better</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="run-stamp"><span><b>${model.repetitions ?? "—"}</b> ${model.repetitions === 1 ? "repetition" : "repetitions"}</span><span><b>${escapeHtml(model.primaryStatistic)}</b> primary</span><span><b>${validScenarios}/${totalScenarios}</b> paired scenarios</span><span><b>${escapeHtml(model.runProfile ?? "—")}</b> profile</span></div></section><nav class="section-nav" aria-label="Report sections"><a href="#overview">Overview</a><a href="#session-navigation">Session navigation</a><a href="#workspace-panel">Workspace panel</a><a href="#method">Method</a></nav><section class="fairness" aria-labelledby="fairness-title"><div><p class="kicker">Fairness ledger</p><h2 id="fairness-title">Same work, same machine, mirrored order.</h2><p>${escapeHtml(statisticExplanation)}</p></div><dl><div><dt>Host</dt><dd>${escapeHtml(environment ? `${environment.cpuModel} · ${environment.logicalCpuCount} logical CPUs · ${formatMemory(environment.totalMemoryBytes)} RAM · ${environment.platform}/${environment.architecture}` : "Not supplied")}</dd></div><div><dt>Order control</dt><dd>Balanced mirrored schedule; each app runs first once across the two flows.</dd></div><div><dt>Corpus and cases</dt><dd>Compatibility validation requires identical framework revision, scenario, corpus, profile, repetition count, and host identity.</dd></div><div><dt>Materialization</dt><dd>Each app uses its registered production path. Native and translated mappings are disclosed; unsupported product contracts are not scored as zero.</dd></div></dl></section><nav class="app-grid" aria-label="Application identity and individual reports">${cards}</nav>${hasLegacyScenarios ? `<section class="legacy"><div class="flow-heading"><p class="kicker">Additional scenarios</p><h2>Process launch and legacy session switching</h2></div>${appStart}${sessionComparison}</section>` : ""}${navigationComparison}${workspacePanelComparison}<section class="method" id="method"><div class="flow-heading"><p class="kicker">Method and provenance</p><h2>What makes the comparison comparable</h2></div><div class="method-grid"><section><h3>Run identity</h3><dl class="compact-list"><div><dt>Provenance</dt><dd>${escapeHtml(model.provenance)}</dd></div><div><dt>Framework revision</dt><dd>${revisions || "—"}</dd></div><div><dt>Run profile</dt><dd>${escapeHtml(model.runProfile ?? "—")}</dd></div><div><dt>Primary statistic</dt><dd>${escapeHtml(model.primaryStatistic)}</dd></div></dl></section><section><h3>Execution order</h3><p class="schedule">${escapeHtml(scheduleOrder || "No paired schedule supplied.")}</p></section></div><div class="notice"><strong>Scope.</strong> This report measures packaged GUI flows over pinned completed-session data. It does not measure Web Vitals, model or harness speed, live streaming output, live tool execution, or terminal coding agents.</div></section>`;
+  const systemNavigation = hasSystemScenarios ? `<a href="#application-start">App start</a><a href="#memory">Memory</a>` : "";
+  const body = `<section class="hero" id="overview"><p class="eyebrow">Controlled desktop comparison · lower is better</p><h1>${escapeHtml(model.title)}</h1><p>${escapeHtml(model.description ?? "Same-machine comparison of completed-session GUI performance.")}</p><div class="run-stamp"><span><b>${model.repetitions ?? "—"}</b> ${model.repetitions === 1 ? "repetition" : "repetitions"}</span><span><b>${escapeHtml(model.primaryStatistic)}</b> primary</span><span><b>${validScenarios}/${totalScenarios}</b> paired scenarios</span><span><b>${escapeHtml(model.runProfile ?? "—")}</b> profile</span></div></section><nav class="section-nav" aria-label="Report sections"><a href="#overview">Overview</a>${systemNavigation}<a href="#session-navigation">Session navigation</a><a href="#workspace-panel">Workspace panel</a><a href="#method">Method</a></nav><section class="fairness" aria-labelledby="fairness-title"><div><p class="kicker">Fairness ledger</p><h2 id="fairness-title">Same work, same machine, mirrored order.</h2><p>${escapeHtml(statisticExplanation)}</p></div><dl><div><dt>Host</dt><dd>${escapeHtml(environment ? `${environment.cpuModel} · ${environment.logicalCpuCount} logical CPUs · ${formatMemory(environment.totalMemoryBytes)} RAM · ${environment.platform}/${environment.architecture}` : "Not supplied")}</dd></div><div><dt>Order control</dt><dd>Balanced mirrored schedule across every paired scenario.</dd></div><div><dt>Corpus and cases</dt><dd>Compatibility validation requires identical framework revision, scenario, corpus, profile, repetition count, and host identity.</dd></div><div><dt>Materialization</dt><dd>Each app uses its registered production path. Native and translated mappings are disclosed; unsupported product contracts are not scored as zero.</dd></div></dl></section><nav class="app-grid" aria-label="Application identity and individual reports">${cards}</nav>${hasSystemScenarios ? `<section class="benchmark-section system-performance"><div class="flow-heading"><p class="kicker">System envelope</p><h2>Launch and memory</h2><p>Cold and initialized process launch are measured separately. Memory is summed across each declared application process family after progressive historical-session loads.</p></div>${appStart}${memory}</section>` : ""}${navigationComparison}${workspacePanelComparison}<section class="method" id="method"><div class="flow-heading"><p class="kicker">Method and provenance</p><h2>What makes the comparison comparable</h2></div><div class="method-grid"><section><h3>Run identity</h3><dl class="compact-list"><div><dt>Provenance</dt><dd>${escapeHtml(model.provenance)}</dd></div><div><dt>Framework revision</dt><dd>${revisions || "—"}</dd></div><div><dt>Run profile</dt><dd>${escapeHtml(model.runProfile ?? "—")}</dd></div><div><dt>Primary statistic</dt><dd>${escapeHtml(model.primaryStatistic)}</dd></div></dl></section><section><h3>Execution order</h3><p class="schedule">${escapeHtml(scheduleOrder || "No paired schedule supplied.")}</p></section></div><div class="notice"><strong>Scope.</strong> This report measures packaged GUI flows over pinned completed-session data. It does not measure Web Vitals, model or harness speed, live streaming output, live tool execution, or terminal coding agents.</div></section>`;
   return page({ title: model.title, current: "index", body });
 }
 
 function renderApp(model, app) {
   const sections = [disclosures(app)];
-  if (app.appStart) {
-    sections.push(metricTable("Application start", [
-      { label: "First launch — new application state", metric: app.appStart.derivation.summary["new-application-state"] },
-      { label: "Repeat launch — initialized application state", metric: app.appStart.derivation.summary["initialized-application-state"] },
-    ]));
-  }
-  if (app.sessionSwitch) {
-    const summary = app.sessionSwitch.derivation.summary;
-    for (const [title, key] of [["Warm within workspace", "within-workspace-warm"], ["Cold within workspace", "within-workspace-cold"], ["Warm across workspaces", "across-workspaces-warm"], ["Cold across workspaces", "across-workspaces-cold"]]) {
-      sections.push(switchTable(title, [app], key));
-    }
-    sections.push(chart("Latency by transcript size", [{ label: "Within workspace — cold", points: summary.transcriptSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: point.average })) }], "Transcript size (MiB)", "Average latency (ms)"));
-    sections.push(memoryTable(app.sessionSwitch.resources));
-    if (app.sessionSwitch.resources?.status === "valid") {
-      sections.push(chart("CPU growth with session switching", [{ label: app.name, points: averageRepeatedPoints(app.sessionSwitch.resources.trend, "cpuPercent") }], "Switch sequence", "CPU (%)"));
-      sections.push(chart("Memory growth with session switching", [{ label: app.name, points: averageRepeatedPoints(app.sessionSwitch.resources.trend, "rssMiB") }], "Switch sequence", "RSS (MiB)"));
-    }
-  }
+  if (app.appStart) sections.push(renderAppStartP95([app]));
+  if (app.sessionSwitch) sections.push(renderMemoryP95([app]));
   if (app.sessionNavigation) sections.push(renderSessionNavigationComparison([app]));
   if (app.workspacePanel) sections.push(renderWorkspacePanelComparison([app]));
   const maximumMiB = app.sessionSwitch?.derivation.summary.transcriptSizeTrend.at(-1)?.transcriptBytes / 1048576;
@@ -106,6 +78,72 @@ function pairedScenarioSection(model, property, title, render) {
   const scenarioId = apps[0][property].scenario.id;
   const compatibility = model.compatibility[scenarioId] ?? { status: "unpaired", reason: `No paired ${title.toLowerCase()} results were supplied.` };
   return compatibility.status === "valid" ? render(apps, model) : comparisonUnavailable(title, compatibility, model.apps, property);
+}
+
+function renderAppStartP95(apps) {
+  const rows = [
+    navigationMatrixRow(
+      "Cold app start",
+      "new application state",
+      apps,
+      (app) => app.appStart.derivation.summary["new-application-state"],
+      "p95",
+    ),
+    navigationMatrixRow(
+      "Initialized app start",
+      "existing application state",
+      apps,
+      (app) => app.appStart.derivation.summary["initialized-application-state"],
+      "p95",
+    ),
+  ].join("");
+  return `<section class="matrix" id="application-start"><div class="matrix-heading"><h3>Application start</h3><p>Process spawn → painted, input-ready application</p></div><div class="table-scroll"><table><caption>Application-start p95 latency in milliseconds</caption><thead><tr><th scope="col">State</th><th scope="col">Starting condition</th>${comparisonHeaders(apps, "P95")}<th scope="col">Relative result</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+}
+
+function renderMemoryP95(apps) {
+  const appTrends = new Map(apps.map((app) => [app.id, resourceP95Trend(app)]));
+  const transcriptBytes = [...new Set([...appTrends.values()].flatMap((trend) => trend.map((point) => point.transcriptBytes)))].toSorted((left, right) => left - right);
+  const rows = transcriptBytes.map((bytes) => navigationMatrixRow(
+    "Post-switch process-family RSS",
+    formatBytes(bytes),
+    apps,
+    (app) => appTrends.get(app.id)?.find((point) => point.transcriptBytes === bytes)?.metric,
+    "p95",
+    "MiB",
+  )).join("");
+  const series = apps.map((app, colorIndex) => ({
+    label: app.name,
+    colorIndex,
+    points: (appTrends.get(app.id) ?? []).map((point) => ({
+      x: point.transcriptBytes / 1048576,
+      y: metricValue(point.metric, "p95"),
+    })),
+  }));
+  const invalid = apps.filter((app) => app.sessionSwitch?.resources?.status !== "valid").map((app) => `${app.name}: ${app.sessionSwitch?.resources?.reason ?? "resource monitor did not produce a valid result"}`);
+  return `<section class="matrix" id="memory"><div class="matrix-heading"><h3>Memory under historical-session load</h3><p>Summed application process family · lower is better</p></div>${invalid.length > 0 ? `<p class="status invalid">${escapeHtml(invalid.join("; "))}</p>` : ""}<div class="table-scroll"><table><caption>Post-switch process-family RSS p95 by transcript size</caption><thead><tr><th scope="col">Metric</th><th scope="col">History</th>${comparisonHeaders(apps, "P95")}<th scope="col">Relative result</th></tr></thead><tbody>${rows}</tbody></table></div>${chart("Memory p95 by historical-session size", series, "History size (MiB)", "p95 RSS (MiB)")}</section>`;
+}
+
+function resourceP95Trend(app) {
+  const resources = app.sessionSwitch?.resources;
+  if (resources?.status !== "valid") return [];
+  const grouped = Map.groupBy(resources.trend, (point) => point.transcriptBytes);
+  return [...grouped.entries()].toSorted(([left], [right]) => left - right).map(([transcriptBytes, points]) => {
+    const values = points.map((point) => point.rssMiB).filter(Number.isFinite);
+    return {
+      transcriptBytes,
+      metric: {
+        status: "valid",
+        p95: values.length >= 20 ? nearestRank(values, 0.95) : null,
+        valid: values.length,
+        attempted: points.length,
+      },
+    };
+  });
+}
+
+function nearestRank(values, quantile) {
+  const sorted = values.toSorted((left, right) => left - right);
+  return sorted[Math.max(0, Math.ceil(quantile * sorted.length) - 1)];
 }
 
 function renderSessionNavigationComparison(apps, model = {}) {
@@ -157,16 +195,16 @@ function renderWorkspacePanelComparison(apps, model = {}) {
     ? Object.keys(apps[0].workspacePanel.derivation.summary.loadTrend[0].interactions)
     : [];
   const loadTrend = apps[0]?.workspacePanel?.derivation.summary.loadTrend ?? [];
-  const matrices = loadTrend.map((point, loadIndex) => {
-    const rows = actions.map((action) => navigationMatrixRow(
+  const rows = loadTrend.flatMap((point, loadIndex) =>
+    actions.map((action) => navigationMatrixRow(
       workspaceActionLabel(action),
-      point.loadProfile,
+      workspacePresentationContext(apps, loadIndex, action, point.loadProfile),
       apps,
       (app) => app.workspacePanel.derivation.summary.loadTrend[loadIndex]?.interactions[action]?.durationMs,
       statistic,
-    )).join("");
-    return `<section class="matrix"><div class="matrix-heading"><h3>${escapeHtml(workspaceLoadLabel(point.loadProfile))} load</h3><p>${escapeHtml(point.loadProfile)} fixture</p></div><div class="table-scroll"><table><caption>Workspace actions under ${escapeHtml(point.loadProfile)} load; ${statisticLabel} latency in milliseconds</caption><thead><tr><th scope="col">Action</th><th scope="col">Load</th>${comparisonHeaders(apps, statisticLabel)}<th scope="col">Relative result</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
-  }).join("");
+    )),
+  ).join("");
+  const matrix = `<section class="matrix"><div class="matrix-heading"><h3>All workspace interactions</h3><p>One table · light → moderate → heavy</p></div><div class="table-scroll"><table><caption>Workspace actions across retained load; ${statisticLabel} latency in milliseconds</caption><thead><tr><th scope="col">Action</th><th scope="col">Load / presentation</th>${comparisonHeaders(apps, statisticLabel)}<th scope="col">Relative result</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
   const shellActions = actions.filter((action) => action === "open-panel" || action === "close-panel");
   const shellSeries = apps.flatMap((app, colorIndex) => shellActions.map((action) => ({
     label: `${app.name} — ${workspaceActionLabel(action)}`,
@@ -183,29 +221,42 @@ function renderWorkspacePanelComparison(apps, model = {}) {
     metric,
     statistic,
   )))).join("");
-  return `<section class="benchmark-section" id="workspace-panel"><div class="flow-heading"><p class="kicker">Flow 02</p><h2>Workspace panel</h2><p>The panel shell and every ordinary interaction are timed separately. Light, moderate, and heavy vary retained directory and file-tab state; all three keep the same complete 24-file Review model. Setup does not scroll Review. Expand All starts collapsed, Collapse All starts expanded, and both use the same columns as every other action.</p></div><div class="result-note"><strong>Data-warm, surface-cold.</strong> Each load profile owns a distinct canonical target whose bytes are warm but whose tab and preview have never mounted. The measured input owns first surface creation and paint.</div>${matrices}${shellSeries.length > 0 ? chart(`Panel shell open and close by retained load — ${statistic}`, shellSeries, "Load profile (1 light, 2 moderate, 3 heavy)", `${statistic} latency (ms)`) : ""}${unsupportedReasons(apps, "workspacePanel")}<details class="technical"><summary>Renderer work and frame measurements</summary><p>This audit table keeps CPU attribution available without making it the reading path for the user-facing latency result.</p><div class="table-scroll"><table><caption>Workspace-panel renderer work</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">Duration</th><th scope="col">JavaScript</th><th scope="col">Style</th><th scope="col">Layout</th><th scope="col">Worst frame</th></tr></thead><tbody>${rendererRows}</tbody></table></div></details></section>`;
+  return `<section class="benchmark-section" id="workspace-panel"><div class="flow-heading"><p class="kicker">Flow 02</p><h2>Workspace panel</h2><p>The panel shell and every ordinary interaction are timed separately. Light, moderate, and heavy vary retained directory and file-tab state; all three keep the same complete 24-file Review model. Setup does not scroll Review. Expand All and Collapse All remain ordinary workspace actions.</p></div><div class="result-note"><strong>Data-warm, surface-cold.</strong> Each load profile owns a distinct canonical target whose bytes are warm but whose tab and preview have never mounted. The measured input owns first surface creation and paint. Open and close rows disclose whether each product animated the full-screen transition.</div>${matrix}${shellSeries.length > 0 ? chart(`Panel shell open and close by retained load — ${statistic}`, shellSeries, "Load profile (1 light, 2 moderate, 3 heavy)", `${statistic} latency (ms)`) : ""}${unsupportedReasons(apps, "workspacePanel")}<details class="technical"><summary>Renderer work and frame measurements</summary><p>Every duration, renderer-work, and frame column uses ${statisticLabel} from the same observations.</p><div class="table-scroll"><table><caption>Workspace-panel renderer work</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">Duration</th><th scope="col">JavaScript</th><th scope="col">Style</th><th scope="col">Layout</th><th scope="col">Frame interval</th></tr></thead><tbody>${rendererRows}</tbody></table></div></details></section>`;
+}
+
+function workspacePresentationContext(apps, loadIndex, action, loadProfile) {
+  if (action !== "open-panel" && action !== "close-panel") return loadProfile;
+  const modes = apps.map((app) => {
+    const transitionModes = app.workspacePanel.derivation.summary.loadTrend[loadIndex]?.interactions[action]?.transitionModes;
+    const animated = transitionModes?.animated ?? 0;
+    const none = transitionModes?.none ?? 0;
+    const mode = animated === none ? "mixed" : animated > none ? "animated" : "no animation";
+    return `${app.name}: ${mode}`;
+  });
+  return `${loadProfile} · ${modes.join("; ")}`;
 }
 
 function comparisonHeaders(apps, statisticLabel) {
   return apps.map((app) => `<th scope="col"><span class="app-key app-tone-${apps.indexOf(app)}"><i aria-hidden="true"></i>${escapeHtml(app.name)}</span><small>${escapeHtml(statisticLabel)} · valid / attempted</small></th>`).join("");
 }
 
-function navigationMatrixRow(flow, context, apps, metricForApp, statistic) {
+function navigationMatrixRow(flow, context, apps, metricForApp, statistic, unit = "ms") {
   const metrics = apps.map(metricForApp);
-  return `<tr><th scope="row">${escapeHtml(flow)}</th><td class="context">${escapeHtml(context)}</td>${metrics.map((metric) => metricCell(metric, statistic)).join("")}<td class="verdict">${relativeResult(apps, metrics, statistic)}</td></tr>`;
+  return `<tr><th scope="row">${escapeHtml(flow)}</th><td class="context">${escapeHtml(context)}</td>${metrics.map((metric) => metricCell(metric, statistic, unit)).join("")}<td class="verdict">${relativeResult(apps, metrics, statistic)}</td></tr>`;
 }
 
-function metricCell(metric, statistic) {
+function metricCell(metric, statistic, unit = "ms") {
   const value = metricValue(metric, statistic);
   if (!Number.isFinite(value)) {
     const label = metric?.status === "invalid" ? "Unsupported" : statistic === "p95" ? "Withheld" : "Unavailable";
     return `<td class="metric status invalid"><strong>${label}</strong><small>${metric?.valid ?? 0} / ${metric?.attempted ?? 0}</small></td>`;
   }
-  return `<td class="metric"><strong>${format(value)} ms</strong><small>${metric.valid} / ${metric.attempted}</small></td>`;
+  return `<td class="metric"><strong>${format(value)} ${escapeHtml(unit)}</strong><small>${metric.valid} / ${metric.attempted}</small></td>`;
 }
 
 function metricValue(metric, statistic) {
   if (!metric || metric.status !== "valid") return null;
+  if (statistic === "p95" && metric.valid < 20) return null;
   return Number.isFinite(metric[statistic]) ? metric[statistic] : null;
 }
 
@@ -221,7 +272,7 @@ function relativeResult(apps, metrics, statistic) {
 }
 
 function rendererWorkRow(app, flow, metric, statistic) {
-  return `<tr><th scope="row">${escapeHtml(flow)}</th><td>${escapeHtml(app.name)}</td>${technicalMetricCell(metric?.durationMs, statistic)}${technicalMetricCell(metric?.rendererWork?.scriptDurationMs, "average")}${technicalMetricCell(metric?.rendererWork?.styleRecalcDurationMs, "average")}${technicalMetricCell(metric?.rendererWork?.layoutDurationMs, "average")}${technicalMetricCell(metric?.frames?.worstIntervalMs, "maximum")}</tr>`;
+  return `<tr><th scope="row">${escapeHtml(flow)}</th><td>${escapeHtml(app.name)}</td>${technicalMetricCell(metric?.durationMs, statistic)}${technicalMetricCell(metric?.rendererWork?.scriptDurationMs, statistic)}${technicalMetricCell(metric?.rendererWork?.styleRecalcDurationMs, statistic)}${technicalMetricCell(metric?.rendererWork?.layoutDurationMs, statistic)}${technicalMetricCell(metric?.frames?.worstIntervalMs, statistic)}</tr>`;
 }
 
 function technicalMetricCell(metric, statistic) {
@@ -242,10 +293,6 @@ function primaryStatisticFor(repetitions) {
   return Number.isInteger(repetitions) && repetitions >= 20 ? "p95" : "p50";
 }
 
-function workspaceLoadLabel(loadProfile) {
-  return ({ light: "Light", moderate: "Moderate", heavy: "Heavy" })[loadProfile] ?? workspaceActionLabel(loadProfile);
-}
-
 function formatRatio(value) {
   return value >= 10 ? value.toFixed(0) : value.toFixed(2).replace(/0+$/u, "").replace(/\.$/u, "");
 }
@@ -258,26 +305,8 @@ function formatMemory(bytes) {
   return Number.isFinite(bytes) ? `${format(bytes / 1073741824)} GiB` : "unknown";
 }
 
-function p50P95Table(title, rows) {
-  const body = rows.map((row) => `<tr><th scope="row">${escapeHtml(row.flow)}</th><td>${escapeHtml(row.app)}</td><td>${format(row.metric?.p50)} ms</td><td>${format(row.metric?.p95)} ms</td><td>${row.metric?.valid ?? 0} / ${row.metric?.attempted ?? 0}</td></tr>`).join("");
-  return `<section class="panel"><h3>${escapeHtml(title)}</h3><div class="table-scroll"><table><caption>${escapeHtml(title)}; p50 and p95 are primary</caption><thead><tr><th scope="col">Flow</th><th scope="col">Application</th><th scope="col">p50</th><th scope="col">p95</th><th scope="col">Valid / attempted</th></tr></thead><tbody>${body}</tbody></table></div></section>`;
-}
-
 function workspaceActionLabel(action) {
   return action.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
-}
-
-function switchTable(title, apps, key) {
-  const appHeaders = apps.map((app) => `<th scope="colgroup" colspan="4">${escapeHtml(app.name)}</th>`).join("");
-  const metricHeaders = apps.map(() => "<th scope=\"col\">Average</th><th scope=\"col\">Maximum</th><th scope=\"col\">p95</th><th scope=\"col\">Valid / attempted</th>").join("");
-  const size = apps[0]?.sessionSwitch.derivation.summary[key].transcriptBytes;
-  const row = `<tr><th scope="row">${formatBytes(size)}</th>${apps.map((app) => switchMetricCells(app.sessionSwitch.derivation.summary[key])).join("")}</tr>`;
-  return `<section class="panel"><h3>${escapeHtml(title)}</h3><div class="table-scroll"><table><caption>${escapeHtml(title)} at the fixed standard transcript</caption><thead><tr><th scope="col" rowspan="2">Transcript size</th>${appHeaders}</tr><tr>${metricHeaders}</tr></thead><tbody>${row}</tbody></table></div></section>`;
-}
-
-function switchMetricCells(metric) {
-  if (!metric || metric.status !== "valid") return `<td colspan="3" class="status invalid">${escapeHtml(metric?.reason ?? "Unavailable")}</td><td>${metric?.valid ?? 0} / ${metric?.attempted ?? 0}</td>`;
-  return `<td>${format(metric.average)} ms</td><td>${format(metric.maximum)} ms</td><td>${format(metric.p95)} ms</td><td>${metric.valid} / ${metric.attempted}</td>`;
 }
 
 function comparisonUnavailable(title, compatibility, apps, property) {
@@ -285,38 +314,8 @@ function comparisonUnavailable(title, compatibility, apps, property) {
   return `<section class="panel"><h2>${escapeHtml(title)}</h2><p class="status invalid"><strong>${escapeHtml(compatibility.status)}:</strong> ${escapeHtml(compatibility.reason)}</p><div class="table-scroll"><table><caption>Individual result availability</caption><thead><tr><th scope="col">Application</th><th scope="col">Status</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
 }
 
-function resourceStatus(apps) {
-  const rows = apps.map((app) => {
-    const resources = app.sessionSwitch?.resources;
-    const status = resources?.status === "valid" ? "Valid" : `Invalid: ${resources?.reason ?? "not measured"}`;
-    return `<tr><th scope="row">${escapeHtml(app.name)}</th><td class="${resources?.status === "valid" ? "" : "status invalid"}">${escapeHtml(status)}</td></tr>`;
-  }).join("");
-  return `<section class="panel"><h3>CPU and memory measurement status</h3><div class="table-scroll"><table><caption>Resource result availability for every application</caption><thead><tr><th scope="col">Application</th><th scope="col">Status</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
-}
-
 function formatBytes(bytes) {
   return Number.isFinite(bytes) && bytes % 1048576 === 0 ? `${bytes / 1048576} MiB (${bytes} bytes)` : `${bytes} bytes`;
-}
-
-function memoryTable(resources) {
-  if (!resources || resources.status !== "valid") return `<section class="panel"><h3>Memory consumption</h3><p class="status invalid">${escapeHtml(resources?.reason ?? "Unavailable")}</p></section>`;
-  const rows = [
-    ["Baseline idle average", resources.baselineIdleAverageRssMiB, "Configured idle window on the ready 1 MiB control transcript before switching"],
-    ["Active average", resources.activeAverageRssMiB, "Average during the progressive session-switch workload"],
-    ["Active sampled maximum", resources.activeMaximumRssMiB, "Largest observed active process-family RSS sample; not an operating-system true peak"],
-    ["Active p95", resources.activeP95RssMiB, "Nearest-rank p95 of active samples"],
-    ["Ending idle average", resources.endingIdleAverageRssMiB, "Configured idle window after returning to the same control transcript"],
-    ["Retained RSS growth", resources.retainedRssGrowthMiB, "Ending idle average minus baseline idle average"],
-  ];
-  return `<section class="panel"><h3>Memory consumption</h3><div class="table-scroll"><table><caption>Whole-application memory result</caption><thead><tr><th scope="col">Metric</th><th scope="col">Summed RSS</th><th scope="col">Definition</th></tr></thead><tbody>${rows.map(([label, value, description]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${format(value)} MiB</td><td>${escapeHtml(description)}</td></tr>`).join("")}</tbody></table></div></section>`;
-}
-
-function averageRepeatedPoints(points, valueKey) {
-  const grouped = Map.groupBy(points, (point) => point.switchSequence);
-  return [...grouped].toSorted(([left], [right]) => left - right).map(([x, values]) => ({
-    x,
-    y: values.reduce((total, point) => total + point[valueKey], 0) / values.length,
-  }));
 }
 
 async function replaceGeneratedDirectory(output, temporary) {

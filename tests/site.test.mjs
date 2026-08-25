@@ -22,23 +22,17 @@ test("static site builds comparison and stable individual app pages from raw res
     assert.deepEqual(built.model.apps.map((app) => app.id), ["claxedo", "t3"]);
     for (const file of ["index.html", "assets/site.css", "apps/t3/index.html", "apps/claxedo/index.html"]) await stat(path.join(output, file));
     const index = await readFile(path.join(output, "index.html"), "utf8");
-    assert.match(index, /Warm session switch — within the same workspace/);
-    assert.match(index, /CPU growth with session switching/);
-    assert.match(index, /class="series series-0"/);
-    assert.match(index, /class="swatch series-0"/);
+    assert.match(index, /Application start/);
+    assert.match(index, /Cold app start/);
+    assert.match(index, /Memory under historical-session load/);
+    assert.match(index, /Memory p95 by historical-session size/);
     assert.doesNotMatch(index, /style="--series:/);
     const stylesheet = await readFile(path.join(output, "assets", "site.css"), "utf8");
     assert.match(stylesheet, /\.series-0 polyline,.series-0 circle\{stroke:var\(--clax\)\}/);
     assert.match(stylesheet, /\.swatch\.series-1\{background:var\(--t3\)\}/);
-    const switchTables = [...index.matchAll(/<section class="panel"><h3>(?:Warm|Cold) session switch[^<]*<\/h3>[\s\S]*?<\/section>/g)];
-    assert.equal(switchTables.length, 4);
-    for (const [table] of switchTables) {
-      assert.match(table, /Average/);
-      assert.match(table, /Maximum/);
-      assert.match(table, /p95/);
-      assert.match(table, /Valid \/ attempted/);
-      assert.equal((table.match(/<tbody>[\s\S]*<\/tbody>/)?.[0].match(/<tr>/g) ?? []).length, 1);
-    }
+    assert.doesNotMatch(index, />Average</);
+    assert.doesNotMatch(index, />Maximum</);
+    assert.match(index, /P95 · valid \/ attempted/);
     assert.match(index, /No Web Vitals/);
     assert.match(index, /1\.0\.0 · electron · native-opencode/);
     assert.match(index, /1\.0\.0 · electron · translated/);
@@ -68,9 +62,9 @@ test("comparison site renders compact navigation and workspace trend matrices", 
     assert.match(index, /History-size trend/);
     assert.match(index, /First visit and return by history size — p95/);
     assert.match(index, /Return with workspace panel open by seeded load — p95/);
-    assert.match(index, /Light load/);
-    assert.match(index, /Moderate load/);
-    assert.match(index, /Heavy load/);
+    assert.match(index, /All workspace interactions/);
+    assert.match(index, /One table · light → moderate → heavy/);
+    assert.equal((index.match(/<caption>Workspace actions across retained load/g) ?? []).length, 1);
     assert.match(index, /same complete 24-file Review model/u);
     assert.match(index, /Setup does not scroll Review/u);
     assert.match(index, /Each load profile owns a distinct canonical target/u);
@@ -196,7 +190,7 @@ test("incompatible scenarios and invalid resource measurements are explicit", as
     const resourcePage = await readFile(path.join(resourceOutput, "index.html"), "utf8");
     assert.match(resourcePage, /T3 monitor rejected malformed data/);
     assert.match(resourcePage, /Claxedo/);
-    assert.match(resourcePage, /CPU growth with session switching/);
+    assert.match(resourcePage, /Memory under historical-session load/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
