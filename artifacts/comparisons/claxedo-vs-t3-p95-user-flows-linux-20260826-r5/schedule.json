@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "policy": "balanced-mirrored-v1",
+  "steps": [
+    {
+      "ordinal": 1,
+      "appId": "t3",
+      "scenarioId": "app-start-v3"
+    },
+    {
+      "ordinal": 2,
+      "appId": "claxedo",
+      "scenarioId": "app-start-v3"
+    },
+    {
+      "ordinal": 3,
+      "appId": "claxedo",
+      "scenarioId": "session-switch-v3"
+    },
+    {
+      "ordinal": 4,
+      "appId": "t3",
+      "scenarioId": "session-switch-v3"
+    },
+    {
+      "ordinal": 5,
+      "appId": "t3",
+      "scenarioId": "session-navigation-v1"
+    },
+    {
+      "ordinal": 6,
+      "appId": "claxedo",
+      "scenarioId": "session-navigation-v1"
+    },
+    {
+      "ordinal": 7,
+      "appId": "claxedo",
+      "scenarioId": "workspace-panel-v2"
+    },
+    {
+      "ordinal": 8,
+      "appId": "t3",
+      "scenarioId": "workspace-panel-v2"
+    }
+  ],
+  "digestSha256": "c69d5df6f12847b7b09adc8594cebddfa617ab76409383befb7464b44f5618ec"
+}

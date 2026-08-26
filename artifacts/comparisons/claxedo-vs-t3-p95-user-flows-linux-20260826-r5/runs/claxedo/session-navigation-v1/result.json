@@ -1,0 +1,4345 @@
+{
+  "schemaVersion": 1,
+  "runId": "claxedo-vs-t3-p95-user-flows-linux-20260826-r5-6-claxedo-session-navigation-v1",
+  "createdAt": "2026-08-26T08:03:11.850Z",
+  "provenance": {
+    "kind": "community-self-attested",
+    "comparisonRunId": "claxedo-vs-t3-p95-user-flows-linux-20260826-r5",
+    "frameworkRevision": "da526a76889026e1e6a6f2544fc1c8635c2304c2",
+    "comparisonScheduleDigestSha256": "c69d5df6f12847b7b09adc8594cebddfa617ab76409383befb7464b44f5618ec",
+    "scheduleOrdinal": 6
+  },
+  "environment": {
+    "platform": "linux",
+    "architecture": "x64",
+    "osRelease": "6.18.44-fc-v21",
+    "logicalCpuCount": 4,
+    "cpuModel": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "totalMemoryBytes": 16856150016,
+    "freeMemoryBytes": 15375634432,
+    "loadAverage1mPerCpu": 0.805,
+    "powerSource": "unknown",
+    "lowPowerMode": null,
+    "memoryPressureLevel": null,
+    "nodeVersion": "v22.22.2"
+  },
+  "app": {
+    "id": "claxedo",
+    "name": "Claxedo",
+    "version": "0.0.1",
+    "buildDigestSha256": "84e1078c8f38659f3785fec90b68ff47dcb7b5ed94e97e4e4cc6dd3290758991"
+  },
+  "driver": {
+    "name": "claxedo-reference",
+    "version": "1",
+    "sourceCommit": "c8351fa56ee830e528a132bc6d658af347213590",
+    "digestSha256": "822041a86419c23e67fca30e2df38b6ef4107b9eb70bf7a9618610eb5a08f063"
+  },
+  "sourceEventFormat": {
+    "id": "opencode-event-v2",
+    "sourceRevision": "a9f7081d4015b0cc22ed67156e042b482a8d064a",
+    "schemaDigestSha256": "f6e789de10d8b54fbe8b640ff885843cbc564ac1eb262611083a050de0435cac"
+  },
+  "materialization": {
+    "mode": "native-opencode",
+    "corpusDigestSha256": "8807d1dd81afb33fc6b22b457c4353298d21697421b509f77cc28e7f353c9dfc",
+    "mappingDigestSha256": "41f8087d59cea41172d8c5347ef36157a18139f637ff2556cd1f0bf5c536d66f",
+    "workspaceFixtureDigestSha256": "468261e78927884ad7b73f49c207e6d739f42c37844ebfe3aaccfdb8c1852cc6"
+  },
+  "scenario": {
+    "id": "session-navigation-v1",
+    "kind": "session-navigation",
+    "digestSha256": "ea698c53da6488acfad3248885fc173faad0b565843f5a758df2e57b3cd96fea",
+    "status": "public-comparable"
+  },
+  "corpus": {
+    "id": "opencode-completed-sessions-v3",
+    "definitionDigestSha256": "07b2ff89f29ed78b6a585b9814375dcc4272d9734755a160eef1b00727027d33",
+    "digestSha256": "8807d1dd81afb33fc6b22b457c4353298d21697421b509f77cc28e7f353c9dfc",
+    "status": "public-comparable"
+  },
+  "runProfile": "publication",
+  "repetitions": 5,
+  "observations": [
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-first-visit-1048576",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 0
+      },
+      "receivedAt": "2026-08-26T08:01:34.939Z",
+      "status": "valid",
+      "durationMs": 85.80000000148993,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 7539.7
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 7539.7
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 7539.7
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 7539.7
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 7453.89999999851,
+        "end": 7539.7
+      },
+      "timingEvidence": {
+        "trustedInputAt": 7453.89999999851,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-return-visited-panel-closed-1048576",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 1
+      },
+      "receivedAt": "2026-08-26T08:01:35.502Z",
+      "status": "valid",
+      "durationMs": 57.5,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8106.5
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8106.5
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8106.5
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8106.5
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8049,
+        "end": 8106.5
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8049,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-first-visit-8388608",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 2
+      },
+      "receivedAt": "2026-08-26T08:01:35.900Z",
+      "status": "valid",
+      "durationMs": 86.30000000223481,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8506.4
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8506.4
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8506.4
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8506.4
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8420.099999997765,
+        "end": 8506.4
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8420.099999997765,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-return-visited-panel-closed-8388608",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 3
+      },
+      "receivedAt": "2026-08-26T08:01:36.533Z",
+      "status": "valid",
+      "durationMs": 71.00000000074579,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9139.7
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9139.7
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9139.7
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9139.7
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9068.699999999255,
+        "end": 9139.7
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9068.699999999255,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-first-visit-33554432",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 4
+      },
+      "receivedAt": "2026-08-26T08:01:36.925Z",
+      "status": "valid",
+      "durationMs": 72.00000000223554,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9523.1
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9523.1
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9523.1
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9523.1
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9451.099999997765,
+        "end": 9523.1
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9451.099999997765,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-return-visited-panel-closed-33554432",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 5
+      },
+      "receivedAt": "2026-08-26T08:01:37.567Z",
+      "status": "valid",
+      "durationMs": 76.40000000223517,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 10173
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 10173
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 10173
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 10173
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10096.599999997765,
+        "end": 10173
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10096.599999997765,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-first-visit-134217728",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 6
+      },
+      "receivedAt": "2026-08-26T08:01:37.950Z",
+      "status": "valid",
+      "durationMs": 84.99999999925421,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 10556.3
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 10556.3
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 10556.3
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 10556.3
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10471.300000000745,
+        "end": 10556.3
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10471.300000000745,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-return-visited-panel-closed-134217728",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 7
+      },
+      "receivedAt": "2026-08-26T08:01:38.522Z",
+      "status": "valid",
+      "durationMs": 54.600000001490116,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 11123
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 11123
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 11123
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 11123
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 11068.39999999851,
+        "end": 11123
+      },
+      "timingEvidence": {
+        "trustedInputAt": 11068.39999999851,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-panel-light",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 8
+      },
+      "receivedAt": "2026-08-26T08:01:41.005Z",
+      "status": "valid",
+      "durationMs": 70.79999999999927,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 13556.3
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 13556.3
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 13556.3
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 13556.3
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 13485.5,
+        "end": 13556.3
+      },
+      "timingEvidence": {
+        "trustedInputAt": 13485.5,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 13485.5
+          },
+          {
+            "id": "session-ready",
+            "at": 13556.3
+          },
+          {
+            "id": "panel-ready",
+            "at": 13556.3
+          },
+          {
+            "id": "content-identity",
+            "at": 13556.3
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 13556.3
+          },
+          {
+            "id": "interactive",
+            "at": 13556.3
+          },
+          {
+            "id": "complete",
+            "at": 13556.3
+          }
+        ],
+        "frameTimestampsMs": [
+          13489.5,
+          13522.8,
+          13539.6,
+          13556.3
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 13485.5,
+          "end": 13556.3
+        },
+        "counters": {
+          "scriptDurationMs": 37.571,
+          "styleRecalcDurationMs": 1.914,
+          "layoutDurationMs": 2.635,
+          "taskDurationMs": 52.876
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-panel-moderate",
+        "repetition": 0,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 9
+      },
+      "receivedAt": "2026-08-26T08:01:43.075Z",
+      "status": "valid",
+      "durationMs": 66.69999999925494,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 15639.5
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 15639.5
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 15639.5
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 15639.5
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 15572.800000000745,
+        "end": 15639.5
+      },
+      "timingEvidence": {
+        "trustedInputAt": 15572.800000000745,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 15572.800000000745
+          },
+          {
+            "id": "session-ready",
+            "at": 15639.5
+          },
+          {
+            "id": "panel-ready",
+            "at": 15639.5
+          },
+          {
+            "id": "content-identity",
+            "at": 15639.5
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 15639.5
+          },
+          {
+            "id": "interactive",
+            "at": 15639.5
+          },
+          {
+            "id": "complete",
+            "at": 15639.5
+          }
+        ],
+        "frameTimestampsMs": [
+          15572.866,
+          15589.5,
+          15606.1,
+          15622.8,
+          15639.5
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 15572.800000000745,
+          "end": 15639.5
+        },
+        "counters": {
+          "scriptDurationMs": 28.937,
+          "styleRecalcDurationMs": 1.511,
+          "layoutDurationMs": 2.528,
+          "taskDurationMs": 50.229
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-panel-heavy",
+        "repetition": 0,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 10
+      },
+      "receivedAt": "2026-08-26T08:01:46.259Z",
+      "status": "valid",
+      "durationMs": 68.89999999925567,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 18822.7
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 18822.7
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 18822.7
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 18822.7
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 18753.800000000745,
+        "end": 18822.7
+      },
+      "timingEvidence": {
+        "trustedInputAt": 18753.800000000745,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 18753.800000000745
+          },
+          {
+            "id": "session-ready",
+            "at": 18822.7
+          },
+          {
+            "id": "panel-ready",
+            "at": 18822.7
+          },
+          {
+            "id": "content-identity",
+            "at": 18822.7
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 18822.7
+          },
+          {
+            "id": "interactive",
+            "at": 18822.7
+          },
+          {
+            "id": "complete",
+            "at": 18822.7
+          }
+        ],
+        "frameTimestampsMs": [
+          18772.632,
+          18789.4,
+          18806,
+          18822.7
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 18753.800000000745,
+          "end": 18822.7
+        },
+        "counters": {
+          "scriptDurationMs": 31.541,
+          "styleRecalcDurationMs": 1.398,
+          "layoutDurationMs": 2.185,
+          "taskDurationMs": 54.702
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-first-visit-1048576",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-1048576",
+        "sequence": 0
+      },
+      "receivedAt": "2026-08-26T08:01:54.699Z",
+      "status": "valid",
+      "durationMs": 88.29999999701977,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 7747
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 7747
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 7747
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 7747
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 7658.70000000298,
+        "end": 7747
+      },
+      "timingEvidence": {
+        "trustedInputAt": 7658.70000000298,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-return-visited-panel-closed-1048576",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-1048576",
+        "sequence": 1
+      },
+      "receivedAt": "2026-08-26T08:01:55.333Z",
+      "status": "valid",
+      "durationMs": 72.3999999977641,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8380.3
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8380.3
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8380.3
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8380.3
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8307.900000002235,
+        "end": 8380.3
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8307.900000002235,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-first-visit-134217728",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-134217728",
+        "sequence": 2
+      },
+      "receivedAt": "2026-08-26T08:01:55.769Z",
+      "status": "valid",
+      "durationMs": 92.49999999851025,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8813.6
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8813.6
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8813.6
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8813.6
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8721.10000000149,
+        "end": 8813.6
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8721.10000000149,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-return-visited-panel-closed-134217728",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-134217728",
+        "sequence": 3
+      },
+      "receivedAt": "2026-08-26T08:01:56.433Z",
+      "status": "valid",
+      "durationMs": 61.699999998509156,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9480.3
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9480.3
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9480.3
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9480.3
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9418.60000000149,
+        "end": 9480.3
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9418.60000000149,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-first-visit-33554432",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-33554432",
+        "sequence": 4
+      },
+      "receivedAt": "2026-08-26T08:01:56.902Z",
+      "status": "valid",
+      "durationMs": 76.09999999925458,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9946.9
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9946.9
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9946.9
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9946.9
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9870.800000000745,
+        "end": 9946.9
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9870.800000000745,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-return-visited-panel-closed-33554432",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-33554432",
+        "sequence": 5
+      },
+      "receivedAt": "2026-08-26T08:01:57.566Z",
+      "status": "valid",
+      "durationMs": 60.69999999776519,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 10613.6
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 10613.6
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 10613.6
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 10613.6
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10552.900000002235,
+        "end": 10613.6
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10552.900000002235,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-first-visit-8388608",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-8388608",
+        "sequence": 6
+      },
+      "receivedAt": "2026-08-26T08:01:58.043Z",
+      "status": "valid",
+      "durationMs": 77.29999999776555,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 11080.2
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 11080.2
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 11080.2
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 11080.2
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 11002.900000002235,
+        "end": 11080.2
+      },
+      "timingEvidence": {
+        "trustedInputAt": 11002.900000002235,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-return-visited-panel-closed-8388608",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-8388608",
+        "sequence": 7
+      },
+      "receivedAt": "2026-08-26T08:01:58.750Z",
+      "status": "valid",
+      "durationMs": 59.59999999701904,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 11796.8
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 11796.8
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 11796.8
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 11796.8
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 11737.20000000298,
+        "end": 11796.8
+      },
+      "timingEvidence": {
+        "trustedInputAt": 11737.20000000298,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-panel-moderate",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 8
+      },
+      "receivedAt": "2026-08-26T08:02:02.019Z",
+      "status": "valid",
+      "durationMs": 67.59999999925458,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 15013.4
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 15013.4
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 15013.4
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 15013.4
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 14945.800000000745,
+        "end": 15013.4
+      },
+      "timingEvidence": {
+        "trustedInputAt": 14945.800000000745,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 14945.800000000745
+          },
+          {
+            "id": "session-ready",
+            "at": 15013.4
+          },
+          {
+            "id": "panel-ready",
+            "at": 15013.4
+          },
+          {
+            "id": "content-identity",
+            "at": 15013.4
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 15013.4
+          },
+          {
+            "id": "interactive",
+            "at": 15013.4
+          },
+          {
+            "id": "complete",
+            "at": 15013.4
+          }
+        ],
+        "frameTimestampsMs": [
+          14946.7,
+          14963.4,
+          14980,
+          14996.7,
+          15013.4
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 14945.800000000745,
+          "end": 15013.4
+        },
+        "counters": {
+          "scriptDurationMs": 27.418,
+          "styleRecalcDurationMs": 1.664,
+          "layoutDurationMs": 2.072,
+          "taskDurationMs": 43.036
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-panel-heavy",
+        "repetition": 1,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 9
+      },
+      "receivedAt": "2026-08-26T08:02:07.296Z",
+      "status": "valid",
+      "durationMs": 783.9999999977663,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 20179.9
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 20179.9
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 20179.9
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 20179.9
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 19395.900000002235,
+        "end": 20179.9
+      },
+      "timingEvidence": {
+        "trustedInputAt": 19395.900000002235,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 19395.900000002235
+          },
+          {
+            "id": "panel-ready",
+            "at": 19479.8
+          },
+          {
+            "id": "session-ready",
+            "at": 20179.9
+          },
+          {
+            "id": "content-identity",
+            "at": 20179.9
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 20179.9
+          },
+          {
+            "id": "interactive",
+            "at": 20179.9
+          },
+          {
+            "id": "complete",
+            "at": 20179.9
+          }
+        ],
+        "frameTimestampsMs": [
+          19396.566,
+          19413.2,
+          19446.5,
+          19463.2,
+          19479.8,
+          19496.6,
+          19513.2,
+          19529.8,
+          19546.5,
+          19596.5,
+          19613.2,
+          19629.8,
+          19646.5,
+          19663.2,
+          19679.8,
+          19696.5,
+          19713.2,
+          19729.9,
+          19746.5,
+          19763.2,
+          19779.9,
+          19796.5,
+          19813.2,
+          19829.8,
+          19846.5,
+          19863.2,
+          19879.9,
+          19896.5,
+          19913.2,
+          19929.9,
+          19946.5,
+          19963.1,
+          19979.8,
+          19996.6,
+          20013.2,
+          20029.8,
+          20046.5,
+          20063.1,
+          20079.9,
+          20096.6,
+          20113.2,
+          20129.8,
+          20146.6,
+          20163.1,
+          20179.9
+        ],
+        "longAnimationFrames": [
+          {
+            "start": 19551.5,
+            "duration": 60.600000001490116,
+            "blockingDuration": 0,
+            "renderStart": 19597.900000002235,
+            "styleAndLayoutStart": 19607.70000000298,
+            "scripts": []
+          }
+        ],
+        "counterInterval": {
+          "start": 19395.900000002235,
+          "end": 20179.9
+        },
+        "counters": {
+          "scriptDurationMs": 173.944,
+          "styleRecalcDurationMs": 28.489,
+          "layoutDurationMs": 22.514,
+          "taskDurationMs": 352.781
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-panel-light",
+        "repetition": 1,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 10
+      },
+      "receivedAt": "2026-08-26T08:02:09.659Z",
+      "status": "valid",
+      "durationMs": 85.89999999701831,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 22613.1
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 22613.1
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 22613.1
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 22613.1
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 22527.20000000298,
+        "end": 22613.1
+      },
+      "timingEvidence": {
+        "trustedInputAt": 22527.20000000298,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 22527.20000000298
+          },
+          {
+            "id": "session-ready",
+            "at": 22613.1
+          },
+          {
+            "id": "panel-ready",
+            "at": 22613.1
+          },
+          {
+            "id": "content-identity",
+            "at": 22613.1
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 22613.1
+          },
+          {
+            "id": "interactive",
+            "at": 22613.1
+          },
+          {
+            "id": "complete",
+            "at": 22613.1
+          }
+        ],
+        "frameTimestampsMs": [
+          22529.7,
+          22546.4,
+          22579.7,
+          22596.4,
+          22613.1
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 22527.20000000298,
+          "end": 22613.1
+        },
+        "counters": {
+          "scriptDurationMs": 35.19,
+          "styleRecalcDurationMs": 2.064,
+          "layoutDurationMs": 2.996,
+          "taskDurationMs": 85.479
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-first-visit-33554432",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 0
+      },
+      "receivedAt": "2026-08-26T08:02:17.898Z",
+      "status": "valid",
+      "durationMs": 88.0999999985097,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 7548.2
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 7548.2
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 7548.2
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 7548.2
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 7460.10000000149,
+        "end": 7548.2
+      },
+      "timingEvidence": {
+        "trustedInputAt": 7460.10000000149,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-return-visited-panel-closed-33554432",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 1
+      },
+      "receivedAt": "2026-08-26T08:02:18.549Z",
+      "status": "valid",
+      "durationMs": 94.2999999992553,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8198.1
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8198.1
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8198.1
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8198.1
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8103.800000000745,
+        "end": 8198.1
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8103.800000000745,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-first-visit-134217728",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 2
+      },
+      "receivedAt": "2026-08-26T08:02:18.925Z",
+      "status": "valid",
+      "durationMs": 72.70000000000073,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8564.7
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8564.7
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8564.7
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8564.7
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8492,
+        "end": 8564.7
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8492,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-return-visited-panel-closed-134217728",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 3
+      },
+      "receivedAt": "2026-08-26T08:02:19.485Z",
+      "status": "valid",
+      "durationMs": 57.899999999999636,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9131.4
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9131.4
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9131.4
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9131.4
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9073.5,
+        "end": 9131.4
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9073.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-first-visit-1048576",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 4
+      },
+      "receivedAt": "2026-08-26T08:02:19.891Z",
+      "status": "valid",
+      "durationMs": 84.89999999999964,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9531.4
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9531.4
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9531.4
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9531.4
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9446.5,
+        "end": 9531.4
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9446.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-return-visited-panel-closed-1048576",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 5
+      },
+      "receivedAt": "2026-08-26T08:02:20.464Z",
+      "status": "valid",
+      "durationMs": 57.29999999776555,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 10114.7
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 10114.7
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 10114.7
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 10114.7
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10057.400000002235,
+        "end": 10114.7
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10057.400000002235,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-first-visit-8388608",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 6
+      },
+      "receivedAt": "2026-08-26T08:02:20.835Z",
+      "status": "valid",
+      "durationMs": 74.6999999970194,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 10481.4
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 10481.4
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 10481.4
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 10481.4
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10406.70000000298,
+        "end": 10481.4
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10406.70000000298,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-return-visited-panel-closed-8388608",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 7
+      },
+      "receivedAt": "2026-08-26T08:02:21.465Z",
+      "status": "valid",
+      "durationMs": 74.49999999851025,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 11114.6
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 11114.6
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 11114.6
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 11114.6
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 11040.10000000149,
+        "end": 11114.6
+      },
+      "timingEvidence": {
+        "trustedInputAt": 11040.10000000149,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-panel-heavy",
+        "repetition": 2,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 8
+      },
+      "receivedAt": "2026-08-26T08:02:27.099Z",
+      "status": "valid",
+      "durationMs": 906.599999997019,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 16497.8
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 16497.8
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 16497.8
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 16497.8
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 15591.20000000298,
+        "end": 16497.8
+      },
+      "timingEvidence": {
+        "trustedInputAt": 15591.20000000298,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 15591.20000000298
+          },
+          {
+            "id": "panel-ready",
+            "at": 15664.5
+          },
+          {
+            "id": "session-ready",
+            "at": 16497.8
+          },
+          {
+            "id": "content-identity",
+            "at": 16497.8
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 16497.8
+          },
+          {
+            "id": "interactive",
+            "at": 16497.8
+          },
+          {
+            "id": "complete",
+            "at": 16497.8
+          }
+        ],
+        "frameTimestampsMs": [
+          15597.9,
+          15631.2,
+          15647.8,
+          15664.5,
+          15681.1,
+          15697.8,
+          15714.5,
+          15731.2,
+          15747.8,
+          15764.5,
+          15781.2,
+          15797.8,
+          15814.5,
+          15831.2,
+          15847.8,
+          15864.5,
+          15881.2,
+          15897.9,
+          15914.5,
+          15931.2,
+          15947.9,
+          15964.5,
+          15981.1,
+          15997.8,
+          16014.5,
+          16031.2,
+          16047.8,
+          16064.5,
+          16081.2,
+          16097.8,
+          16114.5,
+          16131.1,
+          16147.8,
+          16164.4,
+          16181.1,
+          16197.8,
+          16214.4,
+          16231.1,
+          16247.8,
+          16264.5,
+          16281.1,
+          16297.8,
+          16314.4,
+          16331.1,
+          16347.8,
+          16364.5,
+          16381.1,
+          16397.7,
+          16414.5,
+          16431.2,
+          16447.8,
+          16464.5,
+          16481.1,
+          16497.8
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 15591.20000000298,
+          "end": 16497.8
+        },
+        "counters": {
+          "scriptDurationMs": 191.813,
+          "styleRecalcDurationMs": 35.512,
+          "layoutDurationMs": 20.762,
+          "taskDurationMs": 477.402
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-panel-light",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 9
+      },
+      "receivedAt": "2026-08-26T08:02:29.195Z",
+      "status": "valid",
+      "durationMs": 77.39999999925567,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 18797.7
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 18797.7
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 18797.7
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 18797.7
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 18720.300000000745,
+        "end": 18797.7
+      },
+      "timingEvidence": {
+        "trustedInputAt": 18720.300000000745,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 18720.300000000745
+          },
+          {
+            "id": "session-ready",
+            "at": 18797.7
+          },
+          {
+            "id": "panel-ready",
+            "at": 18797.7
+          },
+          {
+            "id": "content-identity",
+            "at": 18797.7
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 18797.7
+          },
+          {
+            "id": "interactive",
+            "at": 18797.7
+          },
+          {
+            "id": "complete",
+            "at": 18797.7
+          }
+        ],
+        "frameTimestampsMs": [
+          18731,
+          18764.3,
+          18781,
+          18797.7
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 18720.300000000745,
+          "end": 18797.7
+        },
+        "counters": {
+          "scriptDurationMs": 44.684,
+          "styleRecalcDurationMs": 1.613,
+          "layoutDurationMs": 1.38,
+          "taskDurationMs": 59.664
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-panel-moderate",
+        "repetition": 2,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 10
+      },
+      "receivedAt": "2026-08-26T08:02:31.071Z",
+      "status": "valid",
+      "durationMs": 68.90000000000146,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 20680.9
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 20680.9
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 20680.9
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 20680.9
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 20612,
+        "end": 20680.9
+      },
+      "timingEvidence": {
+        "trustedInputAt": 20612,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 20612
+          },
+          {
+            "id": "session-ready",
+            "at": 20680.9
+          },
+          {
+            "id": "panel-ready",
+            "at": 20680.9
+          },
+          {
+            "id": "content-identity",
+            "at": 20680.9
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 20680.9
+          },
+          {
+            "id": "interactive",
+            "at": 20680.9
+          },
+          {
+            "id": "complete",
+            "at": 20680.9
+          }
+        ],
+        "frameTimestampsMs": [
+          20630.932,
+          20631,
+          20664.3,
+          20680.9
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 20612,
+          "end": 20680.9
+        },
+        "counters": {
+          "scriptDurationMs": 28.703,
+          "styleRecalcDurationMs": 1.659,
+          "layoutDurationMs": 1.071,
+          "taskDurationMs": 39.903
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-first-visit-33554432",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-33554432",
+        "sequence": 0
+      },
+      "receivedAt": "2026-08-26T08:02:39.500Z",
+      "status": "valid",
+      "durationMs": 93.90000000223517,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 7712.5
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 7712.5
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 7712.5
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 7712.5
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 7618.599999997765,
+        "end": 7712.5
+      },
+      "timingEvidence": {
+        "trustedInputAt": 7618.599999997765,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-return-visited-panel-closed-33554432",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-33554432",
+        "sequence": 1
+      },
+      "receivedAt": "2026-08-26T08:02:40.166Z",
+      "status": "valid",
+      "durationMs": 59.90000000074542,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8379.1
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8379.1
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8379.1
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8379.1
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8319.199999999255,
+        "end": 8379.1
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8319.199999999255,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-first-visit-8388608",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-8388608",
+        "sequence": 2
+      },
+      "receivedAt": "2026-08-26T08:02:40.648Z",
+      "status": "valid",
+      "durationMs": 81.60000000149012,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8862.5
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8862.5
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8862.5
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8862.5
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8780.89999999851,
+        "end": 8862.5
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8780.89999999851,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-return-visited-panel-closed-8388608",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-8388608",
+        "sequence": 3
+      },
+      "receivedAt": "2026-08-26T08:02:41.348Z",
+      "status": "valid",
+      "durationMs": 58.20000000298023,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9562.5
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9562.5
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9562.5
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9562.5
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9504.29999999702,
+        "end": 9562.5
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9504.29999999702,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-first-visit-1048576",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-1048576",
+        "sequence": 4
+      },
+      "receivedAt": "2026-08-26T08:02:41.782Z",
+      "status": "valid",
+      "durationMs": 74.20000000223445,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9995.8
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9995.8
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9995.8
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9995.8
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9921.599999997765,
+        "end": 9995.8
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9921.599999997765,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-return-visited-panel-closed-1048576",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-1048576",
+        "sequence": 5
+      },
+      "receivedAt": "2026-08-26T08:02:42.382Z",
+      "status": "valid",
+      "durationMs": 55.40000000298096,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 10595.7
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 10595.7
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 10595.7
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 10595.7
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10540.29999999702,
+        "end": 10595.7
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10540.29999999702,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-first-visit-134217728",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-134217728",
+        "sequence": 6
+      },
+      "receivedAt": "2026-08-26T08:02:42.814Z",
+      "status": "valid",
+      "durationMs": 77.40000000223517,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 11029
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 11029
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 11029
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 11029
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10951.599999997765,
+        "end": 11029
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10951.599999997765,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-return-visited-panel-closed-134217728",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-134217728",
+        "sequence": 7
+      },
+      "receivedAt": "2026-08-26T08:02:43.499Z",
+      "status": "valid",
+      "durationMs": 56.000000002979505,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 11712.3
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 11712.3
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 11712.3
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 11712.3
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 11656.29999999702,
+        "end": 11712.3
+      },
+      "timingEvidence": {
+        "trustedInputAt": 11656.29999999702,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-panel-light",
+        "repetition": 3,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 8
+      },
+      "receivedAt": "2026-08-26T08:02:45.841Z",
+      "status": "valid",
+      "durationMs": 59.20000000223445,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 14012.3
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 14012.3
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 14012.3
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 14012.3
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 13953.099999997765,
+        "end": 14012.3
+      },
+      "timingEvidence": {
+        "trustedInputAt": 13953.099999997765,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 13953.099999997765
+          },
+          {
+            "id": "session-ready",
+            "at": 14012.3
+          },
+          {
+            "id": "panel-ready",
+            "at": 14012.3
+          },
+          {
+            "id": "content-identity",
+            "at": 14012.3
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 14012.3
+          },
+          {
+            "id": "interactive",
+            "at": 14012.3
+          },
+          {
+            "id": "complete",
+            "at": 14012.3
+          }
+        ],
+        "frameTimestampsMs": [
+          13962.2,
+          13978.9,
+          13995.5,
+          14012.3
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 13953.099999997765,
+          "end": 14012.3
+        },
+        "counters": {
+          "scriptDurationMs": 31.535,
+          "styleRecalcDurationMs": 1.678,
+          "layoutDurationMs": 1.077,
+          "taskDurationMs": 41.731
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-panel-moderate",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 9
+      },
+      "receivedAt": "2026-08-26T08:02:47.840Z",
+      "status": "valid",
+      "durationMs": 68.30000000149084,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 16012.2
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 16012.2
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 16012.2
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 16012.2
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 15943.89999999851,
+        "end": 16012.2
+      },
+      "timingEvidence": {
+        "trustedInputAt": 15943.89999999851,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 15943.89999999851
+          },
+          {
+            "id": "session-ready",
+            "at": 16012.2
+          },
+          {
+            "id": "panel-ready",
+            "at": 16012.2
+          },
+          {
+            "id": "content-identity",
+            "at": 16012.2
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 16012.2
+          },
+          {
+            "id": "interactive",
+            "at": 16012.2
+          },
+          {
+            "id": "complete",
+            "at": 16012.2
+          }
+        ],
+        "frameTimestampsMs": [
+          15945.566,
+          15962.2,
+          15978.8,
+          15995.5,
+          16012.2
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 15943.89999999851,
+          "end": 16012.2
+        },
+        "counters": {
+          "scriptDurationMs": 26.731,
+          "styleRecalcDurationMs": 1.41,
+          "layoutDurationMs": 1.513,
+          "taskDurationMs": 40.109
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-panel-heavy",
+        "repetition": 3,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 10
+      },
+      "receivedAt": "2026-08-26T08:02:50.950Z",
+      "status": "valid",
+      "durationMs": 83.70000000298023,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 19112
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 19112
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 19112
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 19112
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 19028.29999999702,
+        "end": 19112
+      },
+      "timingEvidence": {
+        "trustedInputAt": 19028.29999999702,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 19028.29999999702
+          },
+          {
+            "id": "session-ready",
+            "at": 19112
+          },
+          {
+            "id": "panel-ready",
+            "at": 19112
+          },
+          {
+            "id": "content-identity",
+            "at": 19112
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 19112
+          },
+          {
+            "id": "interactive",
+            "at": 19112
+          },
+          {
+            "id": "complete",
+            "at": 19112
+          }
+        ],
+        "frameTimestampsMs": [
+          19028.7,
+          19045.4,
+          19078.7,
+          19095.3,
+          19112
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 19028.29999999702,
+          "end": 19112
+        },
+        "counters": {
+          "scriptDurationMs": 49.656,
+          "styleRecalcDurationMs": 1.877,
+          "layoutDurationMs": 1.345,
+          "taskDurationMs": 68.063
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-first-visit-1048576",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 0
+      },
+      "receivedAt": "2026-08-26T08:02:59.303Z",
+      "status": "valid",
+      "durationMs": 86.40000000223517,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 7597
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 7597
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 7597
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 7597
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 7510.599999997765,
+        "end": 7597
+      },
+      "timingEvidence": {
+        "trustedInputAt": 7510.599999997765,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-return-visited-panel-closed-1048576",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 1
+      },
+      "receivedAt": "2026-08-26T08:02:59.881Z",
+      "status": "valid",
+      "durationMs": 71.80000000000018,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8180.3
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8180.3
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8180.3
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8180.3
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8108.5,
+        "end": 8180.3
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8108.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-first-visit-8388608",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 2
+      },
+      "receivedAt": "2026-08-26T08:03:00.258Z",
+      "status": "valid",
+      "durationMs": 70.80000000074506,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 8547
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 8547
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 8547
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 8547
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 8476.199999999255,
+        "end": 8547
+      },
+      "timingEvidence": {
+        "trustedInputAt": 8476.199999999255,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-return-visited-panel-closed-8388608",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 3
+      },
+      "receivedAt": "2026-08-26T08:03:00.898Z",
+      "status": "valid",
+      "durationMs": 73.39999999999964,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9196.9
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9196.9
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9196.9
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9196.9
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9123.5,
+        "end": 9196.9
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9123.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-first-visit-33554432",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 4
+      },
+      "receivedAt": "2026-08-26T08:03:01.280Z",
+      "status": "valid",
+      "durationMs": 86.39999999925567,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 9580.2
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 9580.2
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 9580.2
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 9580.2
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 9493.800000000745,
+        "end": 9580.2
+      },
+      "timingEvidence": {
+        "trustedInputAt": 9493.800000000745,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-return-visited-panel-closed-33554432",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 5
+      },
+      "receivedAt": "2026-08-26T08:03:01.914Z",
+      "status": "valid",
+      "durationMs": 77.50000000223554,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 10213.6
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 10213.6
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 10213.6
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 10213.6
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10136.099999997765,
+        "end": 10213.6
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10136.099999997765,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-first-visit-134217728",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 6
+      },
+      "receivedAt": "2026-08-26T08:03:02.300Z",
+      "status": "valid",
+      "durationMs": 87.90000000148939,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 10596.8
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 10596.8
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 10596.8
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 10596.8
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 10508.89999999851,
+        "end": 10596.8
+      },
+      "timingEvidence": {
+        "trustedInputAt": 10508.89999999851,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-return-visited-panel-closed-134217728",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 7
+      },
+      "receivedAt": "2026-08-26T08:03:02.867Z",
+      "status": "valid",
+      "durationMs": 57.40000000074542,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 11163.6
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 11163.6
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 11163.6
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 11163.6
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 11106.199999999255,
+        "end": 11163.6
+      },
+      "timingEvidence": {
+        "trustedInputAt": 11106.199999999255,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-panel-moderate",
+        "repetition": 4,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 8
+      },
+      "receivedAt": "2026-08-26T08:03:06.210Z",
+      "status": "valid",
+      "durationMs": 59.59999999925458,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 14463.4
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 14463.4
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 14463.4
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 14463.4
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 14403.800000000745,
+        "end": 14463.4
+      },
+      "timingEvidence": {
+        "trustedInputAt": 14403.800000000745,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 14403.800000000745
+          },
+          {
+            "id": "session-ready",
+            "at": 14463.4
+          },
+          {
+            "id": "panel-ready",
+            "at": 14463.4
+          },
+          {
+            "id": "content-identity",
+            "at": 14463.4
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 14463.4
+          },
+          {
+            "id": "interactive",
+            "at": 14463.4
+          },
+          {
+            "id": "complete",
+            "at": 14463.4
+          }
+        ],
+        "frameTimestampsMs": [
+          14413.4,
+          14430.1,
+          14446.7,
+          14463.4
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 14403.800000000745,
+          "end": 14463.4
+        },
+        "counters": {
+          "scriptDurationMs": 27.487,
+          "styleRecalcDurationMs": 1.675,
+          "layoutDurationMs": 1.54,
+          "taskDurationMs": 38.785
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-panel-heavy",
+        "repetition": 4,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 9
+      },
+      "receivedAt": "2026-08-26T08:03:09.557Z",
+      "status": "valid",
+      "durationMs": 81.99999999925421,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 17813.3
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 17813.3
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 17813.3
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 17813.3
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 17731.300000000745,
+        "end": 17813.3
+      },
+      "timingEvidence": {
+        "trustedInputAt": 17731.300000000745,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 17731.300000000745
+          },
+          {
+            "id": "session-ready",
+            "at": 17813.3
+          },
+          {
+            "id": "panel-ready",
+            "at": 17813.3
+          },
+          {
+            "id": "content-identity",
+            "at": 17813.3
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 17813.3
+          },
+          {
+            "id": "interactive",
+            "at": 17813.3
+          },
+          {
+            "id": "complete",
+            "at": 17813.3
+          }
+        ],
+        "frameTimestampsMs": [
+          17746.6,
+          17763.2,
+          17796.6,
+          17813.3
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 17731.300000000745,
+          "end": 17813.3
+        },
+        "counters": {
+          "scriptDurationMs": 37.302,
+          "styleRecalcDurationMs": 2.003,
+          "layoutDurationMs": 1.329,
+          "taskDurationMs": 64.447
+        }
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-panel-light",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 10
+      },
+      "receivedAt": "2026-08-26T08:03:11.613Z",
+      "status": "valid",
+      "durationMs": 67.1000000022359,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 19863.2
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 19863.2
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 19863.2
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 19863.2
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 19796.099999997765,
+        "end": 19863.2
+      },
+      "timingEvidence": {
+        "trustedInputAt": 19796.099999997765,
+        "trustedInputEvent": "pointerdown"
+      },
+      "rendererTrace": {
+        "clock": "performance.now",
+        "transitionMode": "animated",
+        "milestones": [
+          {
+            "id": "trusted-input",
+            "at": 19796.099999997765
+          },
+          {
+            "id": "session-ready",
+            "at": 19863.2
+          },
+          {
+            "id": "panel-ready",
+            "at": 19863.2
+          },
+          {
+            "id": "content-identity",
+            "at": 19863.2
+          },
+          {
+            "id": "above-fold-painted",
+            "at": 19863.2
+          },
+          {
+            "id": "interactive",
+            "at": 19863.2
+          },
+          {
+            "id": "complete",
+            "at": 19863.2
+          }
+        ],
+        "frameTimestampsMs": [
+          19796.566,
+          19813.2,
+          19829.9,
+          19846.5,
+          19863.2
+        ],
+        "longAnimationFrames": [],
+        "counterInterval": {
+          "start": 19796.099999997765,
+          "end": 19863.2
+        },
+        "counters": {
+          "scriptDurationMs": 33.734,
+          "styleRecalcDurationMs": 1.641,
+          "layoutDurationMs": 1.055,
+          "taskDurationMs": 56.048
+        }
+      }
+    }
+  ],
+  "resources": null,
+  "resourceTrace": null,
+  "derivation": {
+    "version": 1,
+    "summaryDigestSha256": "0d3ff24e2ed687da214d986219bbb29f77f0c946f7a3b7238e0049ff09125974",
+    "summary": {
+      "historySizeTrend": [
+        {
+          "transcriptBytes": 1048576,
+          "firstVisit": {
+            "status": "valid",
+            "average": 83.92,
+            "maximum": 88.3,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 85.8,
+            "p95": 88.3
+          },
+          "returnVisitedPanelClosed": {
+            "status": "valid",
+            "average": 62.88,
+            "maximum": 72.4,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 57.5,
+            "p95": 72.4
+          }
+        },
+        {
+          "transcriptBytes": 8388608,
+          "firstVisit": {
+            "status": "valid",
+            "average": 78.14,
+            "maximum": 86.3,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 77.3,
+            "p95": 86.3
+          },
+          "returnVisitedPanelClosed": {
+            "status": "valid",
+            "average": 67.34,
+            "maximum": 74.5,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 71,
+            "p95": 74.5
+          }
+        },
+        {
+          "transcriptBytes": 33554432,
+          "firstVisit": {
+            "status": "valid",
+            "average": 83.3,
+            "maximum": 93.9,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 86.4,
+            "p95": 93.9
+          },
+          "returnVisitedPanelClosed": {
+            "status": "valid",
+            "average": 73.76,
+            "maximum": 94.3,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 76.4,
+            "p95": 94.3
+          }
+        },
+        {
+          "transcriptBytes": 134217728,
+          "firstVisit": {
+            "status": "valid",
+            "average": 83.1,
+            "maximum": 92.5,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 85,
+            "p95": 92.5
+          },
+          "returnVisitedPanelClosed": {
+            "status": "valid",
+            "average": 57.52,
+            "maximum": 61.7,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 57.4,
+            "p95": 61.7
+          }
+        }
+      ],
+      "panelLoadTrend": [
+        {
+          "loadProfile": "light",
+          "returnVisitedPanelOpen": {
+            "durationMs": {
+              "status": "valid",
+              "average": 72.08,
+              "maximum": 85.9,
+              "valid": 5,
+              "attempted": 5,
+              "p50": 70.8,
+              "p95": 85.9
+            },
+            "transitionModes": {
+              "animated": 5,
+              "none": 0
+            },
+            "milestones": {
+              "paintToInteractiveMs": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              },
+              "inputToContentMs": {
+                "status": "valid",
+                "average": 72.08,
+                "maximum": 85.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 85.9
+              },
+              "inputToSessionReadyMs": {
+                "status": "valid",
+                "average": 72.08,
+                "maximum": 85.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 85.9
+              },
+              "inputToPanelReadyMs": {
+                "status": "valid",
+                "average": 72.08,
+                "maximum": 85.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 85.9
+              },
+              "inputToInteractiveMs": {
+                "status": "valid",
+                "average": 72.08,
+                "maximum": 85.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 85.9
+              }
+            },
+            "frames": {
+              "worstIntervalMs": {
+                "status": "valid",
+                "average": 26.68,
+                "maximum": 33.3,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 33.3
+              },
+              "p95IntervalMs": {
+                "status": "valid",
+                "average": 26.68,
+                "maximum": 33.3,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 33.3
+              },
+              "overBudgetIntervalCount": {
+                "status": "valid",
+                "average": 2.8,
+                "maximum": 4,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 4
+              }
+            },
+            "longAnimationFrames": {
+              "count": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              },
+              "worstDurationMs": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              },
+              "worstBlockingDurationMs": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              }
+            },
+            "rendererWork": {
+              "scriptDurationMs": {
+                "status": "valid",
+                "average": 36.543,
+                "maximum": 44.684,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 44.684
+              },
+              "styleRecalcDurationMs": {
+                "status": "valid",
+                "average": 1.782,
+                "maximum": 2.064,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 2.064
+              },
+              "layoutDurationMs": {
+                "status": "valid",
+                "average": 1.829,
+                "maximum": 2.996,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 2.996
+              },
+              "taskDurationMs": {
+                "status": "valid",
+                "average": 59.16,
+                "maximum": 85.479,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 85.479
+              }
+            }
+          }
+        },
+        {
+          "loadProfile": "moderate",
+          "returnVisitedPanelOpen": {
+            "durationMs": {
+              "status": "valid",
+              "average": 66.22,
+              "maximum": 68.9,
+              "valid": 5,
+              "attempted": 5,
+              "p50": 67.6,
+              "p95": 68.9
+            },
+            "transitionModes": {
+              "animated": 5,
+              "none": 0
+            },
+            "milestones": {
+              "paintToInteractiveMs": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              },
+              "inputToContentMs": {
+                "status": "valid",
+                "average": 66.22,
+                "maximum": 68.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 68.9
+              },
+              "inputToSessionReadyMs": {
+                "status": "valid",
+                "average": 66.22,
+                "maximum": 68.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 68.9
+              },
+              "inputToPanelReadyMs": {
+                "status": "valid",
+                "average": 66.22,
+                "maximum": 68.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 68.9
+              },
+              "inputToInteractiveMs": {
+                "status": "valid",
+                "average": 66.22,
+                "maximum": 68.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 68.9
+              }
+            },
+            "frames": {
+              "worstIntervalMs": {
+                "status": "valid",
+                "average": 20.02,
+                "maximum": 33.3,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 33.3
+              },
+              "p95IntervalMs": {
+                "status": "valid",
+                "average": 20.02,
+                "maximum": 33.3,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 33.3
+              },
+              "overBudgetIntervalCount": {
+                "status": "valid",
+                "average": 2.2,
+                "maximum": 3,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 3
+              }
+            },
+            "longAnimationFrames": {
+              "count": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              },
+              "worstDurationMs": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              },
+              "worstBlockingDurationMs": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              }
+            },
+            "rendererWork": {
+              "scriptDurationMs": {
+                "status": "valid",
+                "average": 27.855,
+                "maximum": 28.937,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 28.937
+              },
+              "styleRecalcDurationMs": {
+                "status": "valid",
+                "average": 1.584,
+                "maximum": 1.675,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 1.675
+              },
+              "layoutDurationMs": {
+                "status": "valid",
+                "average": 1.745,
+                "maximum": 2.528,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 2.528
+              },
+              "taskDurationMs": {
+                "status": "valid",
+                "average": 42.412,
+                "maximum": 50.229,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 50.229
+              }
+            }
+          }
+        },
+        {
+          "loadProfile": "heavy",
+          "returnVisitedPanelOpen": {
+            "durationMs": {
+              "status": "valid",
+              "average": 385.04,
+              "maximum": 906.6,
+              "valid": 5,
+              "attempted": 5,
+              "p50": 83.7,
+              "p95": 906.6
+            },
+            "transitionModes": {
+              "animated": 5,
+              "none": 0
+            },
+            "milestones": {
+              "paintToInteractiveMs": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              },
+              "inputToContentMs": {
+                "status": "valid",
+                "average": 385.04,
+                "maximum": 906.6,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 906.6
+              },
+              "inputToSessionReadyMs": {
+                "status": "valid",
+                "average": 385.04,
+                "maximum": 906.6,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 906.6
+              },
+              "inputToPanelReadyMs": {
+                "status": "valid",
+                "average": 78.36,
+                "maximum": 83.9,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 83.9
+              },
+              "inputToInteractiveMs": {
+                "status": "valid",
+                "average": 385.04,
+                "maximum": 906.6,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 906.6
+              }
+            },
+            "frames": {
+              "worstIntervalMs": {
+                "status": "valid",
+                "average": 33.766,
+                "maximum": 50,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 50
+              },
+              "p95IntervalMs": {
+                "status": "valid",
+                "average": 23.806,
+                "maximum": 33.4,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 33.4
+              },
+              "overBudgetIntervalCount": {
+                "status": "valid",
+                "average": 13.6,
+                "maximum": 34,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 34
+              }
+            },
+            "longAnimationFrames": {
+              "count": {
+                "status": "valid",
+                "average": 0.2,
+                "maximum": 1,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 1
+              },
+              "worstDurationMs": {
+                "status": "valid",
+                "average": 12.12,
+                "maximum": 60.6,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 60.6
+              },
+              "worstBlockingDurationMs": {
+                "status": "valid",
+                "average": 0,
+                "maximum": 0,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 0
+              }
+            },
+            "rendererWork": {
+              "scriptDurationMs": {
+                "status": "valid",
+                "average": 96.851,
+                "maximum": 191.813,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 191.813
+              },
+              "styleRecalcDurationMs": {
+                "status": "valid",
+                "average": 13.856,
+                "maximum": 35.512,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 35.512
+              },
+              "layoutDurationMs": {
+                "status": "valid",
+                "average": 9.627,
+                "maximum": 22.514,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 22.514
+              },
+              "taskDurationMs": {
+                "status": "valid",
+                "average": 203.479,
+                "maximum": 477.402,
+                "valid": 5,
+                "attempted": 5,
+                "p95": 477.402
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "id": "claxedo-vs-t3-p95-user-flows-linux-20260826-r5",
+  "title": "Claxedo vs T3 Code \u2014 user-flow p95 (Linux same-host, r5)",
+  "description": "Five-repetition same-host packaged-desktop comparison under Xvfb on a 4-core Linux VM, p95 nearest-rank with sampled-max disclosure at n=5. r5: Claxedo app packaged from bench/linux-comparison 4e683ab with driver at c8351fa (endpoint parity: the rendered-hunks instrumentation counter no longer participates in Claxedo's diff-settle stability signature; it remains a readiness gate). T3 binary and driver unchanged from r1. Accommodations: T3CODE_PORT pinned (container lacks IPv6 for the port scan), extracted AppImage (parity with unpacked dir), ELECTRON_DISABLE_SANDBOX for containerized Chromium.",
+  "provenance": "community-self-attested",
+  "frameworkRevision": "da526a76889026e1e6a6f2544fc1c8635c2304c2",
+  "runProfile": "publication",
+  "repetitions": 5,
+  "scenarioIds": [
+    "app-start-v3",
+    "session-switch-v3",
+    "session-navigation-v1",
+    "workspace-panel-v2"
+  ],
+  "resourceMonitor": "/home/user/agent-app-benchmark/native/resource-monitor/target/release/agent-app-resource-monitor",
+  "corpusDirectory": "/home/user/agent-app-benchmark/artifacts/corpora/opencode-completed-sessions-v3",
+  "outputRoot": "/home/user/agent-app-benchmark/artifacts/comparisons/claxedo-vs-t3-p95-user-flows-linux-20260826-r5",
+  "apps": [
+    {
+      "id": "t3",
+      "driver": "/opt/node22/bin/node",
+      "args": [
+        "/home/user/t3code/scripts/lib/agent-app-benchmark/drivers/t3.ts"
+      ],
+      "cwd": "/home/user/t3code",
+      "env": {
+        "T3_BENCHMARK_EXECUTABLE": "/tmp/t3-benchmark-stage/squashfs-root/t3code",
+        "T3CODE_PORT": "3773",
+        "ELECTRON_DISABLE_SANDBOX": "1",
+        "DISPLAY": ":99",
+        "HOME": "/root"
+      }
+    },
+    {
+      "id": "claxedo",
+      "driver": "/root/.bun/bin/bun",
+      "args": [
+        "/home/user/Claxedo/.worktrees/bench-merge/packages/claxedo-app/perf-harness/src/public-agent-app-driver.ts"
+      ],
+      "cwd": "/home/user/Claxedo/.worktrees/bench-merge",
+      "env": {
+        "CLAXEDO_BENCHMARK_EXECUTABLE": "/home/user/Claxedo/.worktrees/bench-merge/packages/claxedo-desktop/dist/linux-unpacked/claxedo",
+        "ELECTRON_DISABLE_SANDBOX": "1",
+        "DISPLAY": ":99",
+        "HOME": "/root"
+      }
+    }
+  ]
+}
