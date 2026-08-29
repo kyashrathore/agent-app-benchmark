@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "claxedo-vs-t3-p95-user-flows-macos-arm64-headed-20260829-r1",
+  "title": "Claxedo vs T3 Code — user-flow p95 (macOS arm64 headed, r1)",
+  "description": "Five-repetition same-host packaged-desktop comparison on macOS arm64 with native headed display (no Xvfb). Scenarios: app-start-v3, session-switch-v3, session-navigation-v1, workspace-panel-v2. Claxedo packaged from opencode 234ec9e83d (session-render: sync rich first paint, env-card persistence, workspace-panel remember/restore, markdown preload gate). T3 Code (Alpha) staged from prior macOS smoke packaging under /private/tmp/t3-benchmark-stage-macos; driver from t3code worktree codex/agent-app-benchmark-v1. Accommodation: T3 .app extracted from the release zip (parity with first-run-macos-arm64-smoke).",
+  "provenance": "community-self-attested",
+  "results": [
+    {
+      "appId": "t3",
+      "scenarioId": "app-start-v3",
+      "path": "runs/t3/app-start-v3/result.json",
+      "digestSha256": "19a34301fcbdb9f1a825bec272a92692d5d0ed7dde66e948717376b5ea55d422"
+    },
+    {
+      "appId": "claxedo",
+      "scenarioId": "app-start-v3",
+      "path": "runs/claxedo/app-start-v3/result.json",
+      "digestSha256": "1f097ecdd9a9b80def3014a9f00933b0040784e230ff0397b45687f46646c932"
+    },
+    {
+      "appId": "claxedo",
+      "scenarioId": "session-switch-v3",
+      "path": "runs/claxedo/session-switch-v3/result.json",
+      "digestSha256": "977d79cbdbd313c8be33106ee2c9cf301be23afdb3f5413ca523fb14a2834fa2"
+    },
+    {
+      "appId": "t3",
+      "scenarioId": "session-switch-v3",
+      "path": "runs/t3/session-switch-v3/result.json",
+      "digestSha256": "8bb72bb170525bedd55a63d651c8c4ab41c44bf8db4d7b39146aedb844e295e9"
+    },
+    {
+      "appId": "t3",
+      "scenarioId": "session-navigation-v1",
+      "path": "runs/t3/session-navigation-v1/result.json",
+      "digestSha256": "a05406e89ebf75e931e123eb3aac13ed7841bee6b0d3a28b6d1fb74a1702986b"
+    },
+    {
+      "appId": "claxedo",
+      "scenarioId": "session-navigation-v1",
+      "path": "runs/claxedo/session-navigation-v1/result.json",
+      "digestSha256": "280e9d45a0e73c24d909627df41b96028e14dff618ee2eb6364f217dc3629f0a"
+    },
+    {
+      "appId": "claxedo",
+      "scenarioId": "workspace-panel-v2",
+      "path": "runs/claxedo/workspace-panel-v2/result.json",
+      "digestSha256": "d4b0a8286e228395b534e181c4c92a418ae68a0ab470a9667b9221b0e425f5e9"
+    },
+    {
+      "appId": "t3",
+      "scenarioId": "workspace-panel-v2",
+      "path": "runs/t3/workspace-panel-v2/result.json",
+      "digestSha256": "97e394361d5d5899b99ec9cceea77226704488eb91e44ab0d2415f1e207a5006"
+    }
+  ]
+}

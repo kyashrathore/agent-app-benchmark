@@ -1,0 +1,42 @@
+{
+  "id": "claxedo-vs-t3-p95-user-flows-macos-arm64-headed-20260829-r1",
+  "title": "Claxedo vs T3 Code — user-flow p95 (macOS arm64 headed, r1)",
+  "description": "Five-repetition same-host packaged-desktop comparison on macOS arm64 with native headed display (no Xvfb). Scenarios: app-start-v3, session-switch-v3, session-navigation-v1, workspace-panel-v2. Claxedo packaged from opencode 234ec9e83d (session-render: sync rich first paint, env-card persistence, workspace-panel remember/restore, markdown preload gate). T3 Code (Alpha) staged from prior macOS smoke packaging under /private/tmp/t3-benchmark-stage-macos; driver from t3code worktree codex/agent-app-benchmark-v1. Accommodation: T3 .app extracted from the release zip (parity with first-run-macos-arm64-smoke).",
+  "provenance": "community-self-attested",
+  "frameworkRevision": "b4c0b7c5084de5a1cb71a723259fb267196f71aa",
+  "runProfile": "publication",
+  "repetitions": 5,
+  "scenarioIds": [
+    "app-start-v3",
+    "session-switch-v3",
+    "session-navigation-v1",
+    "workspace-panel-v2"
+  ],
+  "resourceMonitor": "/Users/yashvardhansingh/test/agent-app-benchmark/native/resource-monitor/target/release/agent-app-resource-monitor",
+  "corpusDirectory": "/Users/yashvardhansingh/test/agent-app-benchmark/artifacts/corpora/opencode-completed-sessions-v3",
+  "outputRoot": "/Users/yashvardhansingh/test/agent-app-benchmark/artifacts/comparisons/claxedo-vs-t3-p95-user-flows-macos-arm64-headed-20260829-r1",
+  "apps": [
+    {
+      "id": "t3",
+      "driver": "/opt/homebrew/bin/node",
+      "args": [
+        "/Users/yashvardhansingh/test/t3code/.worktrees/codex/agent-app-benchmark-v1/scripts/lib/agent-app-benchmark/drivers/t3.ts"
+      ],
+      "cwd": "/Users/yashvardhansingh/test/t3code/.worktrees/codex/agent-app-benchmark-v1",
+      "env": {
+        "T3_BENCHMARK_EXECUTABLE": "/private/tmp/t3-benchmark-stage-macos/T3 Code (Alpha).app/Contents/MacOS/T3 Code (Alpha)"
+      }
+    },
+    {
+      "id": "claxedo",
+      "driver": "/Users/yashvardhansingh/.bun/bin/bun",
+      "args": [
+        "/Users/yashvardhansingh/test/opencode/packages/claxedo-app/perf-harness/src/public-agent-app-driver.ts"
+      ],
+      "cwd": "/Users/yashvardhansingh/test/opencode",
+      "env": {
+        "CLAXEDO_BENCHMARK_EXECUTABLE": "/Users/yashvardhansingh/test/opencode/packages/claxedo-desktop/dist/mac-arm64/Claxedo Dev.app/Contents/MacOS/Claxedo Dev"
+      }
+    }
+  ]
+}
