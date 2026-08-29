@@ -147,6 +147,25 @@ node bin/agent-app-benchmark.mjs comparison run \
   --config /absolute/path/to/comparison-run.json
 ```
 
+### One-liner Claxedo vs T3 compare (macOS headed)
+
+After `npm ci`, building the resource monitor, and generating/verifying the corpus once, the shortest path for the full user-flow suite is the `compare` preset. It writes a comparison config, runs the mirrored schedule, and can build the static site:
+
+```bash
+export CLAXEDO_BENCHMARK_EXECUTABLE="/absolute/path/to/Claxedo Dev.app/Contents/MacOS/Claxedo Dev"
+export T3_BENCHMARK_EXECUTABLE="/absolute/path/to/T3 Code (Alpha).app/Contents/MacOS/T3 Code (Alpha)"
+export CLAXEDO_ROOT="/absolute/path/to/opencode"   # optional; default ../opencode
+export T3_ROOT="/absolute/path/to/t3code"          # optional; default ../t3code
+
+# From a clone of this repo (or later: npx agent-app-benchmark / npx agentappbench):
+node bin/agent-app-benchmark.mjs compare \
+  --preset claxedo-vs-t3 \
+  --run-profile smoke \
+  --site
+```
+
+Auto-detected when present: `native/resource-monitor/target/release/agent-app-resource-monitor`, `artifacts/corpora/opencode-completed-sessions-v3`, git `HEAD` as `frameworkRevision`, and host label (`macos-arm64-headed` on Apple Silicon). Still required: packaged app binaries plus app-owned drivers under `CLAXEDO_ROOT` / `T3_ROOT`. Use `--dry-run` to write only the config. Use `--run-profile publication` (5 reps) for a publishable run. The low-level `comparison run` / `site build` commands remain unchanged.
+
 It verifies or generates the corpus once, then uses the recorded mirrored order `T3 app-start → Claxedo app-start → Claxedo session-switch → T3 session-switch`. Every result contains the same schedule digest and its own ordinal.
 
 The driver protocol is language-neutral NDJSON, so Node, Bun, native binaries, and other runtimes can implement it. See [docs/driver-protocol.md](docs/driver-protocol.md).

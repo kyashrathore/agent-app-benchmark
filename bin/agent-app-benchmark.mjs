@@ -4,6 +4,7 @@ import process from "node:process";
 import { digestBytes } from "../src/canonical-json.mjs";
 import { runDriverConformance } from "../src/conformance.mjs";
 import { runComparison } from "../src/comparison-run.mjs";
+import { buildComparePlan, writeCompareConfig } from "../src/compare-preset.mjs";
 import { verifyCorpus, writeCorpus } from "../src/corpus.mjs";
 import { readDefinition, readRegistered, validateRegistry } from "../src/registry.mjs";
 import { runBenchmark, validateResultFile } from "../src/runner.mjs";
@@ -14,12 +15,50 @@ import { buildWorkspaceFixtureManifest } from "../src/workspace-fixture.mjs";
 const argv = process.argv.slice(2);
 const command = argv.shift();
 const subcommand = ["comparison", "corpus", "publication", "result", "site"].includes(command) ? argv.shift() : undefined;
-const options = parseOptions(argv);
+const options = parseOptions(argv, ["site", "dryRun"]);
 
 try {
   if (command === "validate") {
     const entries = await validateRegistry();
     for (const entry of entries) process.stdout.write(`${entry.kind}\t${entry.id}\t${entry.digest}\n`);
+  } else if (command === "compare") {
+    const plan = await buildComparePlan({
+      preset: options.first("preset") ?? "claxedo-vs-t3",
+      runProfile: options.first("runProfile"),
+      repetitions: integerOption(options, "repetitions"),
+      id: options.first("id"),
+      stamp: options.first("stamp"),
+      hostLabel: options.first("hostLabel"),
+      description: options.first("description"),
+      provenance: options.first("provenance"),
+      frameworkRevision: options.first("frameworkRevision"),
+      resourceMonitor: options.first("resourceMonitor"),
+      corpusDirectory: options.first("corpusDirectory"),
+      outputRoot: options.first("outputRoot"),
+      siteOutput: options.first("siteOutput"),
+      configPath: options.first("config"),
+      claxedoRoot: options.first("claxedoRoot"),
+      t3Root: options.first("t3Root"),
+      claxedoExecutable: options.first("claxedoExecutable"),
+      t3Executable: options.first("t3Executable"),
+      claxedoDriver: options.first("claxedoDriver"),
+      t3Driver: options.first("t3Driver"),
+      claxedoRuntime: options.first("claxedoRuntime"),
+      t3Runtime: options.first("t3Runtime"),
+    });
+    const configPath = await writeCompareConfig(plan);
+    process.stdout.write(`${configPath}\n`);
+    if (options.first("dryRun") === "true") {
+      process.stdout.write(`${JSON.stringify({ id: plan.config.id, outputRoot: plan.config.outputRoot, siteOutput: plan.siteOutput }, null, 2)}\n`);
+    } else {
+      const comparison = await runComparison(configPath);
+      const comparisonFile = path.join(comparison.outputRoot, "comparison.json");
+      process.stdout.write(`${comparisonFile}\n`);
+      if (options.first("site") === "true") {
+        const built = await buildSite(comparisonFile, plan.siteOutput);
+        process.stdout.write(`${path.join(built.output, "index.html")}\n`);
+      }
+    }
   } else if (command === "comparison" && subcommand === "run") {
     const comparison = await runComparison(required(options, "config"));
     process.stdout.write(`${path.join(comparison.outputRoot, "comparison.json")}\n`);
@@ -109,14 +148,21 @@ try {
   process.exitCode = 1;
 }
 
-function parseOptions(args) {
+function parseOptions(args, booleanFlags = []) {
+  const booleans = new Set(booleanFlags);
   const values = new Map();
-  for (let index = 0; index < args.length; index += 2) {
+  for (let index = 0; index < args.length; index += 1) {
     const key = args[index];
-    const value = args[index + 1];
-    if (!key?.startsWith("--") || value === undefined || value.startsWith("--")) throw new Error(`Invalid option near ${key ?? "end of input"}.`);
+    if (!key?.startsWith("--")) throw new Error(`Invalid option near ${key ?? "end of input"}.`);
     const name = key.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    if (booleans.has(name)) {
+      values.set(name, [...(values.get(name) ?? []), "true"]);
+      continue;
+    }
+    const value = args[index + 1];
+    if (value === undefined || value.startsWith("--")) throw new Error(`Invalid option near ${key}.`);
     values.set(name, [...(values.get(name) ?? []), value]);
+    index += 1;
   }
   return {
     first: (name) => values.get(name)?.[0],
@@ -147,5 +193,5 @@ function driverOptions(options) {
 }
 
 function usage() {
-  return "Usage: agent-app-benchmark <validate|comparison run|corpus generate|corpus verify|run|conformance|publication validate-append-only|result validate|site build> [options]";
+  return "Usage: agent-app-benchmark <validate|compare|comparison run|corpus generate|corpus verify|run|conformance|publication validate-append-only|result validate|site build> [options]";
 }

@@ -5,8 +5,21 @@
   "type": "module",
   "license": "MIT",
   "bin": {
-    "agent-app-benchmark": "./bin/agent-app-benchmark.mjs"
+    "agent-app-benchmark": "./bin/agent-app-benchmark.mjs",
+    "agentappbench": "./bin/agent-app-benchmark.mjs"
   },
+  "files": [
+    "bin",
+    "src",
+    "schemas",
+    "registry",
+    "docs",
+    "examples",
+    "drivers",
+    "native/resource-monitor",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     "./driver-sdk": {
       "types": "./src/driver-sdk.d.ts",
