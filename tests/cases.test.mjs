@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildLatencyGroups, buildPanelSwitchGroups, buildResourceSequence, buildResourceSequences, buildSessionNavigationGroups, buildWorkspacePanelGroups, expandCases, PANEL_LOAD_PROFILES, repetitionsFor, SESSION_LANES, WORKSPACE_PANEL_ACTIONS, WORKSPACE_PANEL_V2_ACTIONS } from "../src/cases.mjs";
+import { buildLatencyGroups, buildPanelSwitchGroups, buildResourceSequence, buildResourceSequences, buildSessionNavigationGroups, buildWorkspacePanelGroups, expandCases, PANEL_LOAD_PROFILES, repetitionsFor, SESSION_LANES, STRUCTURED_SESSION_LANES, WORKSPACE_PANEL_ACTIONS, WORKSPACE_PANEL_V2_ACTIONS } from "../src/cases.mjs";
 import { readRegistered } from "../src/registry.mjs";
 
 test("publication schedule emits 2 observations per lane at the fixed standard size", async () => {
@@ -22,13 +22,17 @@ test("a run can override its profile repetition count", async () => {
   assert.throws(() => repetitionsFor(scenario, "publication", 101), /1 through 100/u);
 });
 
-test("isolated groups use one fixed-size lane per fresh process", async () => {
+test("isolated groups use one fixed-size lane per fresh process in structured lane order", async () => {
   const { value: scenario } = await readRegistered("scenario", "session-switch-v1");
   const groups = buildLatencyGroups(scenario, "publication", "fixed-seed");
   assert.equal(groups.length, 8);
   assert.ok(groups.every((group) => group.cases.length === 1));
   assert.ok(groups.every((group) => new Set(group.cases.map((item) => `${item.workspaceRelation}:${item.sessionState}`)).size === 1));
   assert.ok(groups.every((group) => group.cases[0].transcriptBytes === scenario.cases.transcriptBytes[0]));
+  assert.deepEqual(
+    groups.filter((group) => group.repetition === 0).map((group) => group.lane.id),
+    STRUCTURED_SESSION_LANES.map((lane) => lane.id),
+  );
 });
 
 test("resource sequence progresses exact sizes through one fixed representative lane", async () => {
@@ -47,7 +51,7 @@ test("app start schedules both exact process-launch states", async () => {
   assert.equal(cases.filter((item) => item.stateHandle === "P1").length, 1);
 });
 
-test("V3 uses stabilized process pools, counterbalanced size order, and repeated fresh resource runs", async () => {
+test("V3 uses stabilized process pools, structured lane order, counterbalanced size order, and repeated fresh resource runs", async () => {
   const { value: scenario } = await readRegistered("scenario", "session-switch-v3");
   const groups = buildLatencyGroups(scenario, "quick", "v3-seed");
   assert.equal(groups.length, 2);
@@ -55,6 +59,15 @@ test("V3 uses stabilized process pools, counterbalanced size order, and repeated
   for (const lane of SESSION_LANES) {
     assert.equal(groups.flatMap((group) => group.cases).filter((item) => item.workload === "isolated-latency" && item.workspaceRelation === lane.workspaceRelation && item.sessionState === lane.sessionState).length, 20);
   }
+  const standard = groups[0].cases.filter((item) => item.workload === "isolated-latency");
+  assert.deepEqual(
+    [...new Set(standard.map((item) => `${item.workspaceRelation}:${item.sessionState}`))],
+    STRUCTURED_SESSION_LANES.map((lane) => `${lane.workspaceRelation}:${lane.sessionState}`),
+  );
+  assert.deepEqual(
+    standard.filter((item) => item.workspaceRelation === "within-workspace" && item.sessionState === "warm").map((item) => item.sample),
+    Array.from({ length: scenario.cases.latencySamplesPerProcess }, (_, index) => scenario.cases.latencySamplesPerProcess - 1 - index),
+  );
   const sizeOrders = groups.map((group) => group.cases.filter((item) => item.workload === "transcript-size-latency").map((item) => item.transcriptBytes));
   assert.notDeepEqual(sizeOrders[0], sizeOrders[1]);
   const resourceRuns = buildResourceSequences(scenario, 2);
@@ -71,28 +84,41 @@ test("workspace panel schedules one raw per-action observation in each process",
   assert.ok(groups[0].cases.every((item) => item.workload === "workspace-panel-action"));
 });
 
-test("session navigation emits paired first and return visits by history size plus one open-panel trend", async () => {
+test("session navigation walks all first-visits then all returns without interleaved pairs", async () => {
   const { value: scenario } = await readRegistered("scenario", "session-navigation-v1");
   const groups = buildSessionNavigationGroups(scenario, "smoke", 2);
   assert.equal(groups.length, 2);
   assert.ok(groups.every((group) => group.cases.length === scenario.cases.transcriptBytes.length * 2 + PANEL_LOAD_PROFILES.length));
+  const expectedSizes = [...scenario.cases.transcriptBytes].toReversed();
   for (const group of groups) {
     const history = group.cases.filter((item) => item.trend === "history-size");
-    for (const transcriptBytes of scenario.cases.transcriptBytes) {
-      const pair = history.filter((item) => item.transcriptBytes === transcriptBytes);
-      assert.deepEqual(pair.map((item) => item.navigationType), ["first-visit", "return-visited-panel-closed"]);
-      assert.equal(new Set(pair.map((item) => item.destinationSessionId)).size, 1);
-    }
+    const firstVisits = history.filter((item) => item.navigationType === "first-visit");
+    const returns = history.filter((item) => item.navigationType === "return-visited-panel-closed");
+    assert.deepEqual(firstVisits.map((item) => item.transcriptBytes), expectedSizes);
+    assert.deepEqual(returns.map((item) => item.transcriptBytes), [...expectedSizes].toReversed());
+    assert.ok(Math.max(...firstVisits.map((item) => item.sequence)) < Math.min(...returns.map((item) => item.sequence)));
+    assert.deepEqual(
+      history.map((item) => item.navigationType),
+      [...firstVisits.map(() => "first-visit"), ...returns.map(() => "return-visited-panel-closed")],
+    );
     const panel = group.cases.filter((item) => item.trend === "panel-load");
-    assert.deepEqual(new Set(panel.map((item) => item.loadProfile)), new Set(PANEL_LOAD_PROFILES));
+    assert.deepEqual(
+      panel.map((item) => item.loadProfile),
+      rotate(scenario.cases.panelLoads, group.repetition % scenario.cases.panelLoads.length).map((item) => item.id),
+    );
     assert.ok(panel.every((item) => item.navigationType === "return-visited-panel-open"));
     assert.ok(group.cases.every((item) => item.sessionState === undefined && item.workspaceRelation === undefined));
+    assert.ok(history.every((item) => item.sequence < panel[0].sequence));
   }
-  assert.notDeepEqual(
+  assert.deepEqual(
     groups[0].cases.filter((item) => item.trend === "history-size").map((item) => item.transcriptBytes),
     groups[1].cases.filter((item) => item.trend === "history-size").map((item) => item.transcriptBytes),
   );
 });
+
+function rotate(values, offset) {
+  return [...values.slice(offset), ...values.slice(0, offset)];
+}
 
 test("workspace panel V2 emits ordinary interactions across each explicit load profile", async () => {
   const { value: scenario } = await readRegistered("scenario", "workspace-panel-v2");
@@ -105,7 +131,7 @@ test("workspace panel V2 emits ordinary interactions across each explicit load p
   assert.ok(group.cases.every((item) => !item.action.includes("toggle")));
 });
 
-test("panel-open session switching uses distinct real V3 latency-pool destinations", async () => {
+test("panel-open session switching uses distinct real V3 latency-pool destinations in structured lane order", async () => {
   const { value: scenario } = await readRegistered("scenario", "session-switch-workspace-panel-v1");
   const groups = buildPanelSwitchGroups(scenario, "smoke", "panel-seed");
   assert.equal(groups.length, 1);
@@ -113,6 +139,10 @@ test("panel-open session switching uses distinct real V3 latency-pool destinatio
   assert.equal(new Set(groups[0].cases.map((item) => item.destinationSessionId)).size, 12);
   assert.ok(groups[0].cases.every((item) => item.destinationSessionId === `latency-${item.workspaceRelation}-${item.sessionState}-${item.sample}-${item.transcriptBytes}`));
   assert.deepEqual(new Set(groups[0].cases.map((item) => item.panelProfile)), new Set(["closed", "files", "diff"]));
+  assert.deepEqual(
+    [...new Set(groups[0].cases.map((item) => `${item.workspaceRelation}:${item.sessionState}`))],
+    STRUCTURED_SESSION_LANES.map((lane) => `${lane.workspaceRelation}:${lane.sessionState}`),
+  );
 });
 
 test("panel profiles stay adjacent and rotate through every within-lane schedule position", async () => {

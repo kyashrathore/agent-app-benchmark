@@ -243,9 +243,13 @@ async function writeSession(definition, session, sessionIndex, root) {
       projectID: `pro_benchmark_${session.workspaceId}`,
       workspaceID: session.workspaceId,
       directory: `/benchmark/${session.workspaceId}`,
-      title: `Synthetic benchmark ${session.logicalSessionId}`,
+      // Serial prefix keeps sidebar/page titles visually distinct when many
+      // roles share the "Synthetic benchmark …" stem (truncated rail labels).
+      title: `${sessionIndex + 1}. Synthetic benchmark ${session.logicalSessionId}`,
       version: "benchmark-v1",
-      time: { created: baseTime, updated: baseTime },
+      // updated > created by a per-session stride so updated_desc list order is
+      // stable top→bottom instead of a wall of identical relative times.
+      time: { created: baseTime, updated: baseTime + (sessionIndex + 1) * 60_000 },
     },
   });
 
@@ -525,7 +529,9 @@ function assertSyntheticPrivacy(serialized, label) {
 }
 
 function sessionBaseTime(sessionIndex) {
-  return 1_700_000_000_000 + sessionIndex * 1_000_000;
+  // One hour between sessions so relative labels and updated_desc order stay
+  // visually distinct in long sidebar lists.
+  return 1_700_000_000_000 + sessionIndex * 3_600_000;
 }
 
 function sortableOpenCodeId(prefix, timestamp, seed) {

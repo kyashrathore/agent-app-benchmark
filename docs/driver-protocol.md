@@ -55,11 +55,11 @@ Every case has `workload: "session-navigation"` and contains one of two trends:
 
 | Trend | `navigationType` | Timed user action |
 |---|---|---|
-| `history-size` | `first-visit` | Trusted click from `control` to a size-sweep destination that has not been displayed in this process. |
-| `history-size` | `return-visited-panel-closed` | After the paired destination was displayed once and the driver returned to `control` outside timing, trusted click back to it with the panel closed. |
-| `panel-load` | `return-visited-panel-open` | After visiting the destination and seeding the declared `loadProfile`, navigate to `control` outside timing while keeping the panel open, then time the trusted click back. |
+| `history-size` | `first-visit` | Trusted click to a size-sweep destination that has not been displayed in this process (dest→dest after the initial launch on `control`). |
+| `history-size` | `return-visited-panel-closed` | After the destination was first-visited earlier in this process, trusted click to it with the panel closed — without an untimed bounce to `control` between history destinations. |
+| `panel-load` | `return-visited-panel-open` | After visiting the destination and seeding the declared `loadProfile`, navigate to `control` outside timing while keeping the panel open, then time the trusted click back. Panel-open may still seed via `control`/source; that seeding is isolated to panel cases. |
 
-History cases are adjacent first/return pairs for each counterbalanced 1, 8, 32, and 128 MiB size. In a pair, the first measured case is the destination's first and only display before the return measurement. Between the two clocks, the driver may only navigate back to `control`; it must not display the destination again or perform any other destination setup. The panel trend uses the fixed standard transcript and one existing destination per light/moderate/heavy profile. The driver must not include panel opening, load seeding, navigation away, or any other setup in the clock.
+History cases run as all `first-visit` sizes in structured created_desc list order (large→small, matching newer/higher-serial rows nearer the top of the rail), then all `return-visited-panel-closed` sizes walking back up (small→large). A destination's first measured display must happen before its return measurement in the same process; returns need not be adjacent to their first-visit. The panel trend follows history in the same process, using the fixed standard transcript and one existing destination per load profile. The driver must not include panel opening, load seeding, navigation away, or any other setup in the clock.
 
 The first two cases use the ordinary correct-content readiness receipt. `return-visited-panel-open` additionally returns a renderer trace with `trusted-input`, `content-identity`, `session-ready`, `panel-ready`, `above-fold-painted`, and `interactive`. Session and panel observers start from the same trusted input; `interactive` is the later complete painted/input-ready endpoint, not a sequential session-then-panel observation.
 

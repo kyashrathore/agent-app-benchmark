@@ -7,6 +7,9 @@ export const SESSION_LANES = Object.freeze([
   { id: "across-workspaces-warm", workspaceRelation: "across-workspaces", sessionState: "warm" },
 ]);
 
+/** Canonical lane order for structured schedules (same sequence as SESSION_LANES). */
+export const STRUCTURED_SESSION_LANES = SESSION_LANES;
+
 export const WORKSPACE_PANEL_ACTIONS = Object.freeze([
   "open-cold",
   "toggle-open-close",
@@ -103,10 +106,13 @@ export function buildSessionNavigationGroups(scenario, runProfile, repetitionOve
   const repetitions = repetitionsFor(scenario, runProfile, repetitionOverride);
   return Array.from({ length: repetitions }, (_, repetition) => {
     const sample = repetition % 2;
-    const sizes = counterbalancedSizes(scenario.cases.transcriptBytes, repetition);
-    const historyCases = sizes.flatMap((transcriptBytes) => {
-      const destinationSessionId = `size-latency-${sample}-${transcriptBytes}`;
-      return scenario.cases.historyNavigationTypes.map((navigationType) => ({
+    // created_desc among size-latency destinations: later corpus bytes nearer the top → large→small.
+    // All first-visits walk that order, then all returns walk back up (reverse) so measured
+    // clicks stay contiguous dest→dest without resetting to control between history cases.
+    const sizes = structuredHistorySizes(scenario.cases.transcriptBytes);
+    const historyCases = scenario.cases.historyNavigationTypes.flatMap((navigationType) => {
+      const orderedSizes = navigationType === "first-visit" ? sizes : [...sizes].toReversed();
+      return orderedSizes.map((transcriptBytes) => ({
         caseId: `session-navigation-${repetition}-history-${navigationType}-${transcriptBytes}`,
         repetition,
         sample,
@@ -115,7 +121,7 @@ export function buildSessionNavigationGroups(scenario, runProfile, repetitionOve
         navigationType,
         transcriptBytes,
         sourceSessionId: "control",
-        destinationSessionId,
+        destinationSessionId: `size-latency-${sample}-${transcriptBytes}`,
       }));
     });
     const panelCases = rotate(scenario.cases.panelLoads, repetition % scenario.cases.panelLoads.length).map(({ id: loadProfile }) => {
@@ -298,4 +304,9 @@ function rotate(values, offset) {
 function counterbalancedSizes(values, ordinal) {
   const rotated = rotate(values, ordinal % values.length);
   return ordinal % 2 === 0 ? rotated : rotated.toReversed();
+}
+
+/** created_desc among size-latency destinations: later corpus bytes nearer the top → large→small. */
+function structuredHistorySizes(values) {
+  return [...values].toReversed();
 }
