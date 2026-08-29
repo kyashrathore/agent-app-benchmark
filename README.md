@@ -123,6 +123,25 @@ node bin/agent-app-benchmark.mjs run \
   --output artifacts/runs/t3-session-switch
 ```
 
+### One-liner single-app / CI run (no JSON config)
+
+For Claxedo or T3 without writing a comparison config, use the friendly `run` entry. It resolves the app-owned driver from `CLAXEDO_ROOT` / `T3_ROOT` (defaults `../opencode` and `../t3code`), picks up `CLAXEDO_BENCHMARK_EXECUTABLE` / `T3_BENCHMARK_EXECUTABLE`, and writes `result.json` + `report.md` under `--out`:
+
+```bash
+export CLAXEDO_BENCHMARK_EXECUTABLE="/absolute/path/to/Claxedo Dev.app/Contents/MacOS/Claxedo Dev"
+
+# CI / local smoke for one scenario:
+npx agentappbench run --app claxedo --scenario session-switch-v3 --run-profile smoke
+
+# Multiple scenarios (comma-separated or repeatable --scenario):
+npx agentappbench run --app t3 --scenarios app-start-v3,session-switch-v3 --run-profile quick --out artifacts/runs/t3-quick
+
+# Print the resolved binding without launching apps:
+npx agentappbench run --app claxedo --scenario session-switch-v3 --dry-run
+```
+
+Omit `--scenario` / `--scenarios` to run the same user-flow suite as `compare` (`app-start-v3`, `session-switch-v3`, `session-navigation-v1`, `workspace-panel-v2`). `--run-profile smoke|quick|publication` maps to repetition overrides `1|2|5` like compare. Pass `--executable` to override the env binary. Direct `--driver ...` runs keep the low-level path unchanged. Single-app mode does not invent a comparison site; use `compare --site` for paired HTML.
+
 Pass `--corpus-directory` to reuse a previously verified corpus instead of regenerating its roughly 691 MiB NDJSON representation for every scenario.
 
 Maintainers can recompute a private numeric profile without emitting session content:

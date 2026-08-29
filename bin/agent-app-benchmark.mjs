@@ -7,6 +7,7 @@ import { runComparison } from "../src/comparison-run.mjs";
 import { buildComparePlan, writeCompareConfig } from "../src/compare-preset.mjs";
 import { verifyCorpus, writeCorpus } from "../src/corpus.mjs";
 import { readDefinition, readRegistered, validateRegistry } from "../src/registry.mjs";
+import { buildRunPlan, executeRunPlan, serializeRunPlan } from "../src/run-plan.mjs";
 import { runBenchmark, validateResultFile } from "../src/runner.mjs";
 import { buildSite } from "../src/report/site.mjs";
 import { validateAppendOnly } from "../src/publication.mjs";
@@ -78,29 +79,64 @@ try {
     }
     process.stdout.write(`${verified.digestSha256}\n`);
   } else if (command === "run") {
-    const scenario = await readDefinition("scenario", required(options, "scenario"));
-    const corpus = await readDefinition("corpus", options.first("corpus") ?? scenario.value.corpusId);
-    const app = await readRegistered("app", required(options, "app"));
-    if (scenario.value.corpusId !== corpus.value.id) throw new Error(`${scenario.value.id} requires corpus ${scenario.value.corpusId}.`);
-    if (scenario.status === "public-comparable" && !app.value.scenarios.includes(scenario.value.id)) throw new Error(`${app.value.name} is not registered for ${scenario.value.id}.`);
-    if (scenario.value.kind === "session-switch" && !options.first("resourceMonitor")) throw new Error("session-switch-v1 requires --resource-monitor.");
-    const output = path.resolve(required(options, "output"));
-    await runBenchmark({
-      driver: driverOptions(options),
-      app: app.value,
-      scenario,
-      corpus,
-      runProfile: options.first("runProfile") ?? "smoke",
-      repetitions: integerOption(options, "repetitions"),
-      resourceMonitor: options.first("resourceMonitor"),
-      corpusDirectory: options.first("corpusDirectory") ? path.resolve(options.first("corpusDirectory")) : undefined,
-      output,
-      runId: options.first("runId"),
-      comparisonRunId: options.first("comparisonRunId"),
-      frameworkRevision: options.first("frameworkRevision"),
-      provenance: options.first("provenance"),
-    });
-    process.stdout.write(`${path.join(output, "result.json")}\n`);
+    if (options.first("driver")) {
+      const scenario = await readDefinition("scenario", required(options, "scenario"));
+      const corpus = await readDefinition("corpus", options.first("corpus") ?? scenario.value.corpusId);
+      const app = await readRegistered("app", required(options, "app"));
+      if (scenario.value.corpusId !== corpus.value.id) throw new Error(`${scenario.value.id} requires corpus ${scenario.value.corpusId}.`);
+      if (scenario.status === "public-comparable" && !app.value.scenarios.includes(scenario.value.id)) throw new Error(`${app.value.name} is not registered for ${scenario.value.id}.`);
+      if (scenario.value.kind === "session-switch" && !options.first("resourceMonitor")) throw new Error("session-switch-v1 requires --resource-monitor.");
+      const output = path.resolve(required(options, "output"));
+      await runBenchmark({
+        driver: driverOptions(options),
+        app: app.value,
+        scenario,
+        corpus,
+        runProfile: options.first("runProfile") ?? "smoke",
+        repetitions: integerOption(options, "repetitions"),
+        resourceMonitor: options.first("resourceMonitor"),
+        corpusDirectory: options.first("corpusDirectory") ? path.resolve(options.first("corpusDirectory")) : undefined,
+        output,
+        runId: options.first("runId"),
+        comparisonRunId: options.first("comparisonRunId"),
+        frameworkRevision: options.first("frameworkRevision"),
+        provenance: options.first("provenance"),
+      });
+      process.stdout.write(`${path.join(output, "result.json")}\n`);
+    } else {
+      const plan = await buildRunPlan({
+        app: required(options, "app"),
+        scenarioIds: [...options.all("scenario"), ...options.all("scenarios")],
+        runProfile: options.first("runProfile"),
+        repetitions: integerOption(options, "repetitions"),
+        id: options.first("id"),
+        stamp: options.first("stamp"),
+        hostLabel: options.first("hostLabel"),
+        provenance: options.first("provenance"),
+        frameworkRevision: options.first("frameworkRevision"),
+        resourceMonitor: options.first("resourceMonitor"),
+        corpusDirectory: options.first("corpusDirectory"),
+        outputRoot: options.first("out") ?? options.first("output"),
+        executable: options.first("executable"),
+        root: options.first("root"),
+        driverPath: options.first("driverPath") ?? options.first("driverScript"),
+        runtime: options.first("runtime"),
+        claxedoRoot: options.first("claxedoRoot"),
+        t3Root: options.first("t3Root"),
+        claxedoExecutable: options.first("claxedoExecutable"),
+        t3Executable: options.first("t3Executable"),
+        claxedoDriver: options.first("claxedoDriver"),
+        t3Driver: options.first("t3Driver"),
+        claxedoRuntime: options.first("claxedoRuntime"),
+        t3Runtime: options.first("t3Runtime"),
+      });
+      if (options.first("dryRun") === "true") {
+        process.stdout.write(`${JSON.stringify(serializeRunPlan(plan), null, 2)}\n`);
+      } else {
+        const results = await executeRunPlan(plan);
+        for (const result of results) process.stdout.write(`${result.resultFile}\n`);
+      }
+    }
   } else if (command === "conformance") {
     const app = await readRegistered("app", required(options, "app"));
     const scenario = await readRegistered("scenario", required(options, "scenario"));
@@ -193,5 +229,14 @@ function driverOptions(options) {
 }
 
 function usage() {
-  return "Usage: agent-app-benchmark <validate|compare|comparison run|corpus generate|corpus verify|run|conformance|publication validate-append-only|result validate|site build> [options]";
+  return [
+    "Usage: agent-app-benchmark <validate|compare|comparison run|corpus generate|corpus verify|run|conformance|publication validate-append-only|result validate|site build> [options]",
+    "",
+    "Friendly single-app run (resolves claxedo/t3 drivers by convention):",
+    "  agentappbench run --app claxedo|t3 --scenario session-switch-v3 --run-profile smoke",
+    "  agentappbench run --app claxedo --scenarios app-start-v3,session-switch-v3 --out artifacts/runs/claxedo-smoke --dry-run",
+    "",
+    "Direct driver run (unchanged):",
+    "  agent-app-benchmark run --driver ... --driver-arg ... --app ... --scenario ... --output ...",
+  ].join("\n");
 }
