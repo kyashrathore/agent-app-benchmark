@@ -107,12 +107,14 @@ export function buildSessionNavigationGroups(scenario, runProfile, repetitionOve
   return Array.from({ length: repetitions }, (_, repetition) => {
     const sample = repetition % 2;
     // created_desc among size-latency destinations: later corpus bytes nearer the top → large→small.
-    // All first-visits walk that order, then all returns walk back up (reverse) so measured
-    // clicks stay contiguous dest→dest without resetting to control between history cases.
+    // All first-visits walk that order, then all returns walk the same order so measured clicks
+    // stay contiguous dest→dest without resetting to control between history cases. Walking the
+    // returns in the same direction matters: the last first-visit leaves the smallest destination
+    // active, so a reversed return walk would start by clicking the already-active row, which is
+    // a route no-op rather than a session return.
     const sizes = structuredHistorySizes(scenario.cases.transcriptBytes);
     const historyCases = scenario.cases.historyNavigationTypes.flatMap((navigationType) => {
-      const orderedSizes = navigationType === "first-visit" ? sizes : [...sizes].toReversed();
-      return orderedSizes.map((transcriptBytes) => ({
+      return sizes.map((transcriptBytes) => ({
         caseId: `session-navigation-${repetition}-history-${navigationType}-${transcriptBytes}`,
         repetition,
         sample,

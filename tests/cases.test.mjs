@@ -105,7 +105,12 @@ test("session navigation walks all first-visits then all returns without interle
     const firstVisits = history.filter((item) => item.navigationType === "first-visit");
     const returns = history.filter((item) => item.navigationType === "return-visited-panel-closed");
     assert.deepEqual(firstVisits.map((item) => item.transcriptBytes), expectedSizes);
-    assert.deepEqual(returns.map((item) => item.transcriptBytes), [...expectedSizes].toReversed());
+    assert.deepEqual(returns.map((item) => item.transcriptBytes), expectedSizes);
+    // The return walk must never start on the destination the last first-visit left active.
+    assert.notEqual(returns[0].destinationSessionId, firstVisits.at(-1).destinationSessionId);
+    for (let index = 1; index < history.length; index += 1) {
+      assert.notEqual(history[index].destinationSessionId, history[index - 1].destinationSessionId);
+    }
     assert.ok(Math.max(...firstVisits.map((item) => item.sequence)) < Math.min(...returns.map((item) => item.sequence)));
     assert.deepEqual(
       history.map((item) => item.navigationType),
