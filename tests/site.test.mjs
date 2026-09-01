@@ -32,14 +32,14 @@ test("static site builds comparison and stable individual app pages from raw res
     assert.match(index, /p95 summed RSS by historical-session size/);
     assert.match(index, /p95 process-family CPU by historical-session size/);
     for (const row of [
-      "Baseline idle p95 RSS",
-      "Active workload p95 RSS",
-      "Active sampled maximum RSS",
-      "Ending idle p95 RSS",
-      "Retained RSS growth",
-      "Baseline idle p95 CPU",
-      "Active workload p95 CPU",
-      "Ending idle p95 CPU",
+      "Memory when idle at the start",
+      "Memory while working",
+      "Largest single memory sample",
+      "Memory when idle again",
+      "Memory never released",
+      "CPU when idle at the start",
+      "CPU while working",
+      "CPU when idle again",
     ]) assert.match(index, new RegExp(`<th scope="row">${row}</th>`, "u"));
     assert.match(index, /not an operating-system true peak/u);
     assert.match(index, /Observed sample cadence \(median\)/u);
@@ -51,8 +51,8 @@ test("static site builds comparison and stable individual app pages from raw res
     assert.doesNotMatch(index, /No valid chart points/u);
     assert.doesNotMatch(index, /style="--series:/);
     const stylesheet = await readFile(path.join(output, "assets", "site.css"), "utf8");
-    assert.match(stylesheet, /\.series-0 polyline,.series-0 circle\{stroke:var\(--clax\)\}/);
-    assert.match(stylesheet, /\.swatch\.series-1\{background:var\(--t3\)\}/);
+    assert.match(stylesheet, /\.series-0 polyline,.series-0 circle\{stroke:var\(--acc-0\)\}/);
+    assert.match(stylesheet, /\.swatch\.series-1\{background:var\(--acc-1\)/);
     assert.doesNotMatch(index, />Average</);
     assert.doesNotMatch(index, />Maximum</);
     assert.match(index, /P95 · valid \/ attempted/);
@@ -79,22 +79,23 @@ test("comparison site renders compact navigation and workspace trend matrices", 
     const output = path.join(root, "site");
     await buildSite(comparisonFile, output);
     const index = await readFile(path.join(output, "index.html"), "utf8");
-    assert.match(index, /Fairness ledger/);
-    assert.match(index, /Balanced mirrored schedule/);
+    const methodology = await readFile(path.join(output, "methodology.html"), "utf8");
+    assert.match(methodology, /Fairness ledger/);
+    assert.match(methodology, /Balanced mirrored schedule/);
     assert.match(index, /Session navigation/);
-    assert.match(index, /History-size trend/);
+    assert.match(index, /Navigation latency across every session/);
     assert.match(index, /First visit and return by history size — p95/);
-    assert.match(index, /Return with workspace panel open by seeded load — p95/);
+    assert.match(index, /Return with workspace panel open/);
     assert.match(index, /All workspace interactions/);
-    assert.match(index, /One table · latency and 60 Hz health/);
-    assert.equal((index.match(/<caption>Workspace interaction responsiveness and frame health across retained load/g) ?? []).length, 1);
+    assert.match(index, /60 Hz budget/);
+    assert.equal((index.match(/<caption>Workspace interaction responsiveness across retained load/g) ?? []).length, 1);
     assert.match(index, /same complete 24-file Review model/u);
     assert.match(index, /Setup does not scroll Review/u);
     assert.match(index, /Each load profile owns a distinct canonical target/u);
     assert.match(index, /measured input owns first surface creation and paint/u);
     assert.match(index, /Animation is presentation, not speed/u);
-    assert.match(index, /Frames &gt; 16\.67 ms/u);
-    assert.match(index, /Open and close frame health by retained load — p95/u);
+    assert.match(index, /16\.67 ms frame budget/u);
+    assert.match(index, /60 Hz/u);
     for (const action of ["Open Panel", "Close Panel", "Files To Review", "Review To Files", "Open File", "Switch File Tab", "Expand All", "Collapse All"]) {
       assert.match(index, new RegExp(action, "u"));
     }
@@ -117,13 +118,14 @@ test("five-repetition comparison reports nearest-rank p95 and preserves exact un
     const output = path.join(root, "site");
     await buildSite(comparisonFile, output);
     const index = await readFile(path.join(output, "index.html"), "utf8");
-    assert.match(index, /<b>5<\/b> repetitions/);
-    assert.match(index, /<b>p95<\/b> primary/);
-    assert.match(index, /This run schedules 5 repetitions/);
-    assert.match(index, /its p95 is exactly the sampled maximum of those observations/);
+    const methodology = await readFile(path.join(output, "methodology.html"), "utf8");
+    assert.match(methodology, /<b>5<\/b><span>repetitions per measurement/);
+    assert.match(methodology, /<b>P95<\/b><span>primary statistic/);
+    assert.match(methodology, /Every measurement below is repeated 5 times/);
+    assert.match(index, /its nearest-rank p95 is the sampled maximum of those observations/);
     assert.match(index, /5 \/ 5 · p95 = sampled max/u);
     assert.match(index, /First visit and return by history size — p95/);
-    assert.match(index, /Return with workspace panel open by seeded load — p95/);
+    assert.match(index, /Return with workspace panel open/);
     assert.doesNotMatch(index, /No valid chart points/);
     assert.doesNotMatch(index, /withheld until 20 valid observations/u);
     assert.doesNotMatch(index, /<b>p50<\/b> primary/);
@@ -223,7 +225,7 @@ test("incompatible scenarios and invalid resource measurements are explicit", as
     assert.match(resourcePage, /Memory and CPU under historical-session load/);
     // Invalid stays Invalid with its reason and keeps its sample counts; it is never scored as zero.
     assert.match(resourcePage, /<strong>Invalid<\/strong><small>241 \/ 241 · T3 monitor rejected malformed data\./u);
-    assert.match(resourcePage, /Baseline idle p95 RSS<\/th><td class="context">[^<]*<\/td><td class="metric"><strong>122\.8 MiB<\/strong>/u);
+    assert.match(resourcePage, /Memory when idle at the start<\/th><td class="context"[^>]*>[^<]*<\/td><td class="metric"[^>]*><strong>122\.8 MiB<\/strong>/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -246,7 +248,7 @@ test("memory and CPU rows carry absolute values with the relative difference bet
     const index = await readFile(path.join(output, "index.html"), "utf8");
     assert.match(index, /<strong>122\.8 MiB<\/strong>/u);
     assert.match(index, /<strong>245\.6 MiB<\/strong>/u);
-    assert.match(index, /<strong>Claxedo<\/strong><small>2× lower · 50\.0% lower · Claxedo ÷ &lt;unsafe-app&gt; = 0\.5<\/small>/u);
+    assert.match(index, /<strong>Claxedo<\/strong><small>2× lower · 50\.0% lower<\/small>/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

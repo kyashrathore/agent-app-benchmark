@@ -29,9 +29,13 @@ test("isolated groups use one fixed-size lane per fresh process in structured la
   assert.ok(groups.every((group) => group.cases.length === 1));
   assert.ok(groups.every((group) => new Set(group.cases.map((item) => `${item.workspaceRelation}:${item.sessionState}`)).size === 1));
   assert.ok(groups.every((group) => group.cases[0].transcriptBytes === scenario.cases.transcriptBytes[0]));
+  // Lane order inside a repetition is a seeded shuffle: deterministic for the seed (so every
+  // application receives the identical schedule) but not the canonical lane listing order.
+  const firstRepetitionLanes = groups.filter((group) => group.repetition === 0).map((group) => group.lane.id);
+  assert.deepEqual([...firstRepetitionLanes].sort(), STRUCTURED_SESSION_LANES.map((lane) => lane.id).sort());
   assert.deepEqual(
-    groups.filter((group) => group.repetition === 0).map((group) => group.lane.id),
-    STRUCTURED_SESSION_LANES.map((lane) => lane.id),
+    buildLatencyGroups(scenario, "publication", "fixed-seed").filter((group) => group.repetition === 0).map((group) => group.lane.id),
+    firstRepetitionLanes,
   );
 });
 
@@ -60,13 +64,19 @@ test("V3 uses stabilized process pools, structured lane order, counterbalanced s
     assert.equal(groups.flatMap((group) => group.cases).filter((item) => item.workload === "isolated-latency" && item.workspaceRelation === lane.workspaceRelation && item.sessionState === lane.sessionState).length, 20);
   }
   const standard = groups[0].cases.filter((item) => item.workload === "isolated-latency");
+  // Standard cases are seeded-shuffled within the stabilized process so no lane is pinned to a
+  // fixed process age; the schedule is identical for every application under the same seed.
   assert.deepEqual(
-    [...new Set(standard.map((item) => `${item.workspaceRelation}:${item.sessionState}`))],
-    STRUCTURED_SESSION_LANES.map((lane) => `${lane.workspaceRelation}:${lane.sessionState}`),
+    [...new Set(standard.map((item) => `${item.workspaceRelation}:${item.sessionState}`))].sort(),
+    STRUCTURED_SESSION_LANES.map((lane) => `${lane.workspaceRelation}:${lane.sessionState}`).sort(),
   );
   assert.deepEqual(
-    standard.filter((item) => item.workspaceRelation === "within-workspace" && item.sessionState === "warm").map((item) => item.sample),
-    Array.from({ length: scenario.cases.latencySamplesPerProcess }, (_, index) => scenario.cases.latencySamplesPerProcess - 1 - index),
+    buildLatencyGroups(scenario, "quick", "v3-seed")[0].cases.map((item) => item.caseId),
+    groups[0].cases.map((item) => item.caseId),
+  );
+  assert.deepEqual(
+    standard.filter((item) => item.workspaceRelation === "within-workspace" && item.sessionState === "warm").map((item) => item.sample).sort((left, right) => left - right),
+    Array.from({ length: scenario.cases.latencySamplesPerProcess }, (_, index) => index),
   );
   const sizeOrders = groups.map((group) => group.cases.filter((item) => item.workload === "transcript-size-latency").map((item) => item.transcriptBytes));
   assert.notDeepEqual(sizeOrders[0], sizeOrders[1]);
@@ -140,8 +150,8 @@ test("panel-open session switching uses distinct real V3 latency-pool destinatio
   assert.ok(groups[0].cases.every((item) => item.destinationSessionId === `latency-${item.workspaceRelation}-${item.sessionState}-${item.sample}-${item.transcriptBytes}`));
   assert.deepEqual(new Set(groups[0].cases.map((item) => item.panelProfile)), new Set(["closed", "files", "diff"]));
   assert.deepEqual(
-    [...new Set(groups[0].cases.map((item) => `${item.workspaceRelation}:${item.sessionState}`))],
-    STRUCTURED_SESSION_LANES.map((lane) => `${lane.workspaceRelation}:${lane.sessionState}`),
+    [...new Set(groups[0].cases.map((item) => `${item.workspaceRelation}:${item.sessionState}`))].sort(),
+    STRUCTURED_SESSION_LANES.map((lane) => `${lane.workspaceRelation}:${lane.sessionState}`).sort(),
   );
 });
 
