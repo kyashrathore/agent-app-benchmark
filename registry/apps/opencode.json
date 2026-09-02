@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "opencode",
+  "name": "OpenCode",
+  "repository": "https://github.com/anomalyco/opencode",
+  "driverOwnership": "application-repository",
+  "guiFramework": "electron",
+  "sourceEventFormats": [
+    "opencode-event-v2"
+  ],
+  "materializationModes": [
+    "native-opencode"
+  ],
+  "scenarios": [
+    "app-start-v3",
+    "session-switch-v3",
+    "session-navigation-v1",
+    "workspace-panel-v2"
+  ]
+}

@@ -23,6 +23,16 @@ export const APP_BINDINGS = Object.freeze({
     runtimeEnv: "CLAXEDO_BENCHMARK_RUNTIME",
     runtimes: Object.freeze(["bun", "node"]),
   }),
+  opencode: Object.freeze({
+    id: "opencode",
+    rootEnv: "OPENCODE_ROOT",
+    defaultRootRelative: "../opencode-upstream",
+    driverRelative: "packages/desktop/benchmark/agent-app-driver.ts",
+    executableEnv: "OPENCODE_BENCHMARK_EXECUTABLE",
+    driverEnv: "OPENCODE_BENCHMARK_DRIVER",
+    runtimeEnv: "OPENCODE_BENCHMARK_RUNTIME",
+    runtimes: Object.freeze(["bun"]),
+  }),
   t3: Object.freeze({
     id: "t3",
     rootEnv: "T3_ROOT",

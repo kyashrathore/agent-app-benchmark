@@ -26,6 +26,7 @@ test("all public registry entries satisfy strict schemas and cross references", 
     "app:claxedo-solid1-web",
     "app:claxedo-solid2-web",
     "app:claxedo",
+"app:opencode",
     "app:t3",
   ]);
   assert.ok(entries.every((entry) => /^[0-9a-f]{64}$/.test(entry.digest)));
