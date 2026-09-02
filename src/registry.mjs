@@ -113,6 +113,7 @@ function validateScenario(value) {
     if (JSON.stringify(value.cases.workspaceRelations) !== JSON.stringify(expectedRelations)) throw new Error("Session workspace relations are not canonical.");
     if (JSON.stringify(value.cases.sessionStates) !== JSON.stringify(expectedStates)) throw new Error("Session cache states are not canonical.");
     assertAscendingIntegers(value.cases.transcriptBytes, "Scenario transcript sizes");
+    if (value.cases.longRowTranscriptBytes) assertAscendingIntegers(value.cases.longRowTranscriptBytes, "Scenario long-row transcript sizes");
   }
   if (value.kind === "session-navigation") {
     if (JSON.stringify(value.cases.historyNavigationTypes) !== JSON.stringify(["first-visit", "return-visited-panel-closed"])) throw new Error("Session-navigation history types are not canonical.");
@@ -123,7 +124,7 @@ function validateScenario(value) {
     validatePanelLoads(value.cases.panelLoads, value.cases.workspaceLoad);
   }
   if (value.kind === "workspace-panel") {
-    const expectedActions = value.id === "workspace-panel-v2"
+    const expectedActions = ["workspace-panel-v2", "workspace-panel-v3"].includes(value.id)
       ? ["open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "expand-all", "collapse-all"]
       : ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"];
     if (JSON.stringify(value.cases.actions) !== JSON.stringify(expectedActions)) throw new Error("Workspace-panel actions are not canonical.");
@@ -175,7 +176,12 @@ function validateCorpus(value) {
   }
   const canonicalBytes = value.transcriptBytes.reduce((total, bytes) => total + bytes * 4, value.transcriptBytes[0]);
   if (canonicalBytes > 1024 * 1024 * 1024) throw new Error("Corpus definition exceeds the V1 byte budget.");
-  for (const profile of value.sessionProfiles) {
+  const longRowSizes = value.benchmarkTopology?.longRowTranscriptBytes ?? [];
+  if (longRowSizes.length > 0) assertAscendingIntegers(longRowSizes, "Corpus long-row transcript sizes");
+  if (JSON.stringify((value.longRowProfiles ?? []).map((profile) => profile.transcriptBytes)) !== JSON.stringify(longRowSizes)) {
+    throw new Error("Corpus long-row profiles must match benchmarkTopology.longRowTranscriptBytes in order.");
+  }
+  for (const profile of [...value.sessionProfiles, ...(value.longRowProfiles ?? [])]) {
     const weight = Object.values(profile.payloadPermille).reduce((sum, value) => sum + value, 0);
     if (weight !== 1000) throw new Error(`Corpus profile ${profile.transcriptBytes} payloadPermille must total 1000.`);
     if (profile.patches > profile.toolCalls) throw new Error(`Corpus profile ${profile.transcriptBytes} has more patches than tool calls.`);

@@ -157,6 +157,20 @@ export function buildSessionDefinitions(definition) {
         });
       }
     }
+    // Long-row sessions carry the same bytes in a handful of very large text
+    // parts, so a virtualized transcript cannot hide the cost of one row.
+    const longRowProfiles = new Map((definition.longRowProfiles ?? []).map((profile) => [profile.transcriptBytes, profile]));
+    for (let sample = 0; sample < definition.benchmarkTopology.sizeSamplesPerProcess; sample += 1) {
+      for (const transcriptBytes of definition.benchmarkTopology.longRowTranscriptBytes ?? []) {
+        sessions.push({
+          logicalSessionId: `size-latency-long-${sample}-${transcriptBytes}`,
+          workspaceId: primaryWorkspace,
+          role: "size-latency-long",
+          transcriptBytes,
+          profile: longRowProfiles.get(transcriptBytes),
+        });
+      }
+    }
     for (const transcriptBytes of definition.transcriptBytes) {
       sessions.push({
         logicalSessionId: `progressive-resource-${transcriptBytes}`,
@@ -192,6 +206,7 @@ function expectedTopologySessionCount(topology) {
   return 1
     + 4 * topology.benchmarkTopology.latencySamplesPerProcess
     + topology.benchmarkTopology.sizeSamplesPerProcess * topology.transcriptBytes.length
+    + topology.benchmarkTopology.sizeSamplesPerProcess * (topology.benchmarkTopology.longRowTranscriptBytes ?? []).length
     + topology.transcriptBytes.length;
 }
 
@@ -256,7 +271,10 @@ async function writeSession(definition, session, sessionIndex, root) {
   const profile = session.profile;
   const allocation = allocatePayload(profile.transcriptBytes, profile.payloadPermille);
   const realisticDistribution = definition.generator === "opencode-completed-sessions-v3";
-  const split = realisticDistribution
+  // Long-row sessions split their bytes evenly: the point is a row of a known,
+  // uniform size, and a weighted split would push single rows past the event cap.
+  const evenRows = session.role === "size-latency-long";
+  const split = realisticDistribution && !evenRows
     ? (total, count, kind) => splitWeightedBytes(total, count, `${definition.seed}:${session.logicalSessionId}:${kind}`)
     : (total, count) => splitBytes(total, count);
   const payload = realisticDistribution
@@ -318,7 +336,7 @@ async function writeSession(definition, session, sessionIndex, root) {
         },
       });
       await writePart(messageId, { type: "step-start" });
-      if (reasoningChunks.length > 0) {
+      if ((reasoningChunks[reasoningIndex] ?? 0) > 0) {
         await writePart(messageId, {
           type: "reasoning",
           text: payload("Inspecting dependencies, checking edge cases, and selecting a minimal implementation path. ", reasoningChunks[reasoningIndex], `reasoning:${reasoningIndex}`),
@@ -402,6 +420,7 @@ function splitBytes(total, count) {
     if (total !== 0) throw new Error("A non-zero payload budget requires at least one part.");
     return [];
   }
+  if (total === 0) return Array.from({ length: count }, () => 0);
   if (total < count) throw new Error("Payload budget is too small for its part count.");
   return Array.from({ length: count }, (_, index) => distributedCount(total, count, index));
 }
@@ -411,6 +430,7 @@ function splitWeightedBytes(total, count, seed) {
     if (total !== 0) throw new Error("A non-zero payload budget requires at least one part.");
     return [];
   }
+  if (total === 0) return Array.from({ length: count }, () => 0);
   if (total < count) throw new Error("Payload budget is too small for its part count.");
   const weights = Array.from({ length: count }, (_, index) => {
     const value = Number.parseInt(createHash("sha256").update(`${seed}:${index}`).digest("hex").slice(0, 8), 16) / 0xffffffff;

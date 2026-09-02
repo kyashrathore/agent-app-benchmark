@@ -400,7 +400,7 @@ async function executeSafely(driver, scenarioId, benchmarkCase, extra = {}) {
   try {
     const { requireRendererTrace = false, requireTimingEvidence = false, requireTrustedPointerStart = false, ...requestExtra } = extra;
     const result = await driver.request("execute", { scenarioId, case: benchmarkCase, ...requestExtra }, 5 * 60_000);
-    return normalizeExecution(result, benchmarkCase, { requireTimingEvidence: scenarioId.endsWith("-v3") || requireTimingEvidence || requireRendererTrace, requireRendererTrace, requireTrustedPointerStart });
+    return normalizeExecution(result, benchmarkCase, { requireTimingEvidence: /-v(?:[3-9]|[1-9][0-9]+)$/u.test(scenarioId) || requireTimingEvidence || requireRendererTrace, requireRendererTrace, requireTrustedPointerStart });
   } catch (error) {
     return invalidObservation(benchmarkCase, error);
   }

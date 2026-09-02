@@ -409,7 +409,7 @@ function renderMethodology(model) {
 
 <section class="method-block" id="flows"><div class="flow-heading"><p class="kicker">The flows</p><h2>What each measurement actually times</h2><p>Every flow measures a real user action end to end: from the trusted input event to the moment the requested surface is correct, painted, and ready for the next input.</p></div><div class="explain-grid">${flowRows}</div></section>
 
-<section class="method-block" id="fairness"><div class="flow-heading"><p class="kicker">Fairness ledger</p><h2>What stops this from being a rigged demo</h2></div><dl class="method-summary"><div><dt>Order control</dt><dd>${escapeHtml(orderControl(model))}</dd></div><div><dt>Corpus and cases</dt><dd>Compatibility validation requires identical framework revision, scenario, corpus, profile, repetition count, and host identity${model.policy === "balanced-mirrored" ? "" : " (independent runs are not required to share a schedule)"}. Anything that fails to match is reported as unpaired instead of being compared anyway.</dd></div><div><dt>Materialization</dt><dd>Each application uses its registered production path. Native and translated mappings are disclosed; unsupported product contracts are not scored as zero.</dd></div><div><dt>Presentation vs speed</dt><dd>Deliberate animation duration is never used to name a latency winner. Panel open and close are scored on trusted-input response and p95 frame health only.</dd></div><div><dt>Withheld values</dt><dd>A measurement that lost its process family, recorded no sample, or failed validation stays Invalid with its reason attached. It is never substituted with a zero or an average.</dd></div></dl></section>
+<section class="method-block" id="fairness"><div class="flow-heading"><p class="kicker">Fairness ledger</p><h2>What stops this from being a rigged demo</h2></div><dl class="method-summary"><div><dt>Order control</dt><dd>${escapeHtml(orderControl(model))}</dd></div><div><dt>Corpus and cases</dt><dd>Compatibility validation requires identical framework revision, scenario, corpus, profile, repetition count, and host identity${model.policy === "balanced-mirrored" ? "" : " (independent runs are not required to share a schedule or a framework revision)"}. Anything that fails to match is reported as unpaired instead of being compared anyway.</dd></div><div><dt>Materialization</dt><dd>Each application uses its registered production path. Native and translated mappings are disclosed; unsupported product contracts are not scored as zero.</dd></div><div><dt>Presentation vs speed</dt><dd>Deliberate animation duration is never used to name a latency winner. Panel open and close are scored on trusted-input response and p95 frame health only.</dd></div><div><dt>Withheld values</dt><dd>A measurement that lost its process family, recorded no sample, or failed validation stays Invalid with its reason attached. It is never substituted with a zero or an average.</dd></div></dl></section>
 
 <section class="method-block" id="statistics"><div class="flow-heading"><p class="kicker">Statistics</p><h2>Why p95, and what the disclosures mean</h2></div><p class="prose">${escapeHtml(model.p95Disclosure?.note ?? "Nearest-rank p95 is the primary statistic for every distributional comparison.")}</p><dl class="method-summary"><div><dt>Primary statistic</dt><dd>${escapeHtml(model.primaryStatistic)} (${escapeHtml(model.primaryStatisticMethod)})</dd></div><div><dt>Why p95 rather than the average</dt><dd>An average hides the slow interactions that actually make an application feel bad. p95 describes the experience you notice — the worst one in twenty actions — which is where sluggishness is felt.</dd></div><div><dt>&quot;p95 = sampled max&quot;</dt><dd>Nearest-rank p95 selects the ceil(0.95 × n)-th ordered valid observation. Below ${model.p95Disclosure?.equalsSampledMaximumBelowValidCount ?? 20} valid observations that rank is the last one, so the p95 is exactly the largest observation. Those values are labelled rather than quietly relabelled as a different statistic.</dd></div><div><dt>Sampled maximum</dt><dd>Where a sampled maximum appears in the resource tables it is the largest observed framework sample and is diagnostic only; it is not an operating-system true peak.</dd></div><div><dt>Winner definition</dt><dd>Lower is better on every metric in this benchmark. A winner is the strict minimum; exact equality is reported as a tie; ratios are quoted against the best remaining value.</dd></div></dl></section>
 
@@ -549,11 +549,21 @@ function renderSessionSwitchComparison(apps, model = {}, { kicker = "Flow 01", r
     .filter(([key]) => apps.some((app) => app.sessionSwitch.derivation.summary[key]))
     .map(([key, flow, context]) => navigationMatrixRow(flow, context, apps, (app) => app.sessionSwitch.derivation.summary[key], statistic, "ms", record))
     .join("");
-  const trendSeries = apps.map((app) => ({
-    label: app.name,
-    colorIndex: app.tone,
-    points: (app.sessionSwitch.derivation.summary.transcriptSizeTrend ?? []).map((point) => ({ x: point.transcriptBytes / 1048576, y: metricValue(point, statistic) })),
-  }));
+  const trendSeries = apps.flatMap((app) => [
+    {
+      label: app.name,
+      colorIndex: app.tone,
+      points: (app.sessionSwitch.derivation.summary.transcriptSizeTrend ?? []).map((point) => ({ x: point.transcriptBytes / 1048576, y: metricValue(point, statistic) })),
+    },
+    ...(app.sessionSwitch.derivation.summary.longRowSizeTrend
+      ? [{
+          label: `${app.name} · long rows`,
+          colorIndex: app.tone,
+          dashed: true,
+          points: app.sessionSwitch.derivation.summary.longRowSizeTrend.map((point) => ({ x: point.transcriptBytes / 1048576, y: metricValue(point, statistic) })),
+        }]
+      : []),
+  ]);
   const hasTrend = trendSeries.some((series) => series.points.filter((point) => Number.isFinite(point.y)).length >= 3);
   const headers = comparisonHeaders(apps, statisticLabel);
   return `<section class="benchmark-section" id="session-switching"><div class="flow-heading"><p class="kicker">${escapeHtml(kicker)}</p><h2>Session switching</h2><p>Clicking between completed sessions in the session list. Each observation measures trusted input → correct transcript painted and input-ready. Warm means the destination surface was rendered earlier in the same launch.</p></div><section class="matrix"><div class="matrix-heading"><h3>Switch latency by lane</h3><p>${escapeHtml(statisticLabel)} in milliseconds · lower is better</p></div><div class="table-scroll"><table><caption>Session-switch ${escapeHtml(statisticLabel)} latency in milliseconds by lane</caption><thead><tr><th scope="col">Lane</th><th scope="col">Condition</th>${headers}<th scope="col">Relative result</th></tr></thead><tbody>${rows}</tbody></table></div></section>${hasTrend ? chart(`Switch latency by transcript size — ${statistic}`, trendSeries, "Transcript size (MiB)", `${statistic} latency (ms)`) : ""}${unsupportedReasons(apps, "sessionSwitch")}</section>`;
@@ -1217,5 +1227,5 @@ function orderPillar(model) {
 function orderControl(model) {
   return model.policy === "balanced-mirrored"
     ? "Balanced mirrored schedule across every paired scenario, so neither application is systematically favoured by running first or last."
-    : "Independent runs: no counterbalanced order. Run start times are disclosed per leg; host load is gated before each run and the same packaged builds, corpus, and framework revision are required for pairing.";
+    : "Independent runs: no counterbalanced order. Run start times are disclosed per leg; host load is gated before each run, and pairing requires the same scenario and corpus digests, run profile, repetition count, and host identity. Every framework revision involved is listed above.";
 }

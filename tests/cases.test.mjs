@@ -178,3 +178,17 @@ test("panel profiles stay adjacent and rotate through every within-lane schedule
     for (const profile of ["closed", "files", "diff"]) assert.deepEqual(new Set(positions.map((item) => item[profile])), new Set([0, 1, 2]));
   }
 });
+
+test("session-switch-v4 schedules five samples per lane plus long-row size cases", async () => {
+  const { value: scenario } = await readRegistered("scenario", "session-switch-v4");
+  const groups = buildLatencyGroups(scenario, "publication", "seed", 1);
+  assert.equal(groups.length, 1);
+  const cases = groups[0].cases;
+  assert.equal(cases.filter((item) => item.workload === "isolated-latency").length, 4 * 5);
+  const sizeCases = cases.filter((item) => item.workload === "transcript-size-latency" && item.rowShape === undefined);
+  const longRowCases = cases.filter((item) => item.workload === "transcript-size-latency" && item.rowShape === "long");
+  assert.equal(sizeCases.length, 2 * 4);
+  assert.equal(longRowCases.length, 2 * 3);
+  assert.ok(longRowCases.every((item) => item.destinationSessionId === `size-latency-long-${item.sample}-${item.transcriptBytes}` && item.caseId.includes("long-rows")));
+  assert.equal(new Set(cases.map((item) => item.caseId)).size, cases.length);
+});

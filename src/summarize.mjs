@@ -34,7 +34,8 @@ export function summarizeObservations(scenario, observations) {
       transcriptBytes: scenario.cases.standardTranscriptBytes ?? scenario.cases.transcriptBytes[0],
     };
   }
-  const progression = observations.filter((item) => item.case?.workload === (scenario.cases.sizeSamplesPerProcess ? "transcript-size-latency" : "progressive-resource"));
+  const sizeWorkload = scenario.cases.sizeSamplesPerProcess ? "transcript-size-latency" : "progressive-resource";
+  const progression = observations.filter((item) => item.case?.workload === sizeWorkload && item.case?.rowShape !== "long");
   lanes.transcriptSizeTrend = scenario.cases.transcriptBytes.map((transcriptBytes) => {
     const attempted = progression.filter((item) => item.case.transcriptBytes === transcriptBytes);
     return {
@@ -42,6 +43,18 @@ export function summarizeObservations(scenario, observations) {
       ...summaryOrUnavailable(attempted.filter(isValid).map((item) => item.durationMs), attempted.length, "No valid observations."),
     };
   });
+  if (scenario.cases.longRowTranscriptBytes) {
+    // Same bytes in a handful of very large rows: the cost a virtualized
+    // transcript cannot amortize across many small rows.
+    const longRows = observations.filter((item) => item.case?.workload === sizeWorkload && item.case?.rowShape === "long");
+    lanes.longRowSizeTrend = scenario.cases.longRowTranscriptBytes.map((transcriptBytes) => {
+      const attempted = longRows.filter((item) => item.case.transcriptBytes === transcriptBytes);
+      return {
+        transcriptBytes,
+        ...summaryOrUnavailable(attempted.filter(isValid).map((item) => item.durationMs), attempted.length, "No valid observations."),
+      };
+    });
+  }
   return lanes;
 }
 

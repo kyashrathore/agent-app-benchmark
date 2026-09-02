@@ -58,8 +58,9 @@ export async function loadComparison(manifestFile) {
  */
 export function validateIndependentRuns(results) {
   assertSharedComparisonRepetitions(results);
-  const frameworkRevisions = new Set(results.map((item) => item.result.provenance.frameworkRevision));
-  if (frameworkRevisions.size > 1) throw new Error("Assembled comparison results do not share one framework revision.");
+  // Independent runs may come from different framework commits; the scenario
+  // and corpus digests pin the case set, and every framework revision is
+  // disclosed on the methodology page.
   const runProfiles = new Set(results.map((item) => item.result.runProfile));
   if (runProfiles.size > 1) throw new Error("Assembled comparison results do not share one run profile.");
   const perApp = Map.groupBy(results, (item) => item.result.app.id);
@@ -134,7 +135,7 @@ function compatibilityKey(result, policy) {
     // host identity only; the sealed schedule identity is a mirrored-run concept.
     comparisonRunId: policy === "balanced-mirrored" ? result.provenance.comparisonRunId : null,
     comparisonScheduleDigestSha256: policy === "balanced-mirrored" ? result.provenance.comparisonScheduleDigestSha256 : null,
-    frameworkRevision: result.provenance.frameworkRevision,
+    frameworkRevision: policy === "balanced-mirrored" ? result.provenance.frameworkRevision : null,
     scenario: result.scenario.digestSha256,
     corpus: result.corpus.digestSha256,
     sourceEventSchema: result.sourceEventFormat.schemaDigestSha256,

@@ -118,3 +118,19 @@ test("generator never overwrites an existing directory", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("V4 corpus halves the latency lanes and adds long-row size destinations", async () => {
+  const corpus = await readRegistered("corpus", "opencode-completed-sessions-v4");
+  const sessions = buildSessionDefinitions(corpus.value);
+  assert.equal(sessions.length, 1 + 4 * 5 + 2 * 4 + 2 * 3 + 4);
+  assert.equal(sessions.filter((session) => session.logicalSessionId.startsWith("latency-")).length, 20);
+  assert.equal(sessions.filter((session) => session.role === "size-latency").length, 8);
+  const longRows = sessions.filter((session) => session.role === "size-latency-long");
+  assert.deepEqual(longRows.map((session) => session.logicalSessionId), [
+    "size-latency-long-0-1048576", "size-latency-long-0-8388608", "size-latency-long-0-33554432",
+    "size-latency-long-1-1048576", "size-latency-long-1-8388608", "size-latency-long-1-33554432",
+  ]);
+  // Eight text rows carry the whole transcript: no tools, no reasoning.
+  assert.ok(longRows.every((session) => session.profile.toolCalls === 0 && session.profile.transcriptBytes / (session.profile.userMessages + session.profile.assistantMessages) <= 1048576 && session.profile.payloadPermille.text === 1000));
+  assert.equal(new Set(sessions.map((session) => session.logicalSessionId)).size, sessions.length);
+});

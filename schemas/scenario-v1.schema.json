@@ -4,121 +4,328 @@
   "title": "Agent app benchmark scenario v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "title", "description", "kind", "corpusId", "cases", "metrics", "runProfiles"],
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "description",
+    "kind",
+    "corpusId",
+    "cases",
+    "metrics",
+    "runProfiles"
+  ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
-    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
-    "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
-    "kind": { "enum": ["app-start", "session-switch", "session-navigation", "workspace-panel", "session-switch-workspace-panel"] },
-    "corpusId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$" },
-    "cases": { "type": "object" },
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "kind": {
+      "enum": [
+        "app-start",
+        "session-switch",
+        "session-navigation",
+        "workspace-panel",
+        "session-switch-workspace-panel"
+      ]
+    },
+    "corpusId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$"
+    },
+    "cases": {
+      "type": "object"
+    },
     "metrics": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "description", "unit"],
+        "required": [
+          "id",
+          "description",
+          "unit"
+        ],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" },
-          "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
-          "unit": { "enum": ["ms", "percent", "MiB", "bytes"] }
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "unit": {
+            "enum": [
+              "ms",
+              "percent",
+              "MiB",
+              "bytes"
+            ]
+          }
         }
       }
     },
     "resourceMeasurement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["processScope", "activeSampleIntervalMs", "idleSampleIntervalMs", "settleBeforeIdleMs", "idleWindowMs"],
+      "required": [
+        "processScope",
+        "activeSampleIntervalMs",
+        "idleSampleIntervalMs",
+        "settleBeforeIdleMs",
+        "idleWindowMs"
+      ],
       "properties": {
-        "processScope": { "const": "application-family" },
-        "activeSampleIntervalMs": { "type": "integer", "minimum": 50, "maximum": 5000 },
-        "idleSampleIntervalMs": { "type": "integer", "minimum": 50, "maximum": 5000 },
-        "settleBeforeIdleMs": { "type": "integer", "minimum": 0, "maximum": 300000 },
-        "idleWindowMs": { "type": "integer", "minimum": 1000, "maximum": 600000 }
+        "processScope": {
+          "const": "application-family"
+        },
+        "activeSampleIntervalMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 5000
+        },
+        "idleSampleIntervalMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 5000
+        },
+        "settleBeforeIdleMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "idleWindowMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 600000
+        }
       }
     },
     "runProfiles": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["smoke", "quick", "publication"],
+      "required": [
+        "smoke",
+        "quick",
+        "publication"
+      ],
       "properties": {
-        "smoke": { "type": "integer", "minimum": 1, "maximum": 100 },
-        "quick": { "type": "integer", "minimum": 1, "maximum": 100 },
-        "publication": { "type": "integer", "minimum": 1, "maximum": 100 }
+        "smoke": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "quick": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "publication": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
       }
     }
   },
   "allOf": [
     {
-      "if": { "properties": { "kind": { "const": "app-start" } }, "required": ["kind"] },
-      "then": {
+      "if": {
         "properties": {
-          "cases": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["startModes"],
-            "properties": { "startModes": { "const": ["new-application-state", "initialized-application-state"] } }
+          "kind": {
+            "const": "app-start"
           }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "kind": { "const": "session-switch" } }, "required": ["kind"] },
+        },
+        "required": [
+          "kind"
+        ]
+      },
       "then": {
-        "required": ["resourceMeasurement"],
         "properties": {
           "cases": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["workspaceRelations", "sessionStates", "transcriptBytes"],
+            "required": [
+              "startModes"
+            ],
             "properties": {
-              "workspaceRelations": { "const": ["within-workspace", "across-workspaces"] },
-              "sessionStates": { "const": ["cold", "warm"] },
-              "transcriptBytes": {
-                "type": "array",
-                "minItems": 1,
-                "maxItems": 16,
-                "uniqueItems": true,
-                "items": { "type": "integer", "minimum": 1, "maximum": 268435456 }
-              },
-              "standardTranscriptBytes": { "type": "integer", "minimum": 1, "maximum": 268435456 },
-              "latencySamplesPerProcess": { "type": "integer", "minimum": 1, "maximum": 20 },
-              "sizeSamplesPerProcess": { "type": "integer", "minimum": 1, "maximum": 10 }
+              "startModes": {
+                "const": [
+                  "new-application-state",
+                  "initialized-application-state"
+                ]
+              }
             }
           }
         }
       }
     },
     {
-      "if": { "properties": { "kind": { "const": "session-navigation" } }, "required": ["kind"] },
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "session-switch"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
       "then": {
+        "required": [
+          "resourceMeasurement"
+        ],
         "properties": {
           "cases": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["historyNavigationTypes", "panelNavigationType", "transcriptBytes", "standardTranscriptBytes", "panelLoads", "workspaceLoad"],
+            "required": [
+              "workspaceRelations",
+              "sessionStates",
+              "transcriptBytes"
+            ],
             "properties": {
-              "historyNavigationTypes": { "const": ["first-visit", "return-visited-panel-closed"] },
-              "panelNavigationType": { "const": "return-visited-panel-open" },
+              "workspaceRelations": {
+                "const": [
+                  "within-workspace",
+                  "across-workspaces"
+                ]
+              },
+              "sessionStates": {
+                "const": [
+                  "cold",
+                  "warm"
+                ]
+              },
               "transcriptBytes": {
                 "type": "array",
                 "minItems": 1,
                 "maxItems": 16,
                 "uniqueItems": true,
-                "items": { "type": "integer", "minimum": 1, "maximum": 268435456 }
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 268435456
+                }
               },
-              "standardTranscriptBytes": { "type": "integer", "minimum": 1, "maximum": 268435456 },
-              "panelLoads": { "$ref": "#/$defs/panelLoads" },
-              "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" }
+              "standardTranscriptBytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 268435456
+              },
+              "latencySamplesPerProcess": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "sizeSamplesPerProcess": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              },
+              "longRowTranscriptBytes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": {
+                  "type": "integer",
+                  "minimum": 4096,
+                  "maximum": 268435456
+                }
+              }
             }
           }
         }
       }
     },
     {
-      "if": { "properties": { "kind": { "const": "workspace-panel" } }, "required": ["kind"] },
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "session-navigation"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "historyNavigationTypes",
+              "panelNavigationType",
+              "transcriptBytes",
+              "standardTranscriptBytes",
+              "panelLoads",
+              "workspaceLoad"
+            ],
+            "properties": {
+              "historyNavigationTypes": {
+                "const": [
+                  "first-visit",
+                  "return-visited-panel-closed"
+                ]
+              },
+              "panelNavigationType": {
+                "const": "return-visited-panel-open"
+              },
+              "transcriptBytes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 268435456
+                }
+              },
+              "standardTranscriptBytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 268435456
+              },
+              "panelLoads": {
+                "$ref": "#/$defs/panelLoads"
+              },
+              "workspaceLoad": {
+                "$ref": "#/$defs/workspaceLoad"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "workspace-panel"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
       "then": {
         "properties": {
           "cases": {
@@ -126,23 +333,56 @@
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["workspaceLoad", "actions"],
+                "required": [
+                  "workspaceLoad",
+                  "actions"
+                ],
                 "properties": {
-                  "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" },
+                  "workspaceLoad": {
+                    "$ref": "#/$defs/workspaceLoad"
+                  },
                   "actions": {
-                    "const": ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"]
+                    "const": [
+                      "open-cold",
+                      "toggle-open-close",
+                      "toggle-close-open",
+                      "open-warm-data",
+                      "switch-surface",
+                      "open-file",
+                      "switch-file-tab",
+                      "toggle-diff-view",
+                      "collapse-all",
+                      "expand-all"
+                    ]
                   }
                 }
               },
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["workspaceLoad", "panelLoads", "actions"],
+                "required": [
+                  "workspaceLoad",
+                  "panelLoads",
+                  "actions"
+                ],
                 "properties": {
-                  "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" },
-                  "panelLoads": { "$ref": "#/$defs/panelLoads" },
+                  "workspaceLoad": {
+                    "$ref": "#/$defs/workspaceLoad"
+                  },
+                  "panelLoads": {
+                    "$ref": "#/$defs/panelLoads"
+                  },
                   "actions": {
-                    "const": ["open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "expand-all", "collapse-all"]
+                    "const": [
+                      "open-panel",
+                      "close-panel",
+                      "files-to-review",
+                      "review-to-files",
+                      "open-file",
+                      "switch-file-tab",
+                      "expand-all",
+                      "collapse-all"
+                    ]
                   }
                 }
               }
@@ -152,19 +392,56 @@
       }
     },
     {
-      "if": { "properties": { "kind": { "const": "session-switch-workspace-panel" } }, "required": ["kind"] },
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "session-switch-workspace-panel"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
       "then": {
         "properties": {
           "cases": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["workspaceRelations", "sessionStates", "panelProfiles", "transcriptBytes", "workspaceLoad"],
+            "required": [
+              "workspaceRelations",
+              "sessionStates",
+              "panelProfiles",
+              "transcriptBytes",
+              "workspaceLoad"
+            ],
             "properties": {
-              "workspaceRelations": { "const": ["within-workspace", "across-workspaces"] },
-              "sessionStates": { "const": ["cold", "warm"] },
-              "panelProfiles": { "const": ["closed", "files", "diff"] },
-              "transcriptBytes": { "type": "integer", "minimum": 1, "maximum": 268435456 },
-              "workspaceLoad": { "$ref": "#/$defs/workspaceLoad" }
+              "workspaceRelations": {
+                "const": [
+                  "within-workspace",
+                  "across-workspaces"
+                ]
+              },
+              "sessionStates": {
+                "const": [
+                  "cold",
+                  "warm"
+                ]
+              },
+              "panelProfiles": {
+                "const": [
+                  "closed",
+                  "files",
+                  "diff"
+                ]
+              },
+              "transcriptBytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 268435456
+              },
+              "workspaceLoad": {
+                "$ref": "#/$defs/workspaceLoad"
+              }
             }
           }
         }
@@ -177,36 +454,104 @@
       "minItems": 3,
       "maxItems": 3,
       "prefixItems": [
-        { "$ref": "#/$defs/panelLoad" },
-        { "$ref": "#/$defs/panelLoad" },
-        { "$ref": "#/$defs/panelLoad" }
+        {
+          "$ref": "#/$defs/panelLoad"
+        },
+        {
+          "$ref": "#/$defs/panelLoad"
+        },
+        {
+          "$ref": "#/$defs/panelLoad"
+        }
       ],
       "items": false
     },
     "panelLoad": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "expandedDirectoryCount", "retainedFileTabCount", "expandedReviewFileCount"],
+      "required": [
+        "id",
+        "expandedDirectoryCount",
+        "retainedFileTabCount",
+        "expandedReviewFileCount"
+      ],
       "properties": {
-        "id": { "enum": ["light", "moderate", "heavy"] },
-        "expandedDirectoryCount": { "type": "integer", "minimum": 0, "maximum": 10000 },
-        "retainedFileTabCount": { "type": "integer", "minimum": 1, "maximum": 1000 },
-        "expandedReviewFileCount": { "type": "integer", "minimum": 0, "maximum": 10000 }
+        "id": {
+          "enum": [
+            "light",
+            "moderate",
+            "heavy"
+          ]
+        },
+        "expandedDirectoryCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "retainedFileTabCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "expandedReviewFileCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
       }
     },
     "workspaceLoad": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["generator", "directoryCount", "sourceFileCount", "sourceFileBytes", "changedFileCount", "diffHunksPerFile", "diffLinesPerHunk", "openFileTabCount"],
+      "required": [
+        "generator",
+        "directoryCount",
+        "sourceFileCount",
+        "sourceFileBytes",
+        "changedFileCount",
+        "diffHunksPerFile",
+        "diffLinesPerHunk",
+        "openFileTabCount"
+      ],
       "properties": {
-        "generator": { "const": "agent-app-workspace-v1" },
-        "directoryCount": { "type": "integer", "minimum": 1, "maximum": 10000 },
-        "sourceFileCount": { "type": "integer", "minimum": 1, "maximum": 100000 },
-        "sourceFileBytes": { "type": "integer", "minimum": 1, "maximum": 10485760 },
-        "changedFileCount": { "type": "integer", "minimum": 1, "maximum": 10000 },
-        "diffHunksPerFile": { "type": "integer", "minimum": 1, "maximum": 1000 },
-        "diffLinesPerHunk": { "type": "integer", "minimum": 1, "maximum": 10000 },
-        "openFileTabCount": { "type": "integer", "minimum": 1, "maximum": 1000 }
+        "generator": {
+          "const": "agent-app-workspace-v1"
+        },
+        "directoryCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "sourceFileCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "sourceFileBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10485760
+        },
+        "changedFileCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "diffHunksPerFile": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "diffLinesPerHunk": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "openFileTabCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
       }
     }
   }

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "id": "workspace-panel-v3",
+  "title": "Workspace panel user flows",
+  "description": "Measure ordinary workspace-panel interactions independently across explicit light, moderate, and heavy retained directory/tab states. Every profile uses the same complete non-truncated 24-file authoritative model and establishes the exact logical expansion state without scrolling a virtualized surface during setup; readiness requires only the currently materialized viewport to be painted and interactive. Expand All independently starts collapsed and Collapse All independently starts expanded. Open-file is data-warm and surface-cold: each profile owns a distinct canonical non-retained target, exact target bytes load through the production file-data path, and its tab and preview never mount during setup or earlier in the repetition, so measured pointerdown owns first surface creation and paint. Opening exposes shell, animation, data, paint, and interactive milestones. No interrupted or double-toggle action is included.",
+  "kind": "workspace-panel",
+  "corpusId": "opencode-completed-sessions-v4",
+  "cases": {
+    "workspaceLoad": {
+      "generator": "agent-app-workspace-v1",
+      "directoryCount": 16,
+      "sourceFileCount": 160,
+      "sourceFileBytes": 32768,
+      "changedFileCount": 24,
+      "diffHunksPerFile": 8,
+      "diffLinesPerHunk": 24,
+      "openFileTabCount": 4
+    },
+    "panelLoads": [
+      {
+        "id": "light",
+        "expandedDirectoryCount": 2,
+        "retainedFileTabCount": 2,
+        "expandedReviewFileCount": 24
+      },
+      {
+        "id": "moderate",
+        "expandedDirectoryCount": 8,
+        "retainedFileTabCount": 3,
+        "expandedReviewFileCount": 24
+      },
+      {
+        "id": "heavy",
+        "expandedDirectoryCount": 16,
+        "retainedFileTabCount": 4,
+        "expandedReviewFileCount": 24
+      }
+    ],
+    "actions": [
+      "open-panel",
+      "close-panel",
+      "files-to-review",
+      "review-to-files",
+      "open-file",
+      "switch-file-tab",
+      "expand-all",
+      "collapse-all"
+    ]
+  },
+  "metrics": [
+    {
+      "id": "panel.action_duration_ms",
+      "description": "One ordinary trusted panel interaction to its action-specific logical-state, current-viewport-painted, and interactive endpoint at the declared seeded load. Review data must contain all 24 canonical files without truncation; offscreen virtualized bodies need not exist concurrently in the DOM. Open-file starts with authoritative target bytes warm but its tab and preview surface never previously mounted.",
+      "unit": "ms"
+    },
+    {
+      "id": "panel.frame_interval_ms",
+      "description": "Per-action worst and p95 frame intervals and counts above the 16.667 ms 60 Hz budget across light, moderate, and heavy panel load.",
+      "unit": "ms"
+    },
+    {
+      "id": "panel.renderer_work_ms",
+      "description": "Per-action renderer task, script, style-recalculation, and layout work with bounded long-animation-frame attribution.",
+      "unit": "ms"
+    }
+  ],
+  "runProfiles": {
+    "smoke": 1,
+    "quick": 5,
+    "publication": 20
+  }
+}

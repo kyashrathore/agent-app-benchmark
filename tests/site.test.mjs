@@ -544,7 +544,7 @@ test("assembled comparisons pair independently sealed runs without a mirrored sc
     ]) {
       const result = await resultFixture(app, scenarioId, 1, "0".repeat(64));
       result.createdAt = createdAt;
-      result.provenance = { ...result.provenance, comparisonRunId: app.id === "t3" ? "some-earlier-comparison" : null, comparisonScheduleDigestSha256: app.id === "t3" ? "1".repeat(64) : null, scheduleOrdinal: app.id === "t3" ? 1 : null };
+      result.provenance = { ...result.provenance, frameworkRevision: (app.id === "t3" ? "a" : "b").repeat(40), comparisonRunId: app.id === "t3" ? "some-earlier-comparison" : null, comparisonScheduleDigestSha256: app.id === "t3" ? "1".repeat(64) : null, scheduleOrdinal: app.id === "t3" ? 1 : null };
       const file = path.join(root, "runs", `${app.id}-${scenarioId}.json`);
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(file, `${JSON.stringify(result, null, 2)}\n`);

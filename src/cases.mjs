@@ -225,9 +225,27 @@ export function buildLatencyGroups(scenario, runProfile, seed = "agent-app-bench
         }));
       }
     }
+    const longRowCases = [];
+    for (let sample = 0; sample < sizeSamplesPerProcess; sample += 1) {
+      const sizes = counterbalancedSizes(scenario.cases.longRowTranscriptBytes ?? [], repetition + sample);
+      for (let sequence = 0; sequence < sizes.length; sequence += 1) {
+        const size = sizes[sequence];
+        longRowCases.push(makeSwitchCase({
+          lane: SESSION_LANES[0],
+          transcriptBytes: size,
+          repetition,
+          sequence,
+          sample,
+          workload: "transcript-size-latency",
+          rowShape: "long",
+          destinationSessionId: `size-latency-long-${sample}-${size}`,
+        }));
+      }
+    }
     const cases = [
       ...seededShuffle(standardCases, `${seed}|standard-cases|${repetition}`),
       ...sizeCases,
+      ...longRowCases,
     ];
       groups.push({
         groupId: `latency-process-${repetition}`,
@@ -265,13 +283,14 @@ export function buildResourceSequences(scenario, repetitions) {
   }));
 }
 
-function makeSwitchCase({ lane, transcriptBytes, repetition, sequence, sample, workload, destinationSessionId }) {
+function makeSwitchCase({ lane, transcriptBytes, repetition, sequence, sample, workload, rowShape, destinationSessionId }) {
   return {
-    caseId: `${workload}-${repetition}-${lane.id}-${transcriptBytes}${sample === undefined ? "" : `-${sample}`}`,
+    caseId: `${workload}${rowShape === "long" ? "-long-rows" : ""}-${repetition}-${lane.id}-${transcriptBytes}${sample === undefined ? "" : `-${sample}`}`,
     repetition,
     sequence,
     ...(sample === undefined ? {} : { sample }),
     workload,
+    ...(rowShape === undefined ? {} : { rowShape }),
     workspaceRelation: lane.workspaceRelation,
     sessionState: lane.sessionState,
     transcriptBytes,
