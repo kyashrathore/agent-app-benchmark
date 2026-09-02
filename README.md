@@ -206,6 +206,74 @@ node bin/agent-app-benchmark.mjs comparison assemble \
   --output artifacts/comparisons/claxedo-vs-t3-vs-opencode-macos-arm64-20260902
 ```
 
+## Results (2026-09-02, macOS arm64 headed, one MacBook Pro)
+
+Two assembled comparisons are checked in under `results/comparisons/` and rebuild into the full site with `site build`:
+
+- `claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1` — the v4 suite (five latency samples per lane, long-row sessions), three independent legs run back to back behind idle and load gates.
+- `claxedo-vs-t3-vs-opencode-p95-user-flows-macos-arm64-headed-20260902-a1` — the v3 suite; Claxedo and T3 legs from a mirrored run, OpenCode leg run separately.
+
+Nearest-rank p95, milliseconds unless noted, 5 repetitions. A dagger marks a lane the framework withholds because at least one observation was invalid; the value shown is p95 over the valid observations with its count.
+
+| v4 suite | Claxedo | T3 Code | OpenCode |
+|---|---|---|---|
+| Cold app start, s | 1.91 | 2.92 | 2.44 |
+| Initialized app start, s | 1.93 | 2.80 | 2.55 |
+| Switch, within workspace, cold | 47.5 | 230 | 124 † (20/25) |
+| Switch, within workspace, warm | 16.1 | 188 | 32.6 † (20/25) |
+| Switch, across workspaces, cold | 40.8 | 262 | 407 † (20/25) |
+| Switch, across workspaces, warm | 16.2 | 188 | 27.5 † (20/25) |
+| Switch to 8 MiB, many rows | 72.5 | 421 | 116 † (8/10) |
+| Switch to 8 MiB, eight rows | 3,506 | 25,915 † (4/10) | 2,402 † (8/10) |
+| Switch to 32 MiB, many rows | 46.8 | 757 | 116 † (8/10) |
+| Switch to 32 MiB, thirty-two rows | 2,825 | never ready (0/10) | 2,740 † (8/10) |
+| Navigation first visit, 1 MiB | 48.2 | 247 | 125 |
+| Navigation return, 1 MiB | 19.1 | 179 | 23.2 |
+| Active RSS p95, MiB | 947 | 1,807 | 1,564 |
+| Retained RSS growth, MiB | 46.6 | 715 | 131 |
+
+The long-row rows are the point of v4: the same bytes in a handful of 128 KiB to 1 MiB markdown rows cost every app one to three orders of magnitude more than the realistic many-row transcript, and T3 Code does not reach readiness at 32 MiB. OpenCode does not support the workspace-panel scenario or panel-open navigation returns; those are reported unsupported, never as zero. OpenCode's second v4 process produced no frames at all (a covered window), which is why its switch lanes carry 20 of 25 samples.
+
+## Reproducing the 2026-09-02 runs
+
+Exact revisions, all pushed:
+
+| Component | Repository and branch | Commit |
+|---|---|---|
+| Framework | `kyashrathore/agent-app-benchmark` `codex/benchmark-v1` | `0208dd3` (v4 suite) — this README commit lands on top |
+| Claxedo driver | `kyashrathore/Claxedo` `codex/agent-app-benchmark-v4-ids` | `14add6424f` (driver at `packages/claxedo-app/perf-harness/src/public-agent-app-driver.ts`; the packaged app measured here was built from `b8c6ad0c87`) |
+| T3 Code driver | `kyashrathore/t3code` `codex/agent-app-benchmark-v1` | `cd5822be7` (upstream main `5392c9bb9` plus the driver; the app asserts the packaged commit equals HEAD, so package after checking out exactly this commit) |
+| OpenCode driver | `kyashrathore/opencode` `codex/agent-app-benchmark-v1` | `49a9590` (upstream dev `69c172e` plus `packages/desktop/benchmark/`) |
+| Corpus v4 | generated from `registry/corpora/opencode-completed-sessions-v4.json` | digest `e8bc11728c10bc8a7931919d8292de0195c67652e9229b077fc18db412128400` (verified by `corpus verify` against the registered artifact) |
+
+1. Package each app from its commit: Claxedo `cd packages/claxedo-desktop && bun run package:mac`; T3 Code `corepack pnpm install --frozen-lockfile` then `RUSTUP_TOOLCHAIN=1.95.0-aarch64-apple-darwin corepack pnpm dist:desktop:artifact --platform mac --target dmg --arch arm64 --keep-stage --output-dir <dir>`; OpenCode `cd packages/desktop && CSC_IDENTITY_AUTO_DISCOVERY=false OPENCODE_CHANNEL=dev bun run prebuild && bun run build && bun run package:mac`. Copy each `.app` to a stable directory and point `CLAXEDO_BENCHMARK_EXECUTABLE`, `T3_BENCHMARK_EXECUTABLE`, and `OPENCODE_BENCHMARK_EXECUTABLE` at the binary inside `Contents/MacOS`; set `CLAXEDO_ROOT`, `T3_ROOT`, and `OPENCODE_ROOT` to the checkouts.
+2. `npm ci`, build `native/resource-monitor` (`cargo build --release`), then `node bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-sessions-v4 --output artifacts/corpora/opencode-completed-sessions-v4` and `corpus verify --input` the same directory; the digest must match the table.
+3. Run one leg per app, each only while the machine is idle, the app window is on screen and not fully covered by another window (a fully occluded window stops the frame clock and every case fails fast), and the 1-minute load average is under 3.5:
+
+```bash
+node bin/agent-app-benchmark.mjs run --app claxedo \
+  --scenarios app-start-v4,session-switch-v4,session-navigation-v2,workspace-panel-v3 \
+  --run-profile publication --repetitions 5 \
+  --corpus-directory artifacts/corpora/opencode-completed-sessions-v4 \
+  --out artifacts/runs/claxedo-publication-v4
+```
+
+   Repeat with `--app t3` and `--app opencode`.
+4. Assemble and build the site:
+
+```bash
+node bin/agent-app-benchmark.mjs comparison assemble --id my-v4-comparison \
+  --title "Claxedo vs T3 Code vs OpenCode" --provenance community-self-attested \
+  --result artifacts/runs/claxedo-publication-v4/app-start-v4/result.json \
+  # …one --result per app and scenario…
+  --output artifacts/comparisons/my-v4-comparison
+node bin/agent-app-benchmark.mjs site build \
+  --comparison artifacts/comparisons/my-v4-comparison/comparison.json \
+  --output artifacts/site/my-v4-comparison
+```
+
+The checked-in comparisons were produced exactly this way; `site build` on either `results/comparisons/*/comparison.json` regenerates their pages.
+
 ## Local comparison website
 
 The website is generated entirely from an explicit immutable comparison manifest:

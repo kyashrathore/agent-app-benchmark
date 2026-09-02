@@ -1,0 +1,2757 @@
+{
+  "schemaVersion": 1,
+  "runId": "opencode-multi-macos-arm64-headed-20260902-r1-session-navigation-v1",
+  "createdAt": "2026-09-02T12:06:33.542Z",
+  "provenance": {
+    "kind": "community-self-attested",
+    "comparisonRunId": null,
+    "frameworkRevision": "367d8e3337c9de61516a2c69ca1500c106ce6eaf",
+    "comparisonScheduleDigestSha256": null,
+    "scheduleOrdinal": null
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.2.0",
+    "logicalCpuCount": 12,
+    "cpuModel": "Apple M4 Pro",
+    "totalMemoryBytes": 25769803776,
+    "freeMemoryBytes": 4610899968,
+    "loadAverage1mPerCpu": 1.025,
+    "powerSource": "ac",
+    "lowPowerMode": null,
+    "memoryPressureLevel": 1,
+    "nodeVersion": "v26.8.1"
+  },
+  "app": {
+    "id": "opencode",
+    "name": "OpenCode",
+    "version": "1.18.26",
+    "buildDigestSha256": "4f467379fc3cbde2ca7e7392b01c9c748802491e3c613c69864f1716fbac69d2"
+  },
+  "driver": {
+    "name": "opencode-desktop-driver",
+    "version": "1",
+    "sourceCommit": "49a95901258096e9d8d5cff47e9bfb955fe0cffd",
+    "digestSha256": "de795fe2d0e66d9e8d860c0a2b238bf7bd17c2f01fcb1d04b7ebfebb2a2483d3"
+  },
+  "sourceEventFormat": {
+    "id": "opencode-event-v2",
+    "sourceRevision": "a9f7081d4015b0cc22ed67156e042b482a8d064a",
+    "schemaDigestSha256": "f6e789de10d8b54fbe8b640ff885843cbc564ac1eb262611083a050de0435cac"
+  },
+  "materialization": {
+    "mode": "native-opencode",
+    "corpusDigestSha256": "8807d1dd81afb33fc6b22b457c4353298d21697421b509f77cc28e7f353c9dfc",
+    "mappingDigestSha256": "41f8087d59cea41172d8c5347ef36157a18139f637ff2556cd1f0bf5c536d66f",
+    "workspaceFixtureDigestSha256": "468261e78927884ad7b73f49c207e6d739f42c37844ebfe3aaccfdb8c1852cc6"
+  },
+  "scenario": {
+    "id": "session-navigation-v1",
+    "kind": "session-navigation",
+    "digestSha256": "ea698c53da6488acfad3248885fc173faad0b565843f5a758df2e57b3cd96fea",
+    "status": "public-comparable"
+  },
+  "corpus": {
+    "id": "opencode-completed-sessions-v3",
+    "definitionDigestSha256": "07b2ff89f29ed78b6a585b9814375dcc4272d9734755a160eef1b00727027d33",
+    "digestSha256": "8807d1dd81afb33fc6b22b457c4353298d21697421b509f77cc28e7f353c9dfc",
+    "status": "public-comparable"
+  },
+  "runProfile": "publication",
+  "repetitions": 5,
+  "observations": [
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-first-visit-134217728",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 0
+      },
+      "receivedAt": "2026-09-02T12:06:11.041Z",
+      "status": "valid",
+      "durationMs": 107.30000019073486,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 1856.7000000476837
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 1856.7000000476837
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 1856.7000000476837
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 1856.7000000476837
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 1749.3999998569489,
+        "end": 1856.7000000476837
+      },
+      "timingEvidence": {
+        "trustedInputAt": 1749.3999998569489,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-first-visit-33554432",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 1
+      },
+      "receivedAt": "2026-09-02T12:06:11.483Z",
+      "status": "valid",
+      "durationMs": 116.89999985694885,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2298.899999856949
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2298.899999856949
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2298.899999856949
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2298.899999856949
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2182,
+        "end": 2298.899999856949
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2182,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-first-visit-8388608",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 2
+      },
+      "receivedAt": "2026-09-02T12:06:11.936Z",
+      "status": "valid",
+      "durationMs": 125,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2748.899999856949
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2748.899999856949
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2748.899999856949
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2748.899999856949
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2623.899999856949,
+        "end": 2748.899999856949
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2623.899999856949,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-first-visit-1048576",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 3
+      },
+      "receivedAt": "2026-09-02T12:06:12.374Z",
+      "status": "valid",
+      "durationMs": 107.59999990463257,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3190.0999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3190.0999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3190.0999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3190.0999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3082.5,
+        "end": 3190.0999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3082.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-return-visited-panel-closed-134217728",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 4
+      },
+      "receivedAt": "2026-09-02T12:06:12.412Z",
+      "status": "valid",
+      "durationMs": 27.200000047683716,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3227.0999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3227.0999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3227.0999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3227.0999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3199.899999856949,
+        "end": 3227.0999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3199.899999856949,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-return-visited-panel-closed-33554432",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 5
+      },
+      "receivedAt": "2026-09-02T12:06:12.443Z",
+      "status": "valid",
+      "durationMs": 25.299999952316284,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3258.0999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3258.0999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3258.0999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3258.0999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3232.7999999523163,
+        "end": 3258.0999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3232.7999999523163,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-return-visited-panel-closed-8388608",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 6
+      },
+      "receivedAt": "2026-09-02T12:06:12.473Z",
+      "status": "valid",
+      "durationMs": 23.5,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3288.7999999523163
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3288.7999999523163
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3288.7999999523163
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3288.7999999523163
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3265.2999999523163,
+        "end": 3288.7999999523163
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3265.2999999523163,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-history-return-visited-panel-closed-1048576",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 7
+      },
+      "receivedAt": "2026-09-02T12:06:12.508Z",
+      "status": "valid",
+      "durationMs": 24.199999809265137,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3323.399999856949
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3323.399999856949
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3323.399999856949
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3323.399999856949
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3299.2000000476837,
+        "end": 3323.399999856949
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3299.2000000476837,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-panel-light",
+        "repetition": 0,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 8
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:12.509Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-panel-moderate",
+        "repetition": 0,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 9
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:12.509Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-0-panel-heavy",
+        "repetition": 0,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 10
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:12.509Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-first-visit-134217728",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-134217728",
+        "sequence": 0
+      },
+      "receivedAt": "2026-09-02T12:06:16.140Z",
+      "status": "valid",
+      "durationMs": 92.09999990463257,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 1842.2999999523163
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 1842.2999999523163
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 1842.2999999523163
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 1842.2999999523163
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 1750.2000000476837,
+        "end": 1842.2999999523163
+      },
+      "timingEvidence": {
+        "trustedInputAt": 1750.2000000476837,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-first-visit-33554432",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-33554432",
+        "sequence": 1
+      },
+      "receivedAt": "2026-09-02T12:06:16.591Z",
+      "status": "valid",
+      "durationMs": 125.59999990463257,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2292.5999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2292.5999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2292.5999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2292.5999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2167,
+        "end": 2292.5999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2167,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-first-visit-8388608",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-8388608",
+        "sequence": 2
+      },
+      "receivedAt": "2026-09-02T12:06:17.035Z",
+      "status": "valid",
+      "durationMs": 116.29999995231628,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2734.399999856949
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2734.399999856949
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2734.399999856949
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2734.399999856949
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2618.0999999046326,
+        "end": 2734.399999856949
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2618.0999999046326,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-first-visit-1048576",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-1048576",
+        "sequence": 3
+      },
+      "receivedAt": "2026-09-02T12:06:17.491Z",
+      "status": "valid",
+      "durationMs": 124.70000004768372,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3192.7999999523163
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3192.7999999523163
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3192.7999999523163
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3192.7999999523163
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3068.0999999046326,
+        "end": 3192.7999999523163
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3068.0999999046326,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-return-visited-panel-closed-134217728",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-134217728",
+        "sequence": 4
+      },
+      "receivedAt": "2026-09-02T12:06:17.525Z",
+      "status": "valid",
+      "durationMs": 23.200000047683716,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3226.7000000476837
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3226.7000000476837
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3226.7000000476837
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3226.7000000476837
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3203.5,
+        "end": 3226.7000000476837
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3203.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-return-visited-panel-closed-33554432",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-33554432",
+        "sequence": 5
+      },
+      "receivedAt": "2026-09-02T12:06:17.555Z",
+      "status": "valid",
+      "durationMs": 21.5,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3257
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3257
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3257
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3257
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3235.5,
+        "end": 3257
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3235.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-return-visited-panel-closed-8388608",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-8388608",
+        "sequence": 6
+      },
+      "receivedAt": "2026-09-02T12:06:17.583Z",
+      "status": "valid",
+      "durationMs": 24.600000143051147,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3284.7000000476837
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3284.7000000476837
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3284.7000000476837
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3284.7000000476837
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3260.0999999046326,
+        "end": 3284.7000000476837
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3260.0999999046326,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-history-return-visited-panel-closed-1048576",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-1048576",
+        "sequence": 7
+      },
+      "receivedAt": "2026-09-02T12:06:17.617Z",
+      "status": "valid",
+      "durationMs": 25.5,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3319.2000000476837
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3319.2000000476837
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3319.2000000476837
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3319.2000000476837
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3293.7000000476837,
+        "end": 3319.2000000476837
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3293.7000000476837,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-panel-moderate",
+        "repetition": 1,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 8
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:17.618Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-panel-heavy",
+        "repetition": 1,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 9
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:17.618Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-1-panel-light",
+        "repetition": 1,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 10
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:17.618Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-first-visit-134217728",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 0
+      },
+      "receivedAt": "2026-09-02T12:06:21.241Z",
+      "status": "valid",
+      "durationMs": 107,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 1863.5999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 1863.5999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 1863.5999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 1863.5999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 1756.5999999046326,
+        "end": 1863.5999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 1756.5999999046326,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-first-visit-33554432",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 1
+      },
+      "receivedAt": "2026-09-02T12:06:21.691Z",
+      "status": "valid",
+      "durationMs": 125.40000009536743,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2313.5999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2313.5999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2313.5999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2313.5999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2188.199999809265,
+        "end": 2313.5999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2188.199999809265,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-first-visit-8388608",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 2
+      },
+      "receivedAt": "2026-09-02T12:06:22.141Z",
+      "status": "valid",
+      "durationMs": 124.70000004768372,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2763.5999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2763.5999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2763.5999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2763.5999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2638.899999856949,
+        "end": 2763.5999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2638.899999856949,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-first-visit-1048576",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 3
+      },
+      "receivedAt": "2026-09-02T12:06:22.591Z",
+      "status": "valid",
+      "durationMs": 124.5,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3213.5
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3213.5
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3213.5
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3213.5
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3089,
+        "end": 3213.5
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3089,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-return-visited-panel-closed-134217728",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 4
+      },
+      "receivedAt": "2026-09-02T12:06:22.628Z",
+      "status": "valid",
+      "durationMs": 26.799999952316284,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3249.7999999523163
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3249.7999999523163
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3249.7999999523163
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3249.7999999523163
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3223,
+        "end": 3249.7999999523163
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3223,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-return-visited-panel-closed-33554432",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 5
+      },
+      "receivedAt": "2026-09-02T12:06:22.660Z",
+      "status": "valid",
+      "durationMs": 25.700000047683716,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3282
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3282
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3282
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3282
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3256.2999999523163,
+        "end": 3282
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3256.2999999523163,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-return-visited-panel-closed-8388608",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 6
+      },
+      "receivedAt": "2026-09-02T12:06:22.690Z",
+      "status": "valid",
+      "durationMs": 22.799999952316284,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3312.2999999523163
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3312.2999999523163
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3312.2999999523163
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3312.2999999523163
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3289.5,
+        "end": 3312.2999999523163
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3289.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-history-return-visited-panel-closed-1048576",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 7
+      },
+      "receivedAt": "2026-09-02T12:06:22.724Z",
+      "status": "valid",
+      "durationMs": 24.09999990463257,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3346.699999809265
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3346.699999809265
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3346.699999809265
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3346.699999809265
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3322.5999999046326,
+        "end": 3346.699999809265
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3322.5999999046326,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-panel-heavy",
+        "repetition": 2,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 8
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:22.724Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-panel-light",
+        "repetition": 2,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 9
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:22.725Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-2-panel-moderate",
+        "repetition": 2,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 10
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:22.725Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-first-visit-134217728",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-134217728",
+        "sequence": 0
+      },
+      "receivedAt": "2026-09-02T12:06:26.291Z",
+      "status": "valid",
+      "durationMs": 84.90000009536743,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 1810
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 1810
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 1810
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 1810
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 1725.0999999046326,
+        "end": 1810
+      },
+      "timingEvidence": {
+        "trustedInputAt": 1725.0999999046326,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-first-visit-33554432",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-33554432",
+        "sequence": 1
+      },
+      "receivedAt": "2026-09-02T12:06:26.741Z",
+      "status": "valid",
+      "durationMs": 124.30000019073486,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2260
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2260
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2260
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2260
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2135.699999809265,
+        "end": 2260
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2135.699999809265,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-first-visit-8388608",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-8388608",
+        "sequence": 2
+      },
+      "receivedAt": "2026-09-02T12:06:27.187Z",
+      "status": "valid",
+      "durationMs": 118,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2702.699999809265
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2702.699999809265
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2702.699999809265
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2702.699999809265
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2584.699999809265,
+        "end": 2702.699999809265
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2584.699999809265,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-first-visit-1048576",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-1048576",
+        "sequence": 3
+      },
+      "receivedAt": "2026-09-02T12:06:27.657Z",
+      "status": "valid",
+      "durationMs": 141,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3176.5999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3176.5999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3176.5999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3176.5999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3035.5999999046326,
+        "end": 3176.5999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3035.5999999046326,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-return-visited-panel-closed-134217728",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-134217728",
+        "sequence": 4
+      },
+      "receivedAt": "2026-09-02T12:06:27.691Z",
+      "status": "valid",
+      "durationMs": 22.90000009536743,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3210.2999999523163
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3210.2999999523163
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3210.2999999523163
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3210.2999999523163
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3187.399999856949,
+        "end": 3210.2999999523163
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3187.399999856949,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-return-visited-panel-closed-33554432",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-33554432",
+        "sequence": 5
+      },
+      "receivedAt": "2026-09-02T12:06:27.722Z",
+      "status": "valid",
+      "durationMs": 21.700000047683716,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3240.899999856949
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3240.899999856949
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3240.899999856949
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3240.899999856949
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3219.199999809265,
+        "end": 3240.899999856949
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3219.199999809265,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-return-visited-panel-closed-8388608",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-8388608",
+        "sequence": 6
+      },
+      "receivedAt": "2026-09-02T12:06:27.751Z",
+      "status": "valid",
+      "durationMs": 25.09999990463257,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3269.399999856949
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3269.399999856949
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3269.399999856949
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3269.399999856949
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3244.2999999523163,
+        "end": 3269.399999856949
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3244.2999999523163,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-history-return-visited-panel-closed-1048576",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-1-1048576",
+        "sequence": 7
+      },
+      "receivedAt": "2026-09-02T12:06:27.784Z",
+      "status": "valid",
+      "durationMs": 25.299999952316284,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3302.699999809265
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3302.699999809265
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3302.699999809265
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3302.699999809265
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3277.399999856949,
+        "end": 3302.699999809265
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3277.399999856949,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-panel-light",
+        "repetition": 3,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 8
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:27.784Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-panel-moderate",
+        "repetition": 3,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 9
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:27.784Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-3-panel-heavy",
+        "repetition": 3,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 10
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:27.784Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-first-visit-134217728",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 0
+      },
+      "receivedAt": "2026-09-02T12:06:31.431Z",
+      "status": "valid",
+      "durationMs": 107.20000004768372,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 1850.2000000476837
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 1850.2000000476837
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 1850.2000000476837
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 1850.2000000476837
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 1743,
+        "end": 1850.2000000476837
+      },
+      "timingEvidence": {
+        "trustedInputAt": 1743,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-first-visit-33554432",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 1
+      },
+      "receivedAt": "2026-09-02T12:06:31.892Z",
+      "status": "valid",
+      "durationMs": 127.79999995231628,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2310.5
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2310.5
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2310.5
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2310.5
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2182.7000000476837,
+        "end": 2310.5
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2182.7000000476837,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-first-visit-8388608",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 2
+      },
+      "receivedAt": "2026-09-02T12:06:32.361Z",
+      "status": "valid",
+      "durationMs": 125.79999995231628,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 2769.5999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 2769.5999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 2769.5999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 2769.5999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 2643.7999999523163,
+        "end": 2769.5999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 2643.7999999523163,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-first-visit-1048576",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "first-visit",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 3
+      },
+      "receivedAt": "2026-09-02T12:06:32.792Z",
+      "status": "valid",
+      "durationMs": 84.40000009536743,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3209.7000000476837
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3209.7000000476837
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3209.7000000476837
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3209.7000000476837
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3125.2999999523163,
+        "end": 3209.7000000476837
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3125.2999999523163,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-return-visited-panel-closed-134217728",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 134217728,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-134217728",
+        "sequence": 4
+      },
+      "receivedAt": "2026-09-02T12:06:32.842Z",
+      "status": "valid",
+      "durationMs": 27,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3260.4000000953674
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3260.4000000953674
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3260.4000000953674
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3260.4000000953674
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3233.4000000953674,
+        "end": 3260.4000000953674
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3233.4000000953674,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-return-visited-panel-closed-33554432",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 33554432,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-33554432",
+        "sequence": 5
+      },
+      "receivedAt": "2026-09-02T12:06:32.876Z",
+      "status": "valid",
+      "durationMs": 25.299999952316284,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3294.5
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3294.5
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3294.5
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3294.5
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3269.2000000476837,
+        "end": 3294.5
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3269.2000000476837,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-return-visited-panel-closed-8388608",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 8388608,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-8388608",
+        "sequence": 6
+      },
+      "receivedAt": "2026-09-02T12:06:32.906Z",
+      "status": "valid",
+      "durationMs": 22.59999990463257,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3325.0999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3325.0999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3325.0999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3325.0999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3302.5,
+        "end": 3325.0999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3302.5,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-history-return-visited-panel-closed-1048576",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "history-size",
+        "navigationType": "return-visited-panel-closed",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "size-latency-0-1048576",
+        "sequence": 7
+      },
+      "receivedAt": "2026-09-02T12:06:32.941Z",
+      "status": "valid",
+      "durationMs": 24.399999856948853,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 3360.0999999046326
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 3360.0999999046326
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 3360.0999999046326
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 3360.0999999046326
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "performance.now",
+        "start": 3335.7000000476837,
+        "end": 3360.0999999046326
+      },
+      "timingEvidence": {
+        "trustedInputAt": 3335.7000000476837,
+        "trustedInputEvent": "pointerdown"
+      }
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-panel-moderate",
+        "repetition": 4,
+        "sample": 1,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "moderate",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-1-1048576",
+        "sequence": 8
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:32.942Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-panel-heavy",
+        "repetition": 4,
+        "sample": 2,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "heavy",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-2-1048576",
+        "sequence": 9
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:32.942Z"
+    },
+    {
+      "case": {
+        "caseId": "session-navigation-4-panel-light",
+        "repetition": 4,
+        "sample": 0,
+        "workload": "session-navigation",
+        "trend": "panel-load",
+        "navigationType": "return-visited-panel-open",
+        "loadProfile": "light",
+        "transcriptBytes": 1048576,
+        "sourceSessionId": "control",
+        "destinationSessionId": "latency-within-workspace-warm-0-1048576",
+        "sequence": 10
+      },
+      "status": "invalid",
+      "reason": "driver-handler-error: OpenCode driver does not seed workspace panel loads; panel-open session returns are unsupported",
+      "receivedAt": "2026-09-02T12:06:32.942Z"
+    }
+  ],
+  "resources": null,
+  "resourceTrace": null,
+  "derivation": {
+    "version": 1,
+    "summaryDigestSha256": "2d7d6ae056a1c0d2a801e8d31d82f0b0da5ef12295f2dc8410054b3d39c3b074",
+    "summary": {
+      "historySizeTrend": [
+        {
+          "transcriptBytes": 1048576,
+          "firstVisit": {
+            "status": "valid",
+            "average": 116.44,
+            "maximum": 141,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 124.5,
+            "p95": 141
+          },
+          "returnVisitedPanelClosed": {
+            "status": "valid",
+            "average": 24.7,
+            "maximum": 25.5,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 24.4,
+            "p95": 25.5
+          }
+        },
+        {
+          "transcriptBytes": 8388608,
+          "firstVisit": {
+            "status": "valid",
+            "average": 121.96,
+            "maximum": 125.8,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 124.7,
+            "p95": 125.8
+          },
+          "returnVisitedPanelClosed": {
+            "status": "valid",
+            "average": 23.72,
+            "maximum": 25.1,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 23.5,
+            "p95": 25.1
+          }
+        },
+        {
+          "transcriptBytes": 33554432,
+          "firstVisit": {
+            "status": "valid",
+            "average": 124,
+            "maximum": 127.8,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 125.4,
+            "p95": 127.8
+          },
+          "returnVisitedPanelClosed": {
+            "status": "valid",
+            "average": 23.9,
+            "maximum": 25.7,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 25.3,
+            "p95": 25.7
+          }
+        },
+        {
+          "transcriptBytes": 134217728,
+          "firstVisit": {
+            "status": "valid",
+            "average": 99.7,
+            "maximum": 107.3,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 107,
+            "p95": 107.3
+          },
+          "returnVisitedPanelClosed": {
+            "status": "valid",
+            "average": 25.42,
+            "maximum": 27.2,
+            "valid": 5,
+            "attempted": 5,
+            "p50": 26.8,
+            "p95": 27.2
+          }
+        }
+      ],
+      "panelLoadTrend": [
+        {
+          "loadProfile": "light",
+          "returnVisitedPanelOpen": {
+            "durationMs": {
+              "status": "invalid",
+              "valid": 0,
+              "attempted": 5,
+              "reason": "No valid observations."
+            },
+            "transitionModes": {
+              "animated": 0,
+              "none": 0
+            },
+            "milestones": {},
+            "frames": {
+              "worstIntervalMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              },
+              "p95IntervalMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              },
+              "overBudgetIntervalCount": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              }
+            },
+            "longAnimationFrames": {
+              "count": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              },
+              "worstDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              },
+              "worstBlockingDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              }
+            },
+            "rendererWork": {
+              "scriptDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No scriptDurationMs evidence."
+              },
+              "styleRecalcDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No styleRecalcDurationMs evidence."
+              },
+              "layoutDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No layoutDurationMs evidence."
+              },
+              "taskDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No taskDurationMs evidence."
+              }
+            }
+          }
+        },
+        {
+          "loadProfile": "moderate",
+          "returnVisitedPanelOpen": {
+            "durationMs": {
+              "status": "invalid",
+              "valid": 0,
+              "attempted": 5,
+              "reason": "No valid observations."
+            },
+            "transitionModes": {
+              "animated": 0,
+              "none": 0
+            },
+            "milestones": {},
+            "frames": {
+              "worstIntervalMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              },
+              "p95IntervalMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              },
+              "overBudgetIntervalCount": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              }
+            },
+            "longAnimationFrames": {
+              "count": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              },
+              "worstDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              },
+              "worstBlockingDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              }
+            },
+            "rendererWork": {
+              "scriptDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No scriptDurationMs evidence."
+              },
+              "styleRecalcDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No styleRecalcDurationMs evidence."
+              },
+              "layoutDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No layoutDurationMs evidence."
+              },
+              "taskDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No taskDurationMs evidence."
+              }
+            }
+          }
+        },
+        {
+          "loadProfile": "heavy",
+          "returnVisitedPanelOpen": {
+            "durationMs": {
+              "status": "invalid",
+              "valid": 0,
+              "attempted": 5,
+              "reason": "No valid observations."
+            },
+            "transitionModes": {
+              "animated": 0,
+              "none": 0
+            },
+            "milestones": {},
+            "frames": {
+              "worstIntervalMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              },
+              "p95IntervalMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              },
+              "overBudgetIntervalCount": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No frame evidence."
+              }
+            },
+            "longAnimationFrames": {
+              "count": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              },
+              "worstDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              },
+              "worstBlockingDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No long-animation-frame evidence."
+              }
+            },
+            "rendererWork": {
+              "scriptDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No scriptDurationMs evidence."
+              },
+              "styleRecalcDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No styleRecalcDurationMs evidence."
+              },
+              "layoutDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No layoutDurationMs evidence."
+              },
+              "taskDurationMs": {
+                "status": "invalid",
+                "valid": 0,
+                "attempted": 5,
+                "reason": "No taskDurationMs evidence."
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

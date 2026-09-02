@@ -1,0 +1,508 @@
+{
+  "schemaVersion": 1,
+  "runId": "t3-multi-macos-arm64-headed-20260902-r1-app-start-v4",
+  "createdAt": "2026-09-02T12:47:30.216Z",
+  "provenance": {
+    "kind": "community-self-attested",
+    "comparisonRunId": null,
+    "frameworkRevision": "0208dd3e7c604a5a89165527f7111f666fa8f710",
+    "comparisonScheduleDigestSha256": null,
+    "scheduleOrdinal": null
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.2.0",
+    "logicalCpuCount": 12,
+    "cpuModel": "Apple M4 Pro",
+    "totalMemoryBytes": 25769803776,
+    "freeMemoryBytes": 3925835776,
+    "loadAverage1mPerCpu": 0.254,
+    "powerSource": "ac",
+    "lowPowerMode": null,
+    "memoryPressureLevel": 1,
+    "nodeVersion": "v26.8.1"
+  },
+  "app": {
+    "id": "t3",
+    "name": "T3 Code",
+    "version": "0.0.38",
+    "buildDigestSha256": "cbd491ab15e89f7e07581f967119af5322462336f18ec11d41879f6915125885"
+  },
+  "driver": {
+    "name": "t3-reference",
+    "version": "3",
+    "sourceCommit": "cd5822be774602a245d03afcba11d5ea0cbe3c03",
+    "digestSha256": "accd50995d192b9542ef0aff6a18029b4dddaaaf19338772d15bbaaf099c31ad"
+  },
+  "sourceEventFormat": {
+    "id": "opencode-event-v2",
+    "sourceRevision": "a9f7081d4015b0cc22ed67156e042b482a8d064a",
+    "schemaDigestSha256": "f6e789de10d8b54fbe8b640ff885843cbc564ac1eb262611083a050de0435cac"
+  },
+  "materialization": {
+    "mode": "translated",
+    "corpusDigestSha256": "e8bc11728c10bc8a7931919d8292de0195c67652e9229b077fc18db412128400",
+    "mappingDigestSha256": "1d6c5538dcb979ac88d373f2a07ae65636c3e5f02d5d460f7ee4b5c8fb90066c"
+  },
+  "scenario": {
+    "id": "app-start-v4",
+    "kind": "app-start",
+    "digestSha256": "689306d13c5c3c28a034470f8be8aff415f8fe6ac0aae26e34a415d03c4a9594",
+    "status": "public-comparable"
+  },
+  "corpus": {
+    "id": "opencode-completed-sessions-v4",
+    "definitionDigestSha256": "996a5071b75fc9a4b063cfc8978957f4ee99f1613b56b322338628c3f78012d7",
+    "digestSha256": "e8bc11728c10bc8a7931919d8292de0195c67652e9229b077fc18db412128400",
+    "status": "public-comparable"
+  },
+  "runProfile": "publication",
+  "repetitions": 5,
+  "observations": [
+    {
+      "case": {
+        "caseId": "start-new-application-state-0",
+        "repetition": 0,
+        "startMode": "new-application-state",
+        "stateHandle": "P0"
+      },
+      "receivedAt": "2026-09-02T12:46:48.150Z",
+      "status": "valid",
+      "durationMs": 2916.6150420000013,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 13727.61475
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 13727.61475
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 13727.61475
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 13727.61475
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 10810.999708,
+        "end": 13727.61475
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-initialized-application-state-0",
+        "repetition": 0,
+        "startMode": "initialized-application-state",
+        "stateHandle": "P1"
+      },
+      "receivedAt": "2026-09-02T12:46:52.483Z",
+      "status": "valid",
+      "durationMs": 1799.095209000001,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 18060.974167
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 18060.974167
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 18060.974167
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 18060.974167
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 16261.878958,
+        "end": 18060.974167
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-initialized-application-state-1",
+        "repetition": 1,
+        "startMode": "initialized-application-state",
+        "stateHandle": "P1"
+      },
+      "receivedAt": "2026-09-02T12:46:56.702Z",
+      "status": "valid",
+      "durationMs": 1800.6935840000006,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 22278.894042
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 22278.894042
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 22278.894042
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 22278.894042
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 20478.200458,
+        "end": 22278.894042
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-new-application-state-1",
+        "repetition": 1,
+        "startMode": "new-application-state",
+        "stateHandle": "P0"
+      },
+      "receivedAt": "2026-09-02T12:47:00.950Z",
+      "status": "valid",
+      "durationMs": 1931.0406249999978,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 26527.076917
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 26527.076917
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 26527.076917
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 26527.076917
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 24596.036292,
+        "end": 26527.076917
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-new-application-state-2",
+        "repetition": 2,
+        "startMode": "new-application-state",
+        "stateHandle": "P0"
+      },
+      "receivedAt": "2026-09-02T12:47:05.185Z",
+      "status": "valid",
+      "durationMs": 1937.5638340000005,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 30762.017792
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 30762.017792
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 30762.017792
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 30762.017792
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 28824.453958,
+        "end": 30762.017792
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-initialized-application-state-2",
+        "repetition": 2,
+        "startMode": "initialized-application-state",
+        "stateHandle": "P1"
+      },
+      "receivedAt": "2026-09-02T12:47:10.343Z",
+      "status": "valid",
+      "durationMs": 2803.289708000004,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 35920.555375
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 35920.555375
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 35920.555375
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 35920.555375
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 33117.265667,
+        "end": 35920.555375
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-initialized-application-state-3",
+        "repetition": 3,
+        "startMode": "initialized-application-state",
+        "stateHandle": "P1"
+      },
+      "receivedAt": "2026-09-02T12:47:15.490Z",
+      "status": "valid",
+      "durationMs": 2776.941417000002,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 41061.367375
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 41061.367375
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 41061.367375
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 41061.367375
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 38284.425958,
+        "end": 41061.367375
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-new-application-state-3",
+        "repetition": 3,
+        "startMode": "new-application-state",
+        "stateHandle": "P0"
+      },
+      "receivedAt": "2026-09-02T12:47:19.709Z",
+      "status": "valid",
+      "durationMs": 1927.4652090000018,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 45286.831667
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 45286.831667
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 45286.831667
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 45286.831667
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 43359.366458,
+        "end": 45286.831667
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-new-application-state-4",
+        "repetition": 4,
+        "startMode": "new-application-state",
+        "stateHandle": "P0"
+      },
+      "receivedAt": "2026-09-02T12:47:23.926Z",
+      "status": "valid",
+      "durationMs": 1931.9308329999985,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 49503.400458
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 49503.400458
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 49503.400458
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 49503.400458
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 47571.469625,
+        "end": 49503.400458
+      }
+    },
+    {
+      "case": {
+        "caseId": "start-initialized-application-state-4",
+        "repetition": 4,
+        "startMode": "initialized-application-state",
+        "stateHandle": "P1"
+      },
+      "receivedAt": "2026-09-02T12:47:28.058Z",
+      "status": "valid",
+      "durationMs": 1760.1703750000015,
+      "readiness": {
+        "endpoint": "correct-content-painted-and-input-ready",
+        "checks": [
+          {
+            "id": "content-identity",
+            "passed": true,
+            "observedAt": 53635.418375
+          },
+          {
+            "id": "first-fold-painted",
+            "passed": true,
+            "observedAt": 53635.418375
+          },
+          {
+            "id": "two-presentations",
+            "passed": true,
+            "observedAt": 53635.418375
+          },
+          {
+            "id": "trusted-input",
+            "passed": true,
+            "observedAt": 53635.418375
+          }
+        ]
+      },
+      "clock": {
+        "kind": "single-monotonic-clock",
+        "clock": "node-perf-hooks",
+        "start": 51875.248,
+        "end": 53635.418375
+      }
+    }
+  ],
+  "resources": null,
+  "resourceTrace": null,
+  "derivation": {
+    "version": 1,
+    "summaryDigestSha256": "a8973869edea66c32fceab1e4796e52f989e8e692346acff39ef2a96ecacbfb9",
+    "summary": {
+      "new-application-state": {
+        "status": "valid",
+        "average": 2128.923,
+        "maximum": 2916.615,
+        "valid": 5,
+        "attempted": 5,
+        "p95": 2916.615
+      },
+      "initialized-application-state": {
+        "status": "valid",
+        "average": 2188.038,
+        "maximum": 2803.29,
+        "valid": 5,
+        "attempted": 5,
+        "p95": 2803.29
+      }
+    }
+  }
+}
