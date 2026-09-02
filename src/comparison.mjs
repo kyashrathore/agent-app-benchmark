@@ -19,6 +19,7 @@ export async function loadComparison(manifestFile) {
   const manifest = JSON.parse(await readFile(file, "utf8"));
   assertContract("comparison", manifest, "comparison manifest");
   if (manifest.results.length > MAX_COMPARISON_ENTRIES) throw new Error(`Comparison contains more than ${MAX_COMPARISON_ENTRIES} results.`);
+  const policy = manifest.policy ?? "balanced-mirrored";
   const root = path.dirname(file);
   const allowedRoot = path.basename(path.dirname(root)) === "comparisons" ? path.dirname(path.dirname(root)) : root;
   const identities = new Set();
@@ -40,12 +41,29 @@ export async function loadComparison(manifestFile) {
     if (result.app.id !== entry.appId || result.scenario.id !== entry.scenarioId) throw new Error(`${entry.path} identity does not match its comparison entry.`);
     if (result.scenario.status !== "public-comparable" || result.corpus.status !== "public-comparable") throw new Error(`${entry.path} is custom/non-comparable and cannot be published in a comparison.`);
     if (result.provenance.kind !== manifest.provenance) throw new Error(`${entry.path} provenance does not match the comparison manifest.`);
-    if (result.provenance.comparisonRunId !== manifest.id) throw new Error(`${entry.path} comparison run id does not match the comparison manifest.`);
+    if (policy === "balanced-mirrored" && result.provenance.comparisonRunId !== manifest.id) throw new Error(`${entry.path} comparison run id does not match the comparison manifest.`);
     const appDefinition = (await readRegistered("app", result.app.id)).value;
     results.push({ entry, result, file: resultFile, appDefinition });
   }
-  validatePairedSchedule(results);
-  return { manifest, file, results, compatibility: compatibilityByScenario(results) };
+  if (policy === "balanced-mirrored") validatePairedSchedule(results);
+  else validateIndependentRuns(results);
+  return { manifest, file, results, policy, compatibility: compatibilityByScenario(results, policy) };
+}
+
+/**
+ * An assembled comparison pairs results from independently sealed runs: each
+ * application ran its scenarios in its own process on the same host, and any
+ * application can be added or rerun without touching the others. Ordering is
+ * not counterbalanced, so the run timestamps are disclosed instead.
+ */
+export function validateIndependentRuns(results) {
+  assertSharedComparisonRepetitions(results);
+  const frameworkRevisions = new Set(results.map((item) => item.result.provenance.frameworkRevision));
+  if (frameworkRevisions.size > 1) throw new Error("Assembled comparison results do not share one framework revision.");
+  const runProfiles = new Set(results.map((item) => item.result.runProfile));
+  if (runProfiles.size > 1) throw new Error("Assembled comparison results do not share one run profile.");
+  const perApp = Map.groupBy(results, (item) => item.result.app.id);
+  if (perApp.size < 2) throw new Error("An assembled comparison requires at least two applications.");
 }
 
 export function validatePairedSchedule(results) {
@@ -92,7 +110,7 @@ export function assertSharedComparisonRepetitions(results) {
   }
 }
 
-export function compatibilityByScenario(results) {
+export function compatibilityByScenario(results, policy = "balanced-mirrored") {
   const output = {};
   for (const scenarioId of new Set(results.map((item) => item.result.scenario.id))) {
     const members = results.filter((item) => item.result.scenario.id === scenarioId);
@@ -100,7 +118,7 @@ export function compatibilityByScenario(results) {
       output[scenarioId] = { status: "unpaired", reason: "At least two results are required for a side-by-side comparison." };
       continue;
     }
-    const keys = members.map((item) => compatibilityKey(item.result));
+    const keys = members.map((item) => compatibilityKey(item.result, policy));
     const compatible = new Set(keys).size === 1 && members.every((item) => item.result.scenario.status === "public-comparable" && item.result.corpus.status === "public-comparable");
     output[scenarioId] = {
       status: compatible ? "valid" : "incompatible",
@@ -110,10 +128,12 @@ export function compatibilityByScenario(results) {
   return output;
 }
 
-function compatibilityKey(result) {
+function compatibilityKey(result, policy) {
   return digest({
-    comparisonRunId: result.provenance.comparisonRunId,
-    comparisonScheduleDigestSha256: result.provenance.comparisonScheduleDigestSha256,
+    // Independent runs are paired on framework, scenario, corpus, profile, and
+    // host identity only; the sealed schedule identity is a mirrored-run concept.
+    comparisonRunId: policy === "balanced-mirrored" ? result.provenance.comparisonRunId : null,
+    comparisonScheduleDigestSha256: policy === "balanced-mirrored" ? result.provenance.comparisonScheduleDigestSha256 : null,
     frameworkRevision: result.provenance.frameworkRevision,
     scenario: result.scenario.digestSha256,
     corpus: result.corpus.digestSha256,

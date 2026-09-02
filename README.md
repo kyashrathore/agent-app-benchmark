@@ -189,6 +189,23 @@ It verifies or generates the corpus once, then uses the recorded mirrored order 
 
 The driver protocol is language-neutral NDJSON, so Node, Bun, native binaries, and other runtimes can implement it. See [docs/driver-protocol.md](docs/driver-protocol.md).
 
+### Assemble a comparison from independent runs
+
+A scheduled `comparison run` seals one interleaved order and cannot take a single application's rerun. When applications come and go, run each one on its own and assemble the comparison afterwards. Each result keeps its own run provenance; pairing requires the same framework revision, scenario, corpus, profile, repetition count, and host identity, and the site discloses that order was not counterbalanced and lists each leg's start time.
+
+```bash
+node bin/agent-app-benchmark.mjs run --app opencode --scenarios app-start-v3,session-switch-v3 --run-profile publication --out artifacts/runs/opencode-pub
+
+node bin/agent-app-benchmark.mjs comparison assemble \
+  --id claxedo-vs-t3-vs-opencode-macos-arm64-20260902 \
+  --title "Claxedo vs T3 Code vs OpenCode" \
+  --result artifacts/runs/opencode-pub/app-start-v3/result.json \
+  --result artifacts/runs/opencode-pub/session-switch-v3/result.json \
+  --result artifacts/comparisons/earlier-run/runs/claxedo/app-start-v3/result.json \
+  --result artifacts/comparisons/earlier-run/runs/claxedo/session-switch-v3/result.json \
+  --output artifacts/comparisons/claxedo-vs-t3-vs-opencode-macos-arm64-20260902
+```
+
 ## Local comparison website
 
 The website is generated entirely from an explicit immutable comparison manifest:

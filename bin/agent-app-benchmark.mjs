@@ -4,6 +4,7 @@ import process from "node:process";
 import { digestBytes } from "../src/canonical-json.mjs";
 import { runDriverConformance } from "../src/conformance.mjs";
 import { runComparison } from "../src/comparison-run.mjs";
+import { assembleComparison } from "../src/comparison-assemble.mjs";
 import { buildComparePlan, writeCompareConfig } from "../src/compare-preset.mjs";
 import { verifyCorpus, writeCorpus } from "../src/corpus.mjs";
 import { readDefinition, readRegistered, validateRegistry } from "../src/registry.mjs";
@@ -60,6 +61,16 @@ try {
         process.stdout.write(`${path.join(built.output, "index.html")}\n`);
       }
     }
+  } else if (command === "comparison" && subcommand === "assemble") {
+    const assembled = await assembleComparison({
+      id: required(options, "id"),
+      title: required(options, "title"),
+      description: options.first("description"),
+      provenance: options.first("provenance") ?? "community-self-attested",
+      results: [...options.all("result"), ...options.all("results").flatMap((value) => value.split(","))],
+      outputRoot: required(options, "output"),
+    });
+    process.stdout.write(`${assembled.manifestFile}\n`);
   } else if (command === "comparison" && subcommand === "run") {
     const comparison = await runComparison(required(options, "config"));
     process.stdout.write(`${path.join(comparison.outputRoot, "comparison.json")}\n`);
@@ -230,7 +241,7 @@ function driverOptions(options) {
 
 function usage() {
   return [
-    "Usage: agent-app-benchmark <validate|compare|comparison run|corpus generate|corpus verify|run|conformance|publication validate-append-only|result validate|site build> [options]",
+    "Usage: agent-app-benchmark <validate|compare|comparison run|comparison assemble|corpus generate|corpus verify|run|conformance|publication validate-append-only|result validate|site build> [options]",
     "",
     "Friendly single-app run (resolves claxedo/t3 drivers by convention):",
     "  agentappbench run --app claxedo|t3 --scenario session-switch-v3 --run-profile smoke",

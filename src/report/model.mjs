@@ -26,6 +26,8 @@ export function buildSiteModel(comparison) {
         driver: result.driver,
         frameworkRevision: result.provenance.frameworkRevision,
         scheduleOrdinal: result.provenance.scheduleOrdinal,
+        comparisonRunId: result.provenance.comparisonRunId,
+        createdAt: result.createdAt,
         materializationMode: result.materialization.mode,
       })).toSorted((left, right) => left.scenarioId.localeCompare(right.scenarioId)),
       appStart: entries.find((entry) => entry.result.scenario.kind === "app-start")?.result,
@@ -43,13 +45,26 @@ export function buildSiteModel(comparison) {
   const repetitions = comparison.results[0]?.result.repetitions ?? null;
   const runProfile = comparison.results[0]?.result.runProfile ?? null;
   const frameworkRevisions = [...new Set(comparison.results.map((item) => item.result.provenance.frameworkRevision))];
-  const schedule = [...comparison.results]
-    .toSorted((left, right) => left.result.provenance.scheduleOrdinal - right.result.provenance.scheduleOrdinal)
-    .map((item) => ({
-      ordinal: item.result.provenance.scheduleOrdinal,
-      appId: item.result.app.id,
-      scenarioId: item.result.scenario.id,
-    }));
+  const policy = comparison.policy ?? "balanced-mirrored";
+  // A mirrored run orders its legs by schedule ordinal; an assembled comparison
+  // has no counterbalanced order, so legs are listed by when each run started.
+  const schedule = policy === "balanced-mirrored"
+    ? [...comparison.results]
+      .toSorted((left, right) => left.result.provenance.scheduleOrdinal - right.result.provenance.scheduleOrdinal)
+      .map((item) => ({
+        ordinal: item.result.provenance.scheduleOrdinal,
+        appId: item.result.app.id,
+        scenarioId: item.result.scenario.id,
+      }))
+    : [...comparison.results]
+      .toSorted((left, right) => left.result.createdAt.localeCompare(right.result.createdAt))
+      .map((item, index) => ({
+        ordinal: index + 1,
+        appId: item.result.app.id,
+        scenarioId: item.result.scenario.id,
+        createdAt: item.result.createdAt,
+        comparisonRunId: item.result.provenance.comparisonRunId,
+      }));
   return {
     id: comparison.manifest.id,
     title: comparison.manifest.title,
@@ -64,6 +79,7 @@ export function buildSiteModel(comparison) {
     primaryStatisticMethod: "nearest-rank",
     p95Disclosure: p95Disclosure(repetitions),
     frameworkRevisions,
+    policy,
     schedule,
     apps,
   };

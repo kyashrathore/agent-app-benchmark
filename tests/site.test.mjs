@@ -9,6 +9,7 @@ import { assertSharedComparisonRepetitions, loadComparison } from "../src/compar
 import { eventSchemaDigest, OPENCODE_EVENT_SCHEMA_DIGEST } from "../src/corpus.mjs";
 import { readRegistered } from "../src/registry.mjs";
 import { buildSite } from "../src/report/site.mjs";
+import { assembleComparison } from "../src/comparison-assemble.mjs";
 import { deriveResourcesFromTrace } from "../src/runner.mjs";
 import { summarizeObservations } from "../src/summarize.mjs";
 import { buildWorkspaceFixtureManifest } from "../src/workspace-fixture.mjs";
@@ -530,3 +531,46 @@ function sample(atMs, rssMiB, cpuTimeMs) {
 }
 
 const CANONICAL_CORPUS_DIGEST = "979d15dfeb87f2c539b39915c7324470a54f431a23c668f10ef484ab194b9e5e";
+
+test("assembled comparisons pair independently sealed runs without a mirrored schedule", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-assemble-"));
+  try {
+    const files = [];
+    for (const [app, scenarioId, createdAt] of [
+      [{ id: "claxedo", name: "Claxedo" }, "app-start-v1", "2026-08-23T01:00:00.000Z"],
+      [{ id: "t3", name: "T3" }, "app-start-v1", "2026-08-23T03:00:00.000Z"],
+      [{ id: "claxedo", name: "Claxedo" }, "session-switch-v1", "2026-08-23T02:00:00.000Z"],
+      [{ id: "t3", name: "T3" }, "session-switch-v1", "2026-08-23T04:00:00.000Z"],
+    ]) {
+      const result = await resultFixture(app, scenarioId, 1, "0".repeat(64));
+      result.createdAt = createdAt;
+      result.provenance = { ...result.provenance, comparisonRunId: app.id === "t3" ? "some-earlier-comparison" : null, comparisonScheduleDigestSha256: app.id === "t3" ? "1".repeat(64) : null, scheduleOrdinal: app.id === "t3" ? 1 : null };
+      const file = path.join(root, "runs", `${app.id}-${scenarioId}.json`);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, `${JSON.stringify(result, null, 2)}\n`);
+      files.push(file);
+    }
+    const outputRoot = path.join(root, "comparisons", "assembled");
+    const assembled = await assembleComparison({ id: "assembled", title: "Assembled", description: "Independent runs.", provenance: "maintainer-observed", results: files, outputRoot });
+    assert.equal(assembled.manifest.policy, "independent-runs");
+    assert.deepEqual(Object.values(assembled.compatibility).map((item) => item.status), ["valid", "valid"]);
+    const loaded = await loadComparison(assembled.manifestFile);
+    assert.equal(loaded.policy, "independent-runs");
+    const built = await buildSite(assembled.manifestFile, path.join(root, "site"));
+    assert.equal(built.model.policy, "independent-runs");
+    assert.deepEqual(built.model.schedule.map((step) => `${step.ordinal}:${step.appId}/${step.scenarioId}`), ["1:claxedo/app-start-v1", "2:claxedo/session-switch-v1", "3:t3/app-start-v1", "4:t3/session-switch-v1"]);
+    const methodology = await readFile(path.join(root, "site", "methodology.html"), "utf8");
+    assert.match(methodology, /independent runs/);
+    assert.doesNotMatch(methodology, /Balanced mirrored schedule across every paired scenario/);
+    // A second application with a different repetition count cannot be paired.
+    const odd = JSON.parse(await readFile(files[1], "utf8"));
+    odd.repetitions = 7;
+    await writeFile(files[1], `${JSON.stringify(odd, null, 2)}\n`);
+    await assert.rejects(
+      assembleComparison({ id: "assembled-2", title: "Assembled", provenance: "maintainer-observed", results: files, outputRoot: path.join(root, "comparisons", "assembled-2") }),
+      /are required|repetition/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
