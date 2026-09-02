@@ -11,7 +11,7 @@ const APP = { id: "mock-native", name: "Mock Native GUI", materializationModes: 
 const CORPUS_VALUE = {
   schemaVersion: 1,
   id: "test-corpus-v1",
-  generator: "opencode-completed-sessions-v2",
+  generator: "opencode-completed-sessions-v1",
   seed: "runner-test",
   sourceEventFormat: { id: "opencode-event-v2", sourceRevision: "a9f7081d4015b0cc22ed67156e042b482a8d064a", envelope: "EventV2.SerializedEvent", eventTypes: ["session.created.1", "message.updated.1", "message.part.updated.1"] },
   workspaceIds: ["workspace-a", "workspace-b"],
@@ -102,7 +102,7 @@ const NAVIGATION_SCENARIO = {
 };
 const PANEL_V2_SCENARIO = {
   schemaVersion: 1,
-  id: "workspace-panel-v2",
+  id: "workspace-panel-v1",
   title: "Test panel trends",
   description: "test",
   kind: "workspace-panel",

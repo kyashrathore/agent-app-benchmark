@@ -33,7 +33,7 @@ export function buildSiteModel(comparison) {
       appStart: entries.find((entry) => entry.result.scenario.kind === "app-start")?.result,
       sessionSwitch: entries.find((entry) => entry.result.scenario.kind === "session-switch")?.result,
       sessionNavigation: entries.find((entry) => entry.result.scenario.kind === "session-navigation")?.result,
-      workspacePanel: entries.find((entry) => entry.result.scenario.id === "workspace-panel-v2")?.result,
+      workspacePanel: entries.find((entry) => entry.result.scenario.id === "workspace-panel-v1")?.result,
     });
   }
   for (const app of apps) {

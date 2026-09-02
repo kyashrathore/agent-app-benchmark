@@ -20,14 +20,14 @@ export async function runDriverConformance(options) {
         stateHandle: prepared.stateHandles.P1,
         initialSessionId: "control",
         groupId: "conformance",
-      }), { requireProcessRoles: /-v(?:[3-9]|[1-9][0-9]+)$/u.test(options.scenario.id) });
+      }), { requireProcessRoles: true });
     }
     const execution = normalizeExecution(await driver.request("execute", {
       scenarioId: options.scenario.id,
       case: benchmarkCase,
       ...(options.scenario.kind === "app-start" ? { stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] } : {}),
     }), benchmarkCase, {
-      requireTimingEvidence: /-v(?:[3-9]|[1-9][0-9]+)$/u.test(options.scenario.id) || ["workspace-panel", "session-switch-workspace-panel"].includes(options.scenario.kind),
+      requireTimingEvidence: ["workspace-panel", "session-switch-workspace-panel"].includes(options.scenario.kind),
       requireRendererTrace: ["workspace-panel", "session-switch-workspace-panel"].includes(options.scenario.kind),
     });
     if (execution.status !== "valid") throw new Error(`Driver conformance execution failed: ${execution.reason}`);

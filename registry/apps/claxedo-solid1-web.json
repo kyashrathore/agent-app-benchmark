@@ -5,7 +5,17 @@
   "repository": "https://github.com/kyashrathore/Claxedo",
   "driverOwnership": "application-repository",
   "guiFramework": "chromium",
-  "sourceEventFormats": ["opencode-event-v1", "opencode-event-v2"],
-  "materializationModes": ["native-opencode"],
-  "scenarios": ["app-start-v1", "session-switch-v1", "app-start-v3", "session-switch-v3"]
+  "sourceEventFormats": [
+    "opencode-event-v1",
+    "opencode-event-v2"
+  ],
+  "materializationModes": [
+    "native-opencode"
+  ],
+  "scenarios": [
+    "app-start-v1",
+    "session-switch-v1",
+    "session-navigation-v1",
+    "workspace-panel-v1"
+  ]
 }

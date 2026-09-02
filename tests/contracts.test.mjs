@@ -8,31 +8,15 @@ test("all public registry entries satisfy strict schemas and cross references", 
   const entries = await validateRegistry();
   assert.deepEqual(entries.map(({ kind, id }) => `${kind}:${id}`), [
     "scenario:app-start-v1",
-    "scenario:app-start-v2",
-    "scenario:app-start-v3",
-    "scenario:app-start-v4",
     "scenario:session-navigation-v1",
-    "scenario:session-navigation-v2",
     "scenario:session-switch-v1",
-    "scenario:session-switch-v2",
-    "scenario:session-switch-v3",
-    "scenario:session-switch-v4",
-    "scenario:session-switch-workspace-panel-v1",
     "scenario:workspace-panel-v1",
-    "scenario:workspace-panel-v2",
-    "scenario:workspace-panel-v3",
-    "corpus:opencode-completed-sessions-v2",
-    "corpus:opencode-completed-sessions-v3",
-    "corpus:opencode-completed-sessions-v4",
-    "corpus:opencode-completed-transcripts-v1",
-    "corpusArtifact:opencode-completed-sessions-v2",
-    "corpusArtifact:opencode-completed-sessions-v3",
-    "corpusArtifact:opencode-completed-sessions-v4",
-    "corpusArtifact:opencode-completed-transcripts-v1",
+    "corpus:opencode-completed-sessions-v1",
+    "corpusArtifact:opencode-completed-sessions-v1",
     "app:claxedo-solid1-web",
     "app:claxedo-solid2-web",
     "app:claxedo",
-"app:opencode",
+    "app:opencode",
     "app:t3",
   ]);
   assert.ok(entries.every((entry) => /^[0-9a-f]{64}$/.test(entry.digest)));
@@ -41,17 +25,17 @@ test("all public registry entries satisfy strict schemas and cross references", 
 test("registered scenario bytes are public-comparable", async () => {
   const scenario = await readRegistered("scenario", "session-switch-v1");
   assert.equal(scenario.status, "public-comparable");
-  assert.equal(scenario.value.corpusId, "opencode-completed-transcripts-v1");
+  assert.equal(scenario.value.corpusId, "opencode-completed-sessions-v1");
 });
 
 test("V2 scenarios define virtualized Review readiness without weakening authoritative state", async () => {
-  for (const scenarioId of ["session-navigation-v1", "workspace-panel-v2"]) {
+  for (const scenarioId of ["session-navigation-v1", "workspace-panel-v1"]) {
     const scenario = (await readRegistered("scenario", scenarioId)).value;
     assert.match(scenario.description, /complete non-truncated 24-file authoritative model/u);
     assert.match(scenario.description, /exact logical expansion state/u);
     assert.match(scenario.description, /currently materialized viewport/u);
   }
-  const panel = (await readRegistered("scenario", "workspace-panel-v2")).value;
+  const panel = (await readRegistered("scenario", "workspace-panel-v1")).value;
   assert.match(panel.metrics[0].description, /all 24 canonical files without truncation/u);
   assert.match(panel.metrics[0].description, /offscreen virtualized bodies need not exist concurrently/u);
   assert.match(panel.description, /Open-file is data-warm and surface-cold/u);
@@ -60,7 +44,7 @@ test("V2 scenarios define virtualized Review readiness without weakening authori
 });
 
 test("desktop apps advertise the same canonical workspace-panel scenarios", async () => {
-  const panelScenarios = ["workspace-panel-v1", "session-switch-workspace-panel-v1", "session-navigation-v1", "workspace-panel-v2"];
+  const panelScenarios = ["session-navigation-v1", "workspace-panel-v1"];
   for (const appId of ["claxedo", "t3"]) {
     const app = await readRegistered("app", appId);
     assert.deepEqual(

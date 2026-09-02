@@ -124,9 +124,7 @@ function validateScenario(value) {
     validatePanelLoads(value.cases.panelLoads, value.cases.workspaceLoad);
   }
   if (value.kind === "workspace-panel") {
-    const expectedActions = ["workspace-panel-v2", "workspace-panel-v3"].includes(value.id)
-      ? ["open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "expand-all", "collapse-all"]
-      : ["open-cold", "toggle-open-close", "toggle-close-open", "open-warm-data", "switch-surface", "open-file", "switch-file-tab", "toggle-diff-view", "collapse-all", "expand-all"];
+    const expectedActions = ["open-panel", "close-panel", "files-to-review", "review-to-files", "open-file", "switch-file-tab", "expand-all", "collapse-all"];
     if (JSON.stringify(value.cases.actions) !== JSON.stringify(expectedActions)) throw new Error("Workspace-panel actions are not canonical.");
     validateWorkspaceLoad(value.cases.workspaceLoad);
     if (value.id === "workspace-panel-v2") validatePanelLoads(value.cases.panelLoads, value.cases.workspaceLoad);
@@ -164,13 +162,6 @@ function validateWorkspaceLoad(load) {
 function validateCorpus(value) {
   assertAscendingIntegers(value.transcriptBytes, "Corpus transcript sizes");
   if (value.workspaceIds.length !== 2) throw new Error("V1 corpus requires exactly two logical workspaces.");
-  if (value.generator === "opencode-completed-transcripts-v1") {
-    const canonicalBytes = value.transcriptBytes.reduce((total, bytes) => total + bytes * 4, value.transcriptBytes[0]);
-    const eventCount = 2 * canonicalBytes / value.messageChunkBytes + 1 + value.transcriptBytes.length * 4;
-    if (canonicalBytes > 512 * 1024 * 1024 || eventCount > 250_000) throw new Error("Legacy corpus definition exceeds its generation budget.");
-    if (value.transcriptBytes.some((bytes) => bytes % value.messageChunkBytes !== 0)) throw new Error("Every legacy transcript size must be divisible by messageChunkBytes.");
-    return;
-  }
   if (JSON.stringify(value.sessionProfiles.map((profile) => profile.transcriptBytes)) !== JSON.stringify(value.transcriptBytes)) {
     throw new Error("Corpus session profiles must match transcriptBytes in order.");
   }

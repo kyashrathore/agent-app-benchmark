@@ -23,11 +23,7 @@
       "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$"
     },
     "generator": {
-      "enum": [
-        "opencode-completed-transcripts-v1",
-        "opencode-completed-sessions-v2",
-        "opencode-completed-sessions-v3"
-      ]
+      "const": "opencode-completed-sessions-v1"
     },
     "seed": {
       "type": "string",
@@ -95,11 +91,6 @@
       "items": {
         "$ref": "#/$defs/sessionProfile"
       }
-    },
-    "messageChunkBytes": {
-      "type": "integer",
-      "minimum": 1024,
-      "maximum": 1048576
     },
     "benchmarkTopology": {
       "type": "object",
@@ -179,50 +170,13 @@
   "oneOf": [
     {
       "required": [
-        "messageChunkBytes"
-      ],
-      "properties": {
-        "generator": {
-          "const": "opencode-completed-transcripts-v1"
-        },
-        "sourceEventFormat": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "const": "opencode-event-v1"
-            }
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "sessionProfiles",
-        "derivation"
-      ],
-      "properties": {
-        "generator": {
-          "const": "opencode-completed-sessions-v2"
-        },
-        "sourceEventFormat": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "const": "opencode-event-v2"
-            }
-          }
-        }
-      }
-    },
-    {
-      "required": [
         "sessionProfiles",
         "derivation",
         "benchmarkTopology"
       ],
       "properties": {
         "generator": {
-          "const": "opencode-completed-sessions-v3"
+          "const": "opencode-completed-sessions-v1"
         },
         "sourceEventFormat": {
           "type": "object",

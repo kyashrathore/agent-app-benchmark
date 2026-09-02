@@ -2,16 +2,19 @@
   "schemaVersion": 1,
   "id": "app-start-v1",
   "title": "Application start",
-  "description": "Measure new-process launch to painted and trusted-input-ready application surface.",
+  "description": "Measure process spawn to a correctly painted, trusted-input-ready 1 MiB historical coding session. New state uses a freshly created application data directory; initialized state uses an app data directory produced only by the benchmark preparation step and never launched before the timed start.",
   "kind": "app-start",
-  "corpusId": "opencode-completed-transcripts-v1",
+  "corpusId": "opencode-completed-sessions-v1",
   "cases": {
-    "startModes": ["new-application-state", "initialized-application-state"]
+    "startModes": [
+      "new-application-state",
+      "initialized-application-state"
+    ]
   },
   "metrics": [
     {
       "id": "start.duration_ms",
-      "description": "Elapsed monotonic time immediately before process spawn until the 1 MiB anchor transcript is correctly painted across two presentation opportunities and the composer accepts trusted input.",
+      "description": "Elapsed monotonic time immediately before process spawn until content identity, first-fold paint, two presentations, and trusted-input evidence are complete.",
       "unit": "ms"
     }
   ],

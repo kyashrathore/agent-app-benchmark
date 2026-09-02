@@ -6,9 +6,9 @@
   "frameworkRevision": "0000000000000000000000000000000000000000",
   "runProfile": "quick",
   "repetitions": 2,
-  "scenarioIds": ["app-start-v4", "session-switch-v4"],
+  "scenarioIds": ["app-start-v1", "session-switch-v1"],
   "resourceMonitor": "/absolute/path/to/agent-app-resource-monitor",
-  "corpusDirectory": "/absolute/path/to/opencode-completed-sessions-v4",
+  "corpusDirectory": "/absolute/path/to/opencode-completed-sessions-v1",
   "outputRoot": "/absolute/path/to/comparison-output",
   "apps": [
     {

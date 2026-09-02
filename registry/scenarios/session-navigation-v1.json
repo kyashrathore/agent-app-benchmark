@@ -4,11 +4,19 @@
   "title": "Session navigation",
   "description": "Measure only trusted session navigation. First visits and returns to previously visited sessions are plotted across history size with the workspace panel closed. A separate trend measures returns with an already-open workspace panel across light, moderate, and heavy retained directory/tab states. Every panel-open profile keeps the same complete non-truncated 24-file authoritative model and exact logical expansion state. Setup never scrolls a virtualized surface merely to manufacture partial expansion state, and readiness requires only the currently materialized viewport to be painted and interactive.",
   "kind": "session-navigation",
-  "corpusId": "opencode-completed-sessions-v3",
+  "corpusId": "opencode-completed-sessions-v1",
   "cases": {
-    "historyNavigationTypes": ["first-visit", "return-visited-panel-closed"],
+    "historyNavigationTypes": [
+      "first-visit",
+      "return-visited-panel-closed"
+    ],
     "panelNavigationType": "return-visited-panel-open",
-    "transcriptBytes": [1048576, 8388608, 33554432, 134217728],
+    "transcriptBytes": [
+      1048576,
+      8388608,
+      33554432,
+      134217728
+    ],
     "standardTranscriptBytes": 1048576,
     "panelLoads": [
       {
@@ -53,5 +61,9 @@
       "unit": "ms"
     }
   ],
-  "runProfiles": { "smoke": 1, "quick": 5, "publication": 20 }
+  "runProfiles": {
+    "smoke": 1,
+    "quick": 5,
+    "publication": 20
+  }
 }

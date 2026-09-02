@@ -2,19 +2,43 @@
   "schemaVersion": 1,
   "id": "session-switch-v1",
   "title": "Historical session switching",
-  "description": "Switch among completed historical transcripts while varying workspace relation, destination state, and logical transcript bytes.",
+  "description": "Measure unique completed historical sessions in stabilized app processes. Cold destinations have never been activated in that process. Warm destinations are activated once, returned to control, and then measured. Transcript-size latency is counterbalanced separately from the deliberately ascending memory-retention workload.",
   "kind": "session-switch",
-  "corpusId": "opencode-completed-transcripts-v1",
+  "corpusId": "opencode-completed-sessions-v1",
   "cases": {
-    "workspaceRelations": ["within-workspace", "across-workspaces"],
-    "sessionStates": ["cold", "warm"],
-    "transcriptBytes": [1048576, 8388608, 33554432]
+    "workspaceRelations": [
+      "within-workspace",
+      "across-workspaces"
+    ],
+    "sessionStates": [
+      "cold",
+      "warm"
+    ],
+    "transcriptBytes": [
+      1048576,
+      8388608,
+      33554432,
+      134217728
+    ],
+    "standardTranscriptBytes": 1048576,
+    "latencySamplesPerProcess": 5,
+    "sizeSamplesPerProcess": 2,
+    "longRowTranscriptBytes": [
+      1048576,
+      8388608,
+      33554432
+    ]
   },
   "metrics": [
     {
       "id": "switch.duration_ms",
-      "description": "Elapsed monotonic time from trusted destination activation until the requested content is correct, the first fold has no blank virtualization gap, two presentation opportunities have completed, and trusted input is accepted.",
+      "description": "Trusted destination activation to correct content, first-fold paint, two presentations, and trusted input. Each configured repetition contributes five unique observations per workspace/state lane. Long-row sessions repeat the size trend with the same bytes in eight rows.",
       "unit": "ms"
+    },
+    {
+      "id": "memory.sampled_rss",
+      "description": "Framework-sampled summed RSS of the declared application process family. Maximum means the largest observed sample, not an operating-system true peak. Active means the progressive 1, 8, 32, and 128 MiB session-switch workload is running.",
+      "unit": "MiB"
     }
   ],
   "resourceMeasurement": {
@@ -22,7 +46,7 @@
     "activeSampleIntervalMs": 250,
     "idleSampleIntervalMs": 250,
     "settleBeforeIdleMs": 1000,
-    "idleWindowMs": 5000
+    "idleWindowMs": 2000
   },
   "runProfiles": {
     "smoke": 1,

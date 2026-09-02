@@ -18,13 +18,13 @@ export const COMPARE_PRESETS = Object.freeze({
     title: (hostLabel) => `Claxedo vs T3 Code — user-flow p95 (${hostLabel})`,
     description: (hostLabel, profile) =>
       `Paired Claxedo vs T3 Code comparison on ${hostLabel} using the public user-flow suite `
-      + `(app-start-v4, session-switch-v4, session-navigation-v2, workspace-panel-v3) `
+      + `(app-start-v1, session-switch-v1, session-navigation-v1, workspace-panel-v1) `
       + `at run profile ${profile}.`,
     scenarioIds: Object.freeze([
-      "app-start-v4",
-      "session-switch-v4",
-      "session-navigation-v2",
-      "workspace-panel-v3",
+      "app-start-v1",
+      "session-switch-v1",
+      "session-navigation-v1",
+      "workspace-panel-v1",
     ]),
     defaultRunProfile: "smoke",
     apps: Object.freeze(["t3", "claxedo"]),

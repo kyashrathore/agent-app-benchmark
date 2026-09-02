@@ -13,7 +13,7 @@ const DRIVER = path.resolve("examples/mock-driver/mock-driver.mjs");
 const SMALL = {
   schemaVersion: 1,
   id: "test-conformance-corpus-v1",
-  generator: "opencode-completed-sessions-v2",
+  generator: "opencode-completed-sessions-v1",
   seed: "conformance-test",
   sourceEventFormat: {
     id: "opencode-event-v2",
@@ -23,6 +23,7 @@ const SMALL = {
   },
   workspaceIds: ["workspace-a", "workspace-b"],
   transcriptBytes: [4096],
+  benchmarkTopology: { standardTranscriptBytes: 4096, latencySamplesPerProcess: 1, sizeSamplesPerProcess: 1 },
   sessionProfiles: [{
     transcriptBytes: 4096,
     userMessages: 1,

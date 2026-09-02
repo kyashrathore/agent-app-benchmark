@@ -14,10 +14,10 @@ import {
 } from "./app-bindings.mjs";
 
 const DEFAULT_SCENARIO_IDS = Object.freeze([
-  "app-start-v4",
-  "session-switch-v4",
-  "session-navigation-v2",
-  "workspace-panel-v3",
+  "app-start-v1",
+  "session-switch-v1",
+  "session-navigation-v1",
+  "workspace-panel-v1",
 ]);
 
 export function normalizeScenarioIds(values = []) {

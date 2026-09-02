@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "claxedo-vs-t3-vs-opencode-p95-user-flows-macos-arm64-headed-20260902",
+  "title": "Claxedo vs T3 Code vs OpenCode \u2014 user-flow p95 (macOS arm64 headed)",
+  "description": "Assembled from three independent legs run back to back on one host on 2026-09-02 with five latency samples per lane and long-row sessions (1 and 8 MiB in eight text rows, 32 MiB in thirty-two). Each leg waited for the host to be idle and its 1-minute load to drop under 3.5.",
+  "provenance": "community-self-attested",
+  "policy": "independent-runs",
+  "results": [
+    {
+      "appId": "claxedo",
+      "scenarioId": "app-start-v1",
+      "path": "runs/claxedo/app-start-v1/result.json",
+      "digestSha256": "3d50d881b6143db784ca94db3b734144b67aa80e9322c2dfa483303e746ed8f1"
+    },
+    {
+      "appId": "claxedo",
+      "scenarioId": "session-navigation-v1",
+      "path": "runs/claxedo/session-navigation-v1/result.json",
+      "digestSha256": "95514f35eb13e640bca573368657e1cff71e02bf934555302cd50e65d229b058"
+    },
+    {
+      "appId": "claxedo",
+      "scenarioId": "session-switch-v1",
+      "path": "runs/claxedo/session-switch-v1/result.json",
+      "digestSha256": "5b957dff10bf64da985e440b574189340cb47d16549d6de1f19b0f87695d3015"
+    },
+    {
+      "appId": "claxedo",
+      "scenarioId": "workspace-panel-v1",
+      "path": "runs/claxedo/workspace-panel-v1/result.json",
+      "digestSha256": "92bfb2e35b125dbc830d56b64fa806cb93fdcc64c8be869f5a63da782111999f"
+    },
+    {
+      "appId": "opencode",
+      "scenarioId": "app-start-v1",
+      "path": "runs/opencode/app-start-v1/result.json",
+      "digestSha256": "329af740c7338d490d4afafb1525ee3aaaca7414f19a2e6aea0e26a1f5a7869b"
+    },
+    {
+      "appId": "opencode",
+      "scenarioId": "session-navigation-v1",
+      "path": "runs/opencode/session-navigation-v1/result.json",
+      "digestSha256": "570d92d63fa0961d35aeb5285aaf47982eb479a4c52c4bbffd49521ff52d47ae"
+    },
+    {
+      "appId": "opencode",
+      "scenarioId": "session-switch-v1",
+      "path": "runs/opencode/session-switch-v1/result.json",
+      "digestSha256": "54208fc719be312d0c42cf39e645906eda9f879bdd431451f9fe82250b34615f"
+    },
+    {
+      "appId": "opencode",
+      "scenarioId": "workspace-panel-v1",
+      "path": "runs/opencode/workspace-panel-v1/result.json",
+      "digestSha256": "df25f466a30748919e6f8766b6d1120d24cbd3fbf907acc52c9d59d462d353cb"
+    },
+    {
+      "appId": "t3",
+      "scenarioId": "app-start-v1",
+      "path": "runs/t3/app-start-v1/result.json",
+      "digestSha256": "495586ee228b7b89c81944dcfde0f9c8ed346de56bf6cff04ca5102e409f063e"
+    },
+    {
+      "appId": "t3",
+      "scenarioId": "session-navigation-v1",
+      "path": "runs/t3/session-navigation-v1/result.json",
+      "digestSha256": "321fbb1d072584c1df3c9be0a166789d0a8ce1d1b1d901f46ad7220d7e486044"
+    },
+    {
+      "appId": "t3",
+      "scenarioId": "session-switch-v1",
+      "path": "runs/t3/session-switch-v1/result.json",
+      "digestSha256": "65f1915759f91019e5bb0ebb22e4445968d166d95441baacaadf57e1200faeea"
+    },
+    {
+      "appId": "t3",
+      "scenarioId": "workspace-panel-v1",
+      "path": "runs/t3/workspace-panel-v1/result.json",
+      "digestSha256": "337d2b656476c39aa8c7ea382832621ca9fe7b6af04d82901512f266feae742d"
+    }
+  ]
+}

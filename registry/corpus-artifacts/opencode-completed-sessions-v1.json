@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "opencode-completed-sessions-v1",
+  "corpusId": "opencode-completed-sessions-v1",
+  "definitionDigestSha256": "b687efa14dad4863aceeb4ab0baf1df8f2ef4853be88f0660d0edf6c879b8bcb",
+  "eventSchemaDigestSha256": "f6e789de10d8b54fbe8b640ff885843cbc564ac1eb262611083a050de0435cac",
+  "corpusDigestSha256": "beeb966459bb2b8ebeb8df1654625054decbd69a93e1d70e63addfcae610d2a1"
+}

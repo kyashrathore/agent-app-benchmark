@@ -11,16 +11,14 @@ export const SESSION_LANES = Object.freeze([
 export const STRUCTURED_SESSION_LANES = SESSION_LANES;
 
 export const WORKSPACE_PANEL_ACTIONS = Object.freeze([
-  "open-cold",
-  "toggle-open-close",
-  "toggle-close-open",
-  "open-warm-data",
-  "switch-surface",
+  "open-panel",
+  "close-panel",
+  "files-to-review",
+  "review-to-files",
   "open-file",
   "switch-file-tab",
-  "toggle-diff-view",
-  "collapse-all",
   "expand-all",
+  "collapse-all",
 ]);
 
 export const SESSION_NAVIGATION_TYPES = Object.freeze([
@@ -31,16 +29,7 @@ export const SESSION_NAVIGATION_TYPES = Object.freeze([
 
 export const PANEL_LOAD_PROFILES = Object.freeze(["light", "moderate", "heavy"]);
 
-export const WORKSPACE_PANEL_V2_ACTIONS = Object.freeze([
-  "open-panel",
-  "close-panel",
-  "files-to-review",
-  "review-to-files",
-  "open-file",
-  "switch-file-tab",
-  "expand-all",
-  "collapse-all",
-]);
+export const WORKSPACE_PANEL_V2_ACTIONS = WORKSPACE_PANEL_ACTIONS;
 
 export const PANEL_PROFILES = Object.freeze(["closed", "files", "diff"]);
 

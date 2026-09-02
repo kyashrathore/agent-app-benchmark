@@ -270,7 +270,7 @@ async function writeSession(definition, session, sessionIndex, root) {
 
   const profile = session.profile;
   const allocation = allocatePayload(profile.transcriptBytes, profile.payloadPermille);
-  const realisticDistribution = definition.generator === "opencode-completed-sessions-v3";
+  const realisticDistribution = definition.generator === "opencode-completed-sessions-v1";
   // Long-row sessions split their bytes evenly: the point is a row of a known,
   // uniform size, and a weighted split would push single rows past the event cap.
   const evenRows = session.role === "size-latency-long";

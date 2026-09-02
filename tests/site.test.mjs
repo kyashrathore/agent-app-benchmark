@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { digest, digestBytes } from "../src/canonical-json.mjs";
-import { buildResourceSequence, expandCases } from "../src/cases.mjs";
+import { buildResourceSequence, buildResourceSequences, expandCases } from "../src/cases.mjs";
 import { assertSharedComparisonRepetitions, loadComparison } from "../src/comparison.mjs";
-import { eventSchemaDigest, OPENCODE_EVENT_SCHEMA_DIGEST } from "../src/corpus.mjs";
+import { eventSchemaDigest } from "../src/corpus.mjs";
 import { readRegistered } from "../src/registry.mjs";
 import { buildSite } from "../src/report/site.mjs";
 import { assembleComparison } from "../src/comparison-assemble.mjs";
@@ -321,8 +321,8 @@ async function writeTrendComparisonFixture(root, options = {}) {
   const steps = [
     { app: { id: "claxedo", name: "Claxedo" }, scenarioId: "session-navigation-v1" },
     { app: { id: "t3", name: "T3" }, scenarioId: "session-navigation-v1" },
-    { app: { id: "t3", name: "T3" }, scenarioId: "workspace-panel-v2" },
-    { app: { id: "claxedo", name: "Claxedo" }, scenarioId: "workspace-panel-v2" },
+    { app: { id: "t3", name: "T3" }, scenarioId: "workspace-panel-v1" },
+    { app: { id: "claxedo", name: "Claxedo" }, scenarioId: "workspace-panel-v1" },
   ];
   const schedule = { version: 1, policy: "balanced-mirrored-v1", steps: steps.map((step, index) => ({ ordinal: index + 1, appId: step.app.id, scenarioId: step.scenarioId })) };
   const scheduleDigest = digest(schedule);
@@ -346,7 +346,7 @@ async function trendResultFixture(app, scenarioId, scheduleOrdinal, scheduleDige
   const artifact = await readRegistered("corpusArtifact", corpus.value.id);
   const repetitions = options.repetitions ?? scenario.value.runProfiles.publication;
   const cases = expandCases(scenario.value, "publication", corpus.value.seed, repetitions);
-  const observations = trendObservations(cases, app.id === "t3" && scenarioId === "workspace-panel-v2" ? options.invalidReason : undefined);
+  const observations = trendObservations(cases, app.id === "t3" && scenarioId === "workspace-panel-v1" ? options.invalidReason : undefined);
   const summary = summarizeObservations(scenario.value, observations);
   const fixture = buildWorkspaceFixtureManifest(scenario.value.cases.workspaceLoad, corpus.value.seed);
   return {
@@ -457,8 +457,8 @@ async function rewriteResult(comparisonFile, matches, mutate) {
 
 async function resultFixture(app, scenarioId, scheduleOrdinal, scheduleDigest) {
   const scenario = await readRegistered("scenario", scenarioId);
-  const corpus = await readRegistered("corpus", "opencode-completed-transcripts-v1");
-  const observations = scenario.value.kind === "app-start" ? observationsFor(expandCases(scenario.value, "smoke")) : switchObservations(scenario.value);
+  const corpus = await readRegistered("corpus", "opencode-completed-sessions-v1");
+  const observations = scenario.value.kind === "app-start" ? observationsFor(expandCases(scenario.value, "smoke", corpus.value.seed)) : switchObservations(scenario.value, corpus.value.seed);
   const summary = summarizeObservations(scenario.value, observations);
   const resourceTrace = scenario.value.kind === "session-switch" ? resourceTraceFixture(scenario.value) : null;
   const resources = resourceTrace ? deriveResourcesFromTrace(resourceTrace, scenario.value, observations) : null;
@@ -470,7 +470,7 @@ async function resultFixture(app, scenarioId, scheduleOrdinal, scheduleDigest) {
     environment: { platform: "darwin", architecture: "arm64", osRelease: "fixture", logicalCpuCount: 10, cpuModel: "fixture", totalMemoryBytes: 1, nodeVersion: "fixture", guiFramework: "electron" },
     app: { id: app.id, name: app.name, version: "1.0.0", buildDigestSha256: "a".repeat(64) },
     driver: { name: `${app.id}-driver`, version: "1.0.0", sourceCommit: "b".repeat(40), digestSha256: "c".repeat(64) },
-    sourceEventFormat: { id: "opencode-event-v1", sourceRevision: "a9f7081d4015b0cc22ed67156e042b482a8d064a", schemaDigestSha256: OPENCODE_EVENT_SCHEMA_DIGEST },
+    sourceEventFormat: { id: corpus.value.sourceEventFormat.id, sourceRevision: corpus.value.sourceEventFormat.sourceRevision, schemaDigestSha256: eventSchemaDigest(corpus.value.sourceEventFormat.id) },
     materialization: { mode: app.id === "claxedo" ? "native-opencode" : "translated", corpusDigestSha256: CANONICAL_CORPUS_DIGEST, mappingDigestSha256: "e".repeat(64) },
     scenario: { id: scenarioId, kind: scenario.value.kind, digestSha256: scenario.digest, status: "public-comparable" },
     corpus: { id: corpus.value.id, definitionDigestSha256: corpus.digest, digestSha256: CANONICAL_CORPUS_DIGEST, status: "public-comparable" },
@@ -483,11 +483,14 @@ async function resultFixture(app, scenarioId, scheduleOrdinal, scheduleDigest) {
   };
 }
 
-function switchObservations(scenario) {
+function switchObservations(scenario, seed) {
+  const repetitions = scenario.runProfiles.smoke;
   return observationsFor([
-    ...expandCases(scenario, "smoke", "agent-app-benchmark-public-v1"),
-    ...buildResourceSequence(scenario, "agent-app-benchmark-public-v1"),
-    { caseId: "progressive-resource-return-control", workload: "resource-control", destinationSessionId: "control" },
+    ...expandCases(scenario, "smoke", seed),
+    ...buildResourceSequences(scenario, repetitions).flatMap((group) => [
+      ...group.cases,
+      { caseId: `progressive-resource-return-control-${group.repetition}`, repetition: group.repetition, workload: "resource-control", destinationSessionId: "control" },
+    ]),
   ]);
 }
 
@@ -530,7 +533,7 @@ function sample(atMs, rssMiB, cpuTimeMs) {
   return { atMs, collectionDurationMicros: 100, rssBytes, cumulativeCpuTimeMs: cpuTimeMs, inaccessibleProcessCount: 0, rootProcessFound: true, missingExternalProcessCount: 0, processes: [{ pid: 10, startTimeMs: 0, cpuTimeMs, rssBytes, name: "fixture" }] };
 }
 
-const CANONICAL_CORPUS_DIGEST = "979d15dfeb87f2c539b39915c7324470a54f431a23c668f10ef484ab194b9e5e";
+const CANONICAL_CORPUS_DIGEST = "beeb966459bb2b8ebeb8df1654625054decbd69a93e1d70e63addfcae610d2a1";
 
 test("assembled comparisons pair independently sealed runs without a mirrored schedule", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-assemble-"));

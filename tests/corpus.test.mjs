@@ -9,7 +9,7 @@ import { readRegistered } from "../src/registry.mjs";
 const SMALL = {
   schemaVersion: 1,
   id: "test-corpus-v1",
-  generator: "opencode-completed-sessions-v2",
+  generator: "opencode-completed-sessions-v1",
   seed: "test-seed",
   sourceEventFormat: {
     id: "opencode-event-v2",
@@ -34,31 +34,6 @@ const SMALL = {
   },
   description: "Small deterministic test corpus.",
 };
-
-test("public corpus defines one control and four lane sessions per size", async () => {
-  const corpus = await readRegistered("corpus", "opencode-completed-sessions-v2");
-  const sessions = buildSessionDefinitions(corpus.value);
-  assert.equal(sessions.length, 17);
-  assert.equal(sessions[0].role, "control");
-  for (const bytes of corpus.value.transcriptBytes) {
-    assert.deepEqual(sessions.filter((session) => session.transcriptBytes === bytes && session.role !== "control").map((session) => session.role), [
-      "within-workspace-cold",
-      "within-workspace-warm",
-      "across-workspaces-cold",
-      "across-workspaces-warm",
-    ]);
-  }
-});
-
-test("V3 corpus provides independent latency, size-sweep, and retention destinations", async () => {
-  const corpus = await readRegistered("corpus", "opencode-completed-sessions-v3");
-  const sessions = buildSessionDefinitions(corpus.value);
-  assert.equal(sessions.length, 53);
-  assert.equal(sessions.filter((session) => session.logicalSessionId.startsWith("latency-")).length, 40);
-  assert.equal(sessions.filter((session) => session.role === "size-latency").length, 8);
-  assert.equal(sessions.filter((session) => session.role === "progressive-resource").length, 4);
-  assert.equal(new Set(sessions.map((session) => session.logicalSessionId)).size, sessions.length);
-});
 
 test("streamed OpenCode corpus is byte-for-byte deterministic and verifies", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-corpus-"));
@@ -119,8 +94,8 @@ test("generator never overwrites an existing directory", async () => {
   }
 });
 
-test("V4 corpus halves the latency lanes and adds long-row size destinations", async () => {
-  const corpus = await readRegistered("corpus", "opencode-completed-sessions-v4");
+test("the corpus provides five latency destinations per lane and long-row size destinations", async () => {
+  const corpus = await readRegistered("corpus", "opencode-completed-sessions-v1");
   const sessions = buildSessionDefinitions(corpus.value);
   assert.equal(sessions.length, 1 + 4 * 5 + 2 * 4 + 2 * 3 + 4);
   assert.equal(sessions.filter((session) => session.logicalSessionId.startsWith("latency-")).length, 20);

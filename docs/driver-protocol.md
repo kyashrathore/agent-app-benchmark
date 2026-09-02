@@ -84,24 +84,20 @@ Workspace-panel scenarios return one `rendererTrace` per action. Its `clock` is 
 
 The trace preserves at most 600 frame timestamps and 100 long-animation frames. Each long-animation frame preserves at most 32 script attributions with function name, invoker type, sanitized package-asset identifier in `sourceURL`, duration, and forced style/layout duration. Drivers must not serialize URL schemes or local absolute paths in `sourceURL`; use a stable value such as `renderer-assets/panel.js`. Renderer task, script, style-recalculation, and layout counters are raw deltas over the exact execution interval, never cumulative across actions. `counterInterval.start` and `.end` use the trace clock and must equal `clock.start` and `.end` within 0.5 ms. The framework derives milestone intervals, frame-budget misses, transition counts, long-animation-frame counts/worst duration/worst blocking duration, renderer task/script/style/layout summaries, and reports.
 
-`workspace-panel-v1` actions have these exact preconditions and one-click measured inputs:
+`workspace-panel-v1` actions have these exact preconditions and one-click measured inputs. Every action is measured at each seeded panel load (light, moderate, heavy); Review always owns all 24 canonical changed files.
 
 | Action | Untimed precondition | Measured input and endpoint |
 |---|---|---|
-| `open-cold` | Panel surface has never mounted and workspace content has not been requested in the process; Files is the selected target. | Toggle open; measure shell visibility and transition independently, then Files data readiness, above-fold paint, and input readiness. |
-| `toggle-open-close` | Panel is closed and Files data is warm. | Toggle open, then toggle again during the transition, or immediately when no transition exists; the final closed state must be shown on the next presentation. |
-| `toggle-close-open` | Panel is open, settled, and Files data is warm. | Toggle closed, then toggle again during the transition, or immediately when no transition exists; the final open state must be shown on the next presentation. |
-| `open-warm-data` | Files data is warm but the panel surface is unmounted/closed. | Toggle open through shell, above-fold paint, and input readiness. |
-| `switch-surface` | Panel is settled on loaded Files. | Click the Diff surface tab through its above-fold painted and interactive state. |
-| `open-file` | Panel is settled on loaded Files with no file-preview surface active. | Click the first canonical changed file through painted interactive preview. |
-| `switch-file-tab` | The scenario's canonical open file tabs are settled and the first is active. | Click the second canonical file tab through painted interactive preview. |
-| `toggle-diff-view` | Loaded Diff is settled in stacked mode. | Click split mode through painted interactive Diff. |
-| `collapse-all` | Loaded Diff is settled with all file sections expanded. | Click Collapse all through painted interactive Diff. |
-| `expand-all` | Loaded Diff is settled with all file sections collapsed. | Click Expand all through painted interactive Diff. |
+| `open-panel` | Panel is closed; the seeded load is applied. | Trusted `pointerdown` on the panel toggle through shell visibility, above-fold paint, and input readiness. |
+| `close-panel` | Panel is open and settled. | Trusted `pointerdown` on the panel toggle until the closed state is shown and the session composer is interactive. |
+| `files-to-review` | Panel is settled on Files. | Click the Review surface tab through its above-fold painted and interactive state. |
+| `review-to-files` | Panel is settled on Review. | Click the Files surface tab through its above-fold painted and interactive state. |
+| `open-file` | Panel is settled on Files with no file preview active. | Click the first canonical changed file through a painted, interactive preview. |
+| `switch-file-tab` | The load's retained file tabs are settled and the first is active. | Click the second canonical file tab through a painted, interactive preview. |
+| `expand-all` | Review is settled with every file section collapsed. | Click Expand all until the load's expanded count is painted and interactive. |
+| `collapse-all` | Review is settled with every file section expanded. | Click Collapse all until every section is collapsed and interactive. |
 
-No panel content input is sent before an opening/closing transition settles. Toggle pairs are the sole exception because interruptibility is the behavior being measured when an animation exists. A `none` transition is valid for an inline panel and means an immediate double-toggle, and remains explicit in raw evidence and framework summaries.
-
-`session-switch-workspace-panel-v1` measures the four cold/warm and within/across lanes independently for `closed`, `files`, and `diff`. Each profile uses a distinct existing V3 latency-pool destination (`sample` 0, 1, or 2), preserving cold/warm semantics in one stabilized process. The three profiles remain adjacent within a lane block, while their order rotates by repetition and lane so each profile occupies every first/middle/last position. Its trace reports `session-ready` and `panel-ready` independently before the combined interactive endpoint, allowing the framework to distinguish transcript readiness from the open Files/Diff cost. The framework derives only matched, valid Files-minus-closed and Diff-minus-closed costs per lane.
+No panel content input is sent before an opening or closing transition settles. Deliberate animation duration is reported as a milestone and never used to name a latency winner.
 
 ## `shutdown`
 

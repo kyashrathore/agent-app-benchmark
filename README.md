@@ -59,16 +59,16 @@ No live session stream, model call, agent run, or terminal activity occurs durin
 
 ### Workspace panel
 
-`session-navigation-v2` is the primary user-facing navigation scenario. It reports two trends and times only a session-row activation:
+`session-navigation-v1` is the primary user-facing navigation scenario. It reports two trends and times only a session-row activation:
 
 - **History-size trend:** first visit and return to that previously visited session with the panel closed, at 1, 8, 32, and 128 MiB. The destination is displayed exactly once by the measured first visit; only navigation back to control is untimed before the paired return.
 - **Already-open-panel trend:** return to a previously visited fixed 1 MiB session with the panel left open in explicit light, moderate, and heavy seeded UI states.
 
 The already-open-panel endpoint is the later of session readiness and panel readiness. Panel setup is outside the clock. Reports use nearest-rank p95 as the primary value, keep p50 in the diagnostic drill-down, and contain no cold/warm matrix.
 
-All `session-navigation-v2` and `workspace-panel-v3` action clocks begin at the trusted `pointerdown` timestamp. Drivers attest both the timestamp and event type; `click` or a later application mark is invalid.
+All `session-navigation-v1` and `workspace-panel-v1` action clocks begin at the trusted `pointerdown` timestamp. Drivers attest both the timestamp and event type; `click` or a later application mark is invalid.
 
-`workspace-panel-v3` independently measures ordinary user actions: open, close, Files → Review, Review → Files, open file, switch file tab, expand all, and collapse all. Every action is plotted across the same explicit panel loads:
+`workspace-panel-v1` independently measures ordinary user actions: open, close, Files → Review, Review → Files, open file, switch file tab, expand all, and collapse all. Every action is plotted across the same explicit panel loads:
 
 | Load | Expanded directories | Retained file tabs | Expanded Review files |
 |---|---:|---:|---:|
@@ -80,7 +80,7 @@ Review always owns all 24 canonical changed files and their complete, non-trunca
 
 ## Canonical corpus
 
-Every app receives the same deterministic `opencode-completed-sessions-v4` directory. It contains one NDJSON file per logical session using the pinned OpenCode `EventV2.SerializedEvent` envelope and these durable event types:
+Every app receives the same deterministic `opencode-completed-sessions-v1` directory. It contains one NDJSON file per logical session using the pinned OpenCode `EventV2.SerializedEvent` envelope and these durable event types:
 
 - `session.created.1`
 - `message.updated.1`
@@ -115,11 +115,11 @@ Generate and verify the public corpus:
 
 ```bash
 node bin/agent-app-benchmark.mjs corpus generate \
-  --corpus opencode-completed-sessions-v4 \
-  --output artifacts/corpora/opencode-completed-sessions-v4
+  --corpus opencode-completed-sessions-v1 \
+  --output artifacts/corpora/opencode-completed-sessions-v1
 
 node bin/agent-app-benchmark.mjs corpus verify \
-  --input artifacts/corpora/opencode-completed-sessions-v4
+  --input artifacts/corpora/opencode-completed-sessions-v1
 ```
 
 Run an app-owned driver after it advertises the scenario:
@@ -129,7 +129,7 @@ node bin/agent-app-benchmark.mjs run \
   --driver /absolute/path/to/driver-executable \
   --driver-arg optional-driver-argument \
   --app t3 \
-  --scenario session-switch-v4 \
+  --scenario session-switch-v1 \
   --run-profile smoke \
   --repetitions 2 \
   --resource-monitor native/resource-monitor/target/release/agent-app-resource-monitor \
@@ -145,16 +145,16 @@ For Claxedo or T3 without writing a comparison config, use the friendly `run` en
 export CLAXEDO_BENCHMARK_EXECUTABLE="/absolute/path/to/Claxedo Dev.app/Contents/MacOS/Claxedo Dev"
 
 # CI / local smoke for one scenario:
-npx agentappbench run --app claxedo --scenario session-switch-v4 --run-profile smoke
+npx agentappbench run --app claxedo --scenario session-switch-v1 --run-profile smoke
 
 # Multiple scenarios (comma-separated or repeatable --scenario):
-npx agentappbench run --app t3 --scenarios app-start-v4,session-switch-v4 --run-profile quick --out artifacts/runs/t3-quick
+npx agentappbench run --app t3 --scenarios app-start-v1,session-switch-v1 --run-profile quick --out artifacts/runs/t3-quick
 
 # Print the resolved binding without launching apps:
-npx agentappbench run --app claxedo --scenario session-switch-v4 --dry-run
+npx agentappbench run --app claxedo --scenario session-switch-v1 --dry-run
 ```
 
-Omit `--scenario` / `--scenarios` to run the same user-flow suite as `compare` (`app-start-v4`, `session-switch-v4`, `session-navigation-v2`, `workspace-panel-v3`). `--run-profile smoke|quick|publication` maps to repetition overrides `1|2|5` like compare. Pass `--executable` to override the env binary. Direct `--driver ...` runs keep the low-level path unchanged. Single-app mode does not invent a comparison site; use `compare --site` for paired HTML.
+Omit `--scenario` / `--scenarios` to run the same user-flow suite as `compare` (`app-start-v1`, `session-switch-v1`, `session-navigation-v1`, `workspace-panel-v1`). `--run-profile smoke|quick|publication` maps to repetition overrides `1|2|5` like compare. Pass `--executable` to override the env binary. Direct `--driver ...` runs keep the low-level path unchanged. Single-app mode does not invent a comparison site; use `compare --site` for paired HTML.
 
 Pass `--corpus-directory` to reuse a previously verified corpus instead of regenerating its roughly 691 MiB NDJSON representation for every scenario.
 
@@ -173,7 +173,7 @@ The output stays under the ignored `artifacts/` directory. It contains aggregate
 
 The registered profiles provide defaults (`smoke` uses 1; `quick` and `publication` use 2). Pass `--repetitions N` to override the selected profile for a direct run. For session switching, one repetition means one latency process with 5 unique destinations per lane, one counterbalanced size sweep in that process, and one independent memory process. For a paired comparison, set the top-level `"repetitions": N`; the framework applies the same count to every app and records it in every result. The allowed range is 1–100.
 
-For a fair same-machine comparison, use the framework-owned paired runner rather than invoking the four results independently. Copy `examples/comparison-run.example.json`, replace its absolute paths and framework commit, then run with `"scenarioIds": ["app-start-v4", "session-switch-v4"]`.
+For a fair same-machine comparison, use the framework-owned paired runner rather than invoking the four results independently. Copy `examples/comparison-run.example.json`, replace its absolute paths and framework commit, then run with `"scenarioIds": ["app-start-v1", "session-switch-v1"]`.
 
 ```bash
 node bin/agent-app-benchmark.mjs comparison run \
@@ -197,7 +197,7 @@ node bin/agent-app-benchmark.mjs compare \
   --site
 ```
 
-Auto-detected when present: `native/resource-monitor/target/release/agent-app-resource-monitor`, `artifacts/corpora/opencode-completed-sessions-v4`, git `HEAD` as `frameworkRevision`, and host label (`macos-arm64-headed` on Apple Silicon). Still required: packaged app binaries plus app-owned drivers under `CLAXEDO_ROOT` / `T3_ROOT`. Use `--dry-run` to write only the config. Use `--run-profile publication` (5 reps) for a publishable run. The low-level `comparison run` / `site build` commands remain unchanged.
+Auto-detected when present: `native/resource-monitor/target/release/agent-app-resource-monitor`, `artifacts/corpora/opencode-completed-sessions-v1`, git `HEAD` as `frameworkRevision`, and host label (`macos-arm64-headed` on Apple Silicon). Still required: packaged app binaries plus app-owned drivers under `CLAXEDO_ROOT` / `T3_ROOT`. Use `--dry-run` to write only the config. Use `--run-profile publication` (5 reps) for a publishable run. The low-level `comparison run` / `site build` commands remain unchanged.
 
 It verifies or generates the corpus once, then uses the recorded mirrored order `T3 app-start → Claxedo app-start → Claxedo session-switch → T3 session-switch`. Every result contains the same schedule digest and its own ordinal.
 
@@ -208,21 +208,21 @@ The driver protocol is language-neutral NDJSON, so Node, Bun, native binaries, a
 A scheduled `comparison run` seals one interleaved order and cannot take a single application's rerun. When applications come and go, run each one on its own and assemble the comparison afterwards. Each result keeps its own run provenance; pairing requires the same framework revision, scenario, corpus, profile, repetition count, and host identity, and the site discloses that order was not counterbalanced and lists each leg's start time.
 
 ```bash
-node bin/agent-app-benchmark.mjs run --app opencode --scenarios app-start-v4,session-switch-v4 --run-profile publication --out artifacts/runs/opencode-pub
+node bin/agent-app-benchmark.mjs run --app opencode --scenarios app-start-v1,session-switch-v1 --run-profile publication --out artifacts/runs/opencode-pub
 
 node bin/agent-app-benchmark.mjs comparison assemble \
   --id claxedo-vs-t3-vs-opencode-macos-arm64-20260902 \
   --title "Claxedo vs T3 Code vs OpenCode" \
-  --result artifacts/runs/opencode-pub/app-start-v4/result.json \
-  --result artifacts/runs/opencode-pub/session-switch-v4/result.json \
-  --result artifacts/comparisons/earlier-run/runs/claxedo/app-start-v4/result.json \
-  --result artifacts/comparisons/earlier-run/runs/claxedo/session-switch-v4/result.json \
+  --result artifacts/runs/opencode-pub/app-start-v1/result.json \
+  --result artifacts/runs/opencode-pub/session-switch-v1/result.json \
+  --result artifacts/comparisons/earlier-run/runs/claxedo/app-start-v1/result.json \
+  --result artifacts/comparisons/earlier-run/runs/claxedo/session-switch-v1/result.json \
   --output artifacts/comparisons/claxedo-vs-t3-vs-opencode-macos-arm64-20260902
 ```
 
 ## Results (2026-09-02, macOS arm64 headed, one MacBook Pro)
 
-The assembled comparison `claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1` is checked in under `results/comparisons/` and rebuilds into the full site with `site build`: three independent legs run back to back behind idle and load gates.
+The assembled comparison `claxedo-vs-t3-vs-opencode-p95-user-flows-macos-arm64-headed-20260902` is checked in under `results/comparisons/` and rebuilds into the full site with `site build`: three independent legs run back to back behind idle and load gates.
 
 Nearest-rank p95, milliseconds unless noted, 5 repetitions. A dagger marks a lane the framework withholds because at least one observation was invalid; the value shown is p95 over the valid observations with its count.
 
@@ -251,36 +251,36 @@ Exact revisions, all pushed:
 
 | Component | Repository and branch | Commit |
 |---|---|---|
-| Framework | `kyashrathore/agent-app-benchmark` `codex/benchmark-v1` | `0208dd3` (scenarios, corpus, assembler) — later README commits land on top |
-| Claxedo driver | `kyashrathore/Claxedo` `codex/agent-app-benchmark-v4-ids` | `14add6424f` (driver at `packages/claxedo-app/perf-harness/src/public-agent-app-driver.ts`; the packaged app measured here was built from `b8c6ad0c87`) |
-| T3 Code driver | `kyashrathore/t3code` `codex/agent-app-benchmark-v1` | `cd5822be7` (upstream main `5392c9bb9` plus the driver; the app asserts the packaged commit equals HEAD, so package after checking out exactly this commit) |
-| OpenCode driver | `kyashrathore/opencode` `codex/agent-app-benchmark-v1` | `49a9590` (upstream dev `69c172e` plus `packages/desktop/benchmark/`) |
-| Corpus | generated from `registry/corpora/opencode-completed-sessions-v4.json` | digest `e8bc11728c10bc8a7931919d8292de0195c67652e9229b077fc18db412128400` (verified by `corpus verify` against the registered artifact) |
+| Framework | `kyashrathore/agent-app-benchmark` `main` | the commit this README is read from; the checked-in comparison was rewritten to these identifiers in the same history |
+| Claxedo driver | `kyashrathore/Claxedo` `dev` | `0e72693395` (driver at `packages/claxedo-app/perf-harness/src/public-agent-app-driver.ts`; the packaged app measured here was built from `b8c6ad0c87`; the checked-in results record the driver commits that ran, which advertised earlier scenario identifiers for the same case sets) |
+| T3 Code driver | `kyashrathore/t3code` `codex/agent-app-benchmark-v1` | `ddd803278` (upstream main `5392c9bb9` plus the driver; the app asserts the packaged commit equals HEAD, so package after checking out exactly this commit) |
+| OpenCode driver | `kyashrathore/opencode` `codex/agent-app-benchmark-v1` | `11d52c7` (upstream dev `69c172e` plus `packages/desktop/benchmark/`) |
+| Corpus | generated from `registry/corpora/opencode-completed-sessions-v1.json` | digest `beeb966459bb2b8ebeb8df1654625054decbd69a93e1d70e63addfcae610d2a1` (verified by `corpus verify` against the registered artifact) |
 
 1. Package each app from its commit: Claxedo `cd packages/claxedo-desktop && bun run package:mac`; T3 Code `corepack pnpm install --frozen-lockfile` then `RUSTUP_TOOLCHAIN=1.95.0-aarch64-apple-darwin corepack pnpm dist:desktop:artifact --platform mac --target dmg --arch arm64 --keep-stage --output-dir <dir>`; OpenCode `cd packages/desktop && CSC_IDENTITY_AUTO_DISCOVERY=false OPENCODE_CHANNEL=dev bun run prebuild && bun run build && bun run package:mac`. Copy each `.app` to a stable directory and point `CLAXEDO_BENCHMARK_EXECUTABLE`, `T3_BENCHMARK_EXECUTABLE`, and `OPENCODE_BENCHMARK_EXECUTABLE` at the binary inside `Contents/MacOS`; set `CLAXEDO_ROOT`, `T3_ROOT`, and `OPENCODE_ROOT` to the checkouts.
-2. `npm ci`, build `native/resource-monitor` (`cargo build --release`), then `node bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-sessions-v4 --output artifacts/corpora/opencode-completed-sessions-v4` and `corpus verify --input` the same directory; the digest must match the table.
+2. `npm ci`, build `native/resource-monitor` (`cargo build --release`), then `node bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-sessions-v1 --output artifacts/corpora/opencode-completed-sessions-v1` and `corpus verify --input` the same directory; the digest must match the table.
 3. Run one leg per app, each only while the machine is idle, the app window is on screen and not fully covered by another window (a fully occluded window stops the frame clock and every case fails fast), and the 1-minute load average is under 3.5:
 
 ```bash
 node bin/agent-app-benchmark.mjs run --app claxedo \
-  --scenarios app-start-v4,session-switch-v4,session-navigation-v2,workspace-panel-v3 \
+  --scenarios app-start-v1,session-switch-v1,session-navigation-v1,workspace-panel-v1 \
   --run-profile publication --repetitions 5 \
-  --corpus-directory artifacts/corpora/opencode-completed-sessions-v4 \
-  --out artifacts/runs/claxedo-publication-v4
+  --corpus-directory artifacts/corpora/opencode-completed-sessions-v1 \
+  --out artifacts/runs/claxedo-publication
 ```
 
    Repeat with `--app t3` and `--app opencode`.
 4. Assemble and build the site:
 
 ```bash
-node bin/agent-app-benchmark.mjs comparison assemble --id my-v4-comparison \
+node bin/agent-app-benchmark.mjs comparison assemble --id my-comparison \
   --title "Claxedo vs T3 Code vs OpenCode" --provenance community-self-attested \
-  --result artifacts/runs/claxedo-publication-v4/app-start-v4/result.json \
+  --result artifacts/runs/claxedo-publication/app-start-v1/result.json \
   # …one --result per app and scenario…
-  --output artifacts/comparisons/my-v4-comparison
+  --output artifacts/comparisons/my-comparison
 node bin/agent-app-benchmark.mjs site build \
-  --comparison artifacts/comparisons/my-v4-comparison/comparison.json \
-  --output artifacts/site/my-v4-comparison
+  --comparison artifacts/comparisons/my-comparison/comparison.json \
+  --output artifacts/site/my-comparison
 ```
 
 The checked-in comparisons were produced exactly this way; `site build` on either `results/comparisons/*/comparison.json` regenerates their pages.
@@ -291,13 +291,13 @@ The website is generated entirely from an explicit immutable comparison manifest
 
 ```bash
 node bin/agent-app-benchmark.mjs site build \
-  --comparison results/comparisons/claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1/comparison.json \
-  --output artifacts/site/claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1
+  --comparison results/comparisons/claxedo-vs-t3-vs-opencode-p95-user-flows-macos-arm64-headed-20260902/comparison.json \
+  --output artifacts/site/claxedo-vs-t3-vs-opencode-p95-user-flows-macos-arm64-headed-20260902
 ```
 
 Result paths are relative to the comparison manifest. A manifest under `results/comparisons/<id>/` may reference sibling content under `results/runs/`, but the loader rejects paths that escape `results/`.
 
-Open `artifacts/site/claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1/index.html` directly. It has no server, CDN, remote font, runtime fetch, or browser-side metric calculation. The home page compares every listed app and each `/apps/<app-id>/` path contains an individual report.
+Open `artifacts/site/claxedo-vs-t3-vs-opencode-p95-user-flows-macos-arm64-headed-20260902/index.html` directly. It has no server, CDN, remote font, runtime fetch, or browser-side metric calculation. The home page compares every listed app and each `/apps/<app-id>/` path contains an individual report.
 
 ## Public contribution rule
 
