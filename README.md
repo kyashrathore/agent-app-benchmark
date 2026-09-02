@@ -2,7 +2,25 @@
 
 Agent App Benchmark is a public, reproducible performance benchmark for multi-harness coding-agent GUI applications. The current V3 scenarios measure GUI handling of completed historical coding sessions; they do not run or compare the coding-agent harness itself.
 
-The first registered applications are [T3 Code](https://github.com/pingdotgg/t3code) and [Claxedo](https://github.com/kyashrathore/Claxedo). Both happen to use Electron. Electron is not a requirement: native, Tauri, Flutter, Qt, browser-based, and other GUI applications are welcome.
+The registered applications are [T3 Code](https://github.com/pingdotgg/t3code), [Claxedo](https://github.com/kyashrathore/Claxedo), and [OpenCode](https://github.com/anomalyco/opencode). All three happen to use Electron. Electron is not a requirement: native, Tauri, Flutter, Qt, browser-based, and other GUI applications are welcome.
+
+## At a glance (2026-09-02, macOS arm64, one MacBook Pro, v4 suite)
+
+Nearest-rank p95 over 5 repetitions; lower is better. † means the framework withheld the lane because at least one observation was invalid, so the value is p95 over the valid observations with its count. Full tables, caveats, and the exact commits are in [Results](#results-2026-09-02-macos-arm64-headed-one-macbook-pro) and [Reproducing](#reproducing-the-2026-09-02-runs).
+
+| | Claxedo | T3 Code | OpenCode |
+|---|---|---|---|
+| Cold app start | 1.91 s | 2.92 s | 2.44 s |
+| Switch to a 1 MiB session, cold | 48 ms | 230 ms | 124 ms † |
+| Switch to a 1 MiB session, warm | 16 ms | 188 ms | 33 ms † |
+| Switch to a 32 MiB session, many rows | 47 ms | 757 ms | 116 ms † |
+| Switch to 8 MiB in eight rows (long rows) | 3.5 s | 25.9 s † | 2.4 s † |
+| Switch to 32 MiB in thirty-two rows | 2.8 s | never ready | 2.7 s † |
+| Active memory p95 | 947 MiB | 1,807 MiB | 1,564 MiB |
+| Retained memory growth after the workload | 47 MiB | 715 MiB | 131 MiB |
+| Workspace panel | measured | measured | unsupported |
+
+Claxedo leads every latency and memory row; OpenCode is second on switching and memory; T3 Code is fastest only at opening its workspace panel. Long rows are the shared weakness: a handful of 128 KiB to 1 MiB markdown rows costs every app one to three orders of magnitude more than the same bytes spread over hundreds of rows, and T3 Code never reaches readiness at 32 MiB.
 
 ## Current scenarios
 
