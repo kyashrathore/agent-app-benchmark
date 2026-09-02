@@ -1,10 +1,10 @@
 # Agent App Benchmark
 
-Agent App Benchmark is a public, reproducible performance benchmark for multi-harness coding-agent GUI applications. The current V3 scenarios measure GUI handling of completed historical coding sessions; they do not run or compare the coding-agent harness itself.
+Agent App Benchmark is a public, reproducible performance benchmark for multi-harness coding-agent GUI applications. The scenarios measure GUI handling of completed historical coding sessions; they do not run or compare the coding-agent harness itself.
 
 The registered applications are [T3 Code](https://github.com/pingdotgg/t3code), [Claxedo](https://github.com/kyashrathore/Claxedo), and [OpenCode](https://github.com/anomalyco/opencode). All three happen to use Electron. Electron is not a requirement: native, Tauri, Flutter, Qt, browser-based, and other GUI applications are welcome.
 
-## At a glance (2026-09-02, macOS arm64, one MacBook Pro, v4 suite)
+## At a glance (2026-09-02, macOS arm64, one MacBook Pro)
 
 Nearest-rank p95 over 5 repetitions; lower is better. † means the framework withheld the lane because at least one observation was invalid, so the value is p95 over the valid observations with its count. Full tables, caveats, and the exact commits are in [Results](#results-2026-09-02-macos-arm64-headed-one-macbook-pro) and [Reproducing](#reproducing-the-2026-09-02-runs).
 
@@ -41,7 +41,9 @@ Four lanes are reported independently:
 - cold destination across workspaces;
 - warm destination across workspaces.
 
-Cold means the unique destination has never become active in that measured app process. Warm means that destination is activated once to readiness, the driver returns to control, and the revisit is measured. Each configured repetition starts one stabilized process and measures 10 unique 1 MiB destinations per lane, so the default two repetitions provide 20 observations per lane without 40 application launches. Nearest-rank p95 is reported for every distributional comparison at any valid observation count, always beside its valid / attempted counts. Below 20 valid observations the nearest-rank 95th value is the sampled maximum of those observations; the report says so on the value instead of withholding it or relabelling it as p50. Average, sampled maximum, and p50 remain available as diagnostic drill-down. A separate within-workspace/cold size sweep measures 1, 8, 32, and 128 MiB in a counterbalanced order; it is not derived from the ascending memory workload.
+Cold means the unique destination has never become active in that measured app process. Warm means that destination is activated once to readiness, the driver returns to control, and the revisit is measured. Each configured repetition starts one stabilized process and measures 5 unique 1 MiB destinations per lane, so the default two repetitions provide 10 observations per lane without 20 application launches. Nearest-rank p95 is reported for every distributional comparison at any valid observation count, always beside its valid / attempted counts. Below 20 valid observations the nearest-rank 95th value is the sampled maximum of those observations; the report says so on the value instead of withholding it or relabelling it as p50. Average, sampled maximum, and p50 remain available as diagnostic drill-down. A separate within-workspace/cold size sweep measures 1, 8, 32, and 128 MiB in a counterbalanced order; it is not derived from the ascending memory workload.
+
+The same process also switches to a counterbalanced size sweep of 1, 8, 32, and 128 MiB sessions, and to long-row sessions that carry 1 and 8 MiB in eight text rows and 32 MiB in thirty-two, so every row is 128 KiB to 1 MiB of markdown that a virtualized transcript cannot skip. Both trends are reported next to each other.
 
 ### Memory and CPU
 
@@ -57,16 +59,16 @@ No live session stream, model call, agent run, or terminal activity occurs durin
 
 ### Workspace panel
 
-`session-navigation-v1` is the primary user-facing navigation scenario. It reports two trends and times only a session-row activation:
+`session-navigation-v2` is the primary user-facing navigation scenario. It reports two trends and times only a session-row activation:
 
 - **History-size trend:** first visit and return to that previously visited session with the panel closed, at 1, 8, 32, and 128 MiB. The destination is displayed exactly once by the measured first visit; only navigation back to control is untimed before the paired return.
 - **Already-open-panel trend:** return to a previously visited fixed 1 MiB session with the panel left open in explicit light, moderate, and heavy seeded UI states.
 
 The already-open-panel endpoint is the later of session readiness and panel readiness. Panel setup is outside the clock. Reports use nearest-rank p95 as the primary value, keep p50 in the diagnostic drill-down, and contain no cold/warm matrix.
 
-All `session-navigation-v1` and `workspace-panel-v2` action clocks begin at the trusted `pointerdown` timestamp. Drivers attest both the timestamp and event type; `click` or a later application mark is invalid.
+All `session-navigation-v2` and `workspace-panel-v3` action clocks begin at the trusted `pointerdown` timestamp. Drivers attest both the timestamp and event type; `click` or a later application mark is invalid.
 
-`workspace-panel-v2` independently measures ordinary user actions: open, close, Files → Review, Review → Files, open file, switch file tab, expand all, and collapse all. Every action is plotted across the same explicit panel loads:
+`workspace-panel-v3` independently measures ordinary user actions: open, close, Files → Review, Review → Files, open file, switch file tab, expand all, and collapse all. Every action is plotted across the same explicit panel loads:
 
 | Load | Expanded directories | Retained file tabs | Expanded Review files |
 |---|---:|---:|---:|
@@ -76,15 +78,9 @@ All `session-navigation-v1` and `workspace-panel-v2` action clocks begin at the 
 
 Review always owns all 24 canonical changed files and their complete, non-truncated authoritative data; the load varies retained logical UI state, not data completeness. Production virtualization is allowed: exact logical expansion counts are required, while only Review bodies currently materialized in the canonical viewport must be painted and interactive. Untimed setup may scan or scroll the real surface to attest all identities and restore the required start position. For `open-file`, setup loads the exact target bytes through the application's production file-data path without ever mounting that target's tab or preview; the measured pointerdown owns first surface creation and paint. Opening records shell visibility and animation separately from data readiness, above-fold paint, and interactive readiness. There are no interrupted or double-toggle cases.
 
-The following V1 scenarios remain immutable for already-published results but are superseded for new comparisons:
-
-`workspace-panel-v1` measures one trusted action at a time against a deterministic substantial workspace: cold-surface opening, both directions of a toggle pair, warm-data/cold-surface reopening, surface navigation, opening a file, switching an already open file tab, diff view mode, and collapse/expand all. A toggle pair is an interrupted reversal for an animated panel and an immediate double-toggle for a non-animated inline panel. Opening reports shell animation separately from data-ready-to-paint and data-ready-to-interactive. All content interactions begin after loaded state has settled.
-
-`session-switch-workspace-panel-v1` repeats the four cold/warm and within/across session-switch lanes with the panel closed, with Files open, and with Diff open. Within each lane the three profiles stay adjacent and rotate through every schedule position across repetitions. Files-minus-closed and Diff-minus-closed penalties are derived from matched valid observations. Both scenarios preserve raw per-action renderer milestones, frame timestamps, long-animation-frame script attribution, exact-interval counter timestamps, and task/script/style/layout work; the framework, not the driver, derives every summary and report row. The public workspace manifest fixes every path, file revision, diff hunk, and initial open tab and is driver-attested after materialization.
-
 ## Canonical corpus
 
-Every app receives the same deterministic `opencode-completed-sessions-v3` directory. It contains one NDJSON file per logical session using the pinned OpenCode `EventV2.SerializedEvent` envelope and these durable event types:
+Every app receives the same deterministic `opencode-completed-sessions-v4` directory. It contains one NDJSON file per logical session using the pinned OpenCode `EventV2.SerializedEvent` envelope and these durable event types:
 
 - `session.created.1`
 - `message.updated.1`
@@ -92,15 +88,15 @@ Every app receives the same deterministic `opencode-completed-sessions-v3` direc
 
 The source baseline is OpenCode revision `a9f7081d4015b0cc22ed67156e042b482a8d064a`. Payload size counts UTF-8 bytes in completed text, reasoning, serialized tool input, and tool output. It excludes IDs, event envelopes, indexes, database encoding, and storage overhead.
 
-V3 uses rounded structural distributions derived from local OpenCode, Claude Code, and Codex histories, including the long-session tail. Only counts and byte-length distributions were used. The committed shape is rounded, and every emitted prompt, response, reasoning block, tool input, tool output, path, patch, title, timestamp, and identifier is synthetic. No original session text, code, command, repository name, path, URL, or identifier is copied into the corpus. Generation and verification also reject common home-path, email, and secret patterns. Payload parts use deterministic heavy-tailed sizes and varied code/log/JSON-like content rather than equal uniform chunks.
+The corpus uses rounded structural distributions derived from local OpenCode, Claude Code, and Codex histories, including the long-session tail. Only counts and byte-length distributions were used. The committed shape is rounded, and every emitted prompt, response, reasoning block, tool input, tool output, path, patch, title, timestamp, and identifier is synthetic. No original session text, code, command, repository name, path, URL, or identifier is copied into the corpus. Generation and verification also reject common home-path, email, and secret patterns. Payload parts use deterministic heavy-tailed sizes and varied code/log/JSON-like content rather than equal uniform chunks.
 
-The 53-session corpus has separate destinations for the four latency pools, the counterbalanced size sweep, and the progressive memory workload. It contains 574,619,648 measured payload bytes and 219,073 durable events. The largest individual histories are 128 MiB with 4,400 messages, 12,000 completed tool calls, and 1,000 patch records.
+The 39-session corpus has separate destinations for the four latency pools, the counterbalanced size sweep, the long-row sweep, and the progressive memory workload. It contains 639,631,360 measured payload bytes and 199,647 durable events. The largest individual histories are 128 MiB with 4,400 messages, 12,000 completed tool calls, and 1,000 patch records.
 
 An application with a shipped production OpenCode history path should use it and report `native-opencode`. Other apps may translate the canonical event stream through their ordinary production history path and report `translated`. The website discloses the mode. Drivers are trusted adapters: app-owned tests and review catch mistakes, but the framework does not pretend DOM readback proves driver honesty.
 
 ## Non-goals
 
-V3 does not measure Web Vitals (LCP, INP, CLS, FCP, or TTFB), streaming output, live agent or model execution, embedded terminal coding agents, or a composite score. It does include completed historical text, reasoning, tool, and patch records because those are ordinary session-GUI load.
+The benchmark does not measure Web Vitals (LCP, INP, CLS, FCP, or TTFB), streaming output, live agent or model execution, embedded terminal coding agents, or a composite score. It does include completed historical text, reasoning, tool, and patch records because those are ordinary session-GUI load.
 
 ## Install and validate
 
@@ -119,21 +115,21 @@ Generate and verify the public corpus:
 
 ```bash
 node bin/agent-app-benchmark.mjs corpus generate \
-  --corpus opencode-completed-sessions-v3 \
-  --output artifacts/corpora/opencode-completed-sessions-v3
+  --corpus opencode-completed-sessions-v4 \
+  --output artifacts/corpora/opencode-completed-sessions-v4
 
 node bin/agent-app-benchmark.mjs corpus verify \
-  --input artifacts/corpora/opencode-completed-sessions-v3
+  --input artifacts/corpora/opencode-completed-sessions-v4
 ```
 
-Run an app-owned driver after it advertises V3 support:
+Run an app-owned driver after it advertises the scenario:
 
 ```bash
 node bin/agent-app-benchmark.mjs run \
   --driver /absolute/path/to/driver-executable \
   --driver-arg optional-driver-argument \
   --app t3 \
-  --scenario session-switch-v3 \
+  --scenario session-switch-v4 \
   --run-profile smoke \
   --repetitions 2 \
   --resource-monitor native/resource-monitor/target/release/agent-app-resource-monitor \
@@ -149,16 +145,16 @@ For Claxedo or T3 without writing a comparison config, use the friendly `run` en
 export CLAXEDO_BENCHMARK_EXECUTABLE="/absolute/path/to/Claxedo Dev.app/Contents/MacOS/Claxedo Dev"
 
 # CI / local smoke for one scenario:
-npx agentappbench run --app claxedo --scenario session-switch-v3 --run-profile smoke
+npx agentappbench run --app claxedo --scenario session-switch-v4 --run-profile smoke
 
 # Multiple scenarios (comma-separated or repeatable --scenario):
-npx agentappbench run --app t3 --scenarios app-start-v3,session-switch-v3 --run-profile quick --out artifacts/runs/t3-quick
+npx agentappbench run --app t3 --scenarios app-start-v4,session-switch-v4 --run-profile quick --out artifacts/runs/t3-quick
 
 # Print the resolved binding without launching apps:
-npx agentappbench run --app claxedo --scenario session-switch-v3 --dry-run
+npx agentappbench run --app claxedo --scenario session-switch-v4 --dry-run
 ```
 
-Omit `--scenario` / `--scenarios` to run the same user-flow suite as `compare` (`app-start-v3`, `session-switch-v3`, `session-navigation-v1`, `workspace-panel-v2`). `--run-profile smoke|quick|publication` maps to repetition overrides `1|2|5` like compare. Pass `--executable` to override the env binary. Direct `--driver ...` runs keep the low-level path unchanged. Single-app mode does not invent a comparison site; use `compare --site` for paired HTML.
+Omit `--scenario` / `--scenarios` to run the same user-flow suite as `compare` (`app-start-v4`, `session-switch-v4`, `session-navigation-v2`, `workspace-panel-v3`). `--run-profile smoke|quick|publication` maps to repetition overrides `1|2|5` like compare. Pass `--executable` to override the env binary. Direct `--driver ...` runs keep the low-level path unchanged. Single-app mode does not invent a comparison site; use `compare --site` for paired HTML.
 
 Pass `--corpus-directory` to reuse a previously verified corpus instead of regenerating its roughly 691 MiB NDJSON representation for every scenario.
 
@@ -175,9 +171,9 @@ node scripts/derive-private-session-profile.mjs \
 
 The output stays under the ignored `artifacts/` directory. It contains aggregate numbers only and is not part of the public corpus.
 
-The registered profiles provide defaults (`smoke` uses 1; `quick` and `publication` use 2). Pass `--repetitions N` to override the selected profile for a direct run. For session switching, one repetition means one latency process with 10 unique destinations per lane, one counterbalanced size sweep in that process, and one independent memory process. For a paired comparison, set the top-level `"repetitions": N`; the framework applies the same count to every app and records it in every result. The allowed range is 1–100.
+The registered profiles provide defaults (`smoke` uses 1; `quick` and `publication` use 2). Pass `--repetitions N` to override the selected profile for a direct run. For session switching, one repetition means one latency process with 5 unique destinations per lane, one counterbalanced size sweep in that process, and one independent memory process. For a paired comparison, set the top-level `"repetitions": N`; the framework applies the same count to every app and records it in every result. The allowed range is 1–100.
 
-For a fair same-machine comparison, use the framework-owned paired runner rather than invoking the four results independently. Copy `examples/comparison-run.example.json`, replace its absolute paths and framework commit, then run with `"scenarioIds": ["app-start-v3", "session-switch-v3"]`.
+For a fair same-machine comparison, use the framework-owned paired runner rather than invoking the four results independently. Copy `examples/comparison-run.example.json`, replace its absolute paths and framework commit, then run with `"scenarioIds": ["app-start-v4", "session-switch-v4"]`.
 
 ```bash
 node bin/agent-app-benchmark.mjs comparison run \
@@ -201,7 +197,7 @@ node bin/agent-app-benchmark.mjs compare \
   --site
 ```
 
-Auto-detected when present: `native/resource-monitor/target/release/agent-app-resource-monitor`, `artifacts/corpora/opencode-completed-sessions-v3`, git `HEAD` as `frameworkRevision`, and host label (`macos-arm64-headed` on Apple Silicon). Still required: packaged app binaries plus app-owned drivers under `CLAXEDO_ROOT` / `T3_ROOT`. Use `--dry-run` to write only the config. Use `--run-profile publication` (5 reps) for a publishable run. The low-level `comparison run` / `site build` commands remain unchanged.
+Auto-detected when present: `native/resource-monitor/target/release/agent-app-resource-monitor`, `artifacts/corpora/opencode-completed-sessions-v4`, git `HEAD` as `frameworkRevision`, and host label (`macos-arm64-headed` on Apple Silicon). Still required: packaged app binaries plus app-owned drivers under `CLAXEDO_ROOT` / `T3_ROOT`. Use `--dry-run` to write only the config. Use `--run-profile publication` (5 reps) for a publishable run. The low-level `comparison run` / `site build` commands remain unchanged.
 
 It verifies or generates the corpus once, then uses the recorded mirrored order `T3 app-start → Claxedo app-start → Claxedo session-switch → T3 session-switch`. Every result contains the same schedule digest and its own ordinal.
 
@@ -212,28 +208,25 @@ The driver protocol is language-neutral NDJSON, so Node, Bun, native binaries, a
 A scheduled `comparison run` seals one interleaved order and cannot take a single application's rerun. When applications come and go, run each one on its own and assemble the comparison afterwards. Each result keeps its own run provenance; pairing requires the same framework revision, scenario, corpus, profile, repetition count, and host identity, and the site discloses that order was not counterbalanced and lists each leg's start time.
 
 ```bash
-node bin/agent-app-benchmark.mjs run --app opencode --scenarios app-start-v3,session-switch-v3 --run-profile publication --out artifacts/runs/opencode-pub
+node bin/agent-app-benchmark.mjs run --app opencode --scenarios app-start-v4,session-switch-v4 --run-profile publication --out artifacts/runs/opencode-pub
 
 node bin/agent-app-benchmark.mjs comparison assemble \
   --id claxedo-vs-t3-vs-opencode-macos-arm64-20260902 \
   --title "Claxedo vs T3 Code vs OpenCode" \
-  --result artifacts/runs/opencode-pub/app-start-v3/result.json \
-  --result artifacts/runs/opencode-pub/session-switch-v3/result.json \
-  --result artifacts/comparisons/earlier-run/runs/claxedo/app-start-v3/result.json \
-  --result artifacts/comparisons/earlier-run/runs/claxedo/session-switch-v3/result.json \
+  --result artifacts/runs/opencode-pub/app-start-v4/result.json \
+  --result artifacts/runs/opencode-pub/session-switch-v4/result.json \
+  --result artifacts/comparisons/earlier-run/runs/claxedo/app-start-v4/result.json \
+  --result artifacts/comparisons/earlier-run/runs/claxedo/session-switch-v4/result.json \
   --output artifacts/comparisons/claxedo-vs-t3-vs-opencode-macos-arm64-20260902
 ```
 
 ## Results (2026-09-02, macOS arm64 headed, one MacBook Pro)
 
-Two assembled comparisons are checked in under `results/comparisons/` and rebuild into the full site with `site build`:
-
-- `claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1` — the v4 suite (five latency samples per lane, long-row sessions), three independent legs run back to back behind idle and load gates.
-- `claxedo-vs-t3-vs-opencode-p95-user-flows-macos-arm64-headed-20260902-a1` — the v3 suite; Claxedo and T3 legs from a mirrored run, OpenCode leg run separately.
+The assembled comparison `claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1` is checked in under `results/comparisons/` and rebuilds into the full site with `site build`: three independent legs run back to back behind idle and load gates.
 
 Nearest-rank p95, milliseconds unless noted, 5 repetitions. A dagger marks a lane the framework withholds because at least one observation was invalid; the value shown is p95 over the valid observations with its count.
 
-| v4 suite | Claxedo | T3 Code | OpenCode |
+| | Claxedo | T3 Code | OpenCode |
 |---|---|---|---|
 | Cold app start, s | 1.91 | 2.92 | 2.44 |
 | Initialized app start, s | 1.93 | 2.80 | 2.55 |
@@ -250,7 +243,7 @@ Nearest-rank p95, milliseconds unless noted, 5 repetitions. A dagger marks a lan
 | Active RSS p95, MiB | 947 | 1,807 | 1,564 |
 | Retained RSS growth, MiB | 46.6 | 715 | 131 |
 
-The long-row rows are the point of v4: the same bytes in a handful of 128 KiB to 1 MiB markdown rows cost every app one to three orders of magnitude more than the realistic many-row transcript, and T3 Code does not reach readiness at 32 MiB. OpenCode does not support the workspace-panel scenario or panel-open navigation returns; those are reported unsupported, never as zero. OpenCode's second v4 process produced no frames at all (a covered window), which is why its switch lanes carry 20 of 25 samples.
+The long-row rows are the point of the suite: the same bytes in a handful of 128 KiB to 1 MiB markdown rows cost every app one to three orders of magnitude more than the realistic many-row transcript, and T3 Code does not reach readiness at 32 MiB. OpenCode does not support the workspace-panel scenario or panel-open navigation returns; those are reported unsupported, never as zero. OpenCode's second v4 process produced no frames at all (a covered window), which is why its switch lanes carry 20 of 25 samples.
 
 ## Reproducing the 2026-09-02 runs
 
@@ -258,11 +251,11 @@ Exact revisions, all pushed:
 
 | Component | Repository and branch | Commit |
 |---|---|---|
-| Framework | `kyashrathore/agent-app-benchmark` `codex/benchmark-v1` | `0208dd3` (v4 suite) — this README commit lands on top |
+| Framework | `kyashrathore/agent-app-benchmark` `codex/benchmark-v1` | `0208dd3` (scenarios, corpus, assembler) — later README commits land on top |
 | Claxedo driver | `kyashrathore/Claxedo` `codex/agent-app-benchmark-v4-ids` | `14add6424f` (driver at `packages/claxedo-app/perf-harness/src/public-agent-app-driver.ts`; the packaged app measured here was built from `b8c6ad0c87`) |
 | T3 Code driver | `kyashrathore/t3code` `codex/agent-app-benchmark-v1` | `cd5822be7` (upstream main `5392c9bb9` plus the driver; the app asserts the packaged commit equals HEAD, so package after checking out exactly this commit) |
 | OpenCode driver | `kyashrathore/opencode` `codex/agent-app-benchmark-v1` | `49a9590` (upstream dev `69c172e` plus `packages/desktop/benchmark/`) |
-| Corpus v4 | generated from `registry/corpora/opencode-completed-sessions-v4.json` | digest `e8bc11728c10bc8a7931919d8292de0195c67652e9229b077fc18db412128400` (verified by `corpus verify` against the registered artifact) |
+| Corpus | generated from `registry/corpora/opencode-completed-sessions-v4.json` | digest `e8bc11728c10bc8a7931919d8292de0195c67652e9229b077fc18db412128400` (verified by `corpus verify` against the registered artifact) |
 
 1. Package each app from its commit: Claxedo `cd packages/claxedo-desktop && bun run package:mac`; T3 Code `corepack pnpm install --frozen-lockfile` then `RUSTUP_TOOLCHAIN=1.95.0-aarch64-apple-darwin corepack pnpm dist:desktop:artifact --platform mac --target dmg --arch arm64 --keep-stage --output-dir <dir>`; OpenCode `cd packages/desktop && CSC_IDENTITY_AUTO_DISCOVERY=false OPENCODE_CHANNEL=dev bun run prebuild && bun run build && bun run package:mac`. Copy each `.app` to a stable directory and point `CLAXEDO_BENCHMARK_EXECUTABLE`, `T3_BENCHMARK_EXECUTABLE`, and `OPENCODE_BENCHMARK_EXECUTABLE` at the binary inside `Contents/MacOS`; set `CLAXEDO_ROOT`, `T3_ROOT`, and `OPENCODE_ROOT` to the checkouts.
 2. `npm ci`, build `native/resource-monitor` (`cargo build --release`), then `node bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-sessions-v4 --output artifacts/corpora/opencode-completed-sessions-v4` and `corpus verify --input` the same directory; the digest must match the table.
@@ -298,13 +291,13 @@ The website is generated entirely from an explicit immutable comparison manifest
 
 ```bash
 node bin/agent-app-benchmark.mjs site build \
-  --comparison results/comparisons/initial-macos-arm64/comparison.json \
-  --output artifacts/sites/initial-macos-arm64
+  --comparison results/comparisons/claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1/comparison.json \
+  --output artifacts/site/claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1
 ```
 
 Result paths are relative to the comparison manifest. A manifest under `results/comparisons/<id>/` may reference sibling content under `results/runs/`, but the loader rejects paths that escape `results/`.
 
-Open `artifacts/sites/initial-macos-arm64/index.html` directly. It has no server, CDN, remote font, runtime fetch, or browser-side metric calculation. The home page compares every listed app and each `/apps/<app-id>/` path contains an individual report.
+Open `artifacts/site/claxedo-vs-t3-vs-opencode-p95-user-flows-v4-macos-arm64-headed-20260902-a1/index.html` directly. It has no server, CDN, remote font, runtime fetch, or browser-side metric calculation. The home page compares every listed app and each `/apps/<app-id>/` path contains an individual report.
 
 ## Public contribution rule
 

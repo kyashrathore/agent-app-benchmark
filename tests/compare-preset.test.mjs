@@ -8,10 +8,10 @@ import { REPOSITORY_ROOT } from "../src/paths.mjs";
 
 test("claxedo-vs-t3 preset covers the full user-flow suite", () => {
   assert.deepEqual(COMPARE_PRESETS["claxedo-vs-t3"].scenarioIds, [
-    "app-start-v3",
-    "session-switch-v3",
-    "session-navigation-v1",
-    "workspace-panel-v2",
+    "app-start-v4",
+    "session-switch-v4",
+    "session-navigation-v2",
+    "workspace-panel-v3",
   ]);
 });
 

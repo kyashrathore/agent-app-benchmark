@@ -19,9 +19,9 @@ test("app bindings point at the compare-preset driver conventions", () => {
 });
 
 test("normalizeScenarioIds accepts comma-separated and repeated values", () => {
-  assert.deepEqual(normalizeScenarioIds(["session-switch-v3", "app-start-v3,session-switch-v3"]), [
-    "session-switch-v3",
-    "app-start-v3",
+  assert.deepEqual(normalizeScenarioIds(["session-switch-v4", "app-start-v4,session-switch-v4"]), [
+    "session-switch-v4",
+    "app-start-v4",
   ]);
   assert.deepEqual(normalizeScenarioIds([]), []);
 });
@@ -88,7 +88,7 @@ test("run plan resolves a smoke single-scenario layout for claxedo", async () =>
 
     const plan = await buildRunPlan({
       app: "claxedo",
-      scenarioIds: ["session-switch-v3"],
+      scenarioIds: ["session-switch-v4"],
       runProfile: "smoke",
       id: "claxedo-smoke-fixture",
       hostLabel: "macOS arm64 headed",
@@ -101,7 +101,7 @@ test("run plan resolves a smoke single-scenario layout for claxedo", async () =>
     });
 
     assert.equal(plan.appId, "claxedo");
-    assert.deepEqual(plan.scenarioIds, ["session-switch-v3"]);
+    assert.deepEqual(plan.scenarioIds, ["session-switch-v4"]);
     assert.equal(plan.runProfile, "smoke");
     assert.equal(plan.repetitions, 1);
     assert.equal(plan.binding.driverPath, driverPath);
@@ -142,10 +142,10 @@ test("run plan defaults to the user-flow scenario suite when none are given", as
 
     assert.equal(plan.defaultedScenarios, true);
     assert.deepEqual(plan.scenarioIds, [
-      "app-start-v3",
-      "session-switch-v3",
-      "session-navigation-v1",
-      "workspace-panel-v2",
+      "app-start-v4",
+      "session-switch-v4",
+      "session-navigation-v2",
+      "workspace-panel-v3",
     ]);
     assert.equal(plan.repetitions, 2);
   } finally {
