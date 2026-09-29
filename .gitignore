@@ -1,0 +1,4 @@
+artifacts/
+node_modules/
+native/resource-monitor/target/
+.DS_Store

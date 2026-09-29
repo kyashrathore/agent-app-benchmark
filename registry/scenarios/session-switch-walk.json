@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "id": "session-switch-walk",
+  "title": "Historical session switching, walking the session list",
+  "description": "Two processes each walk the session list consecutively, top to bottom, twice: the first pass opens every session for the first time and the second pass returns to each in the same order. The list is the corpus's own recency order, workspace-b newest first and then workspace-a newest first, which the workspace-contiguous corpus makes identical in lists grouped by workspace and lists sorted by recency; the control session the app launches on is not walked. One separate process runs the 1/8 MiB progressive memory workload sampled by the framework.",
+  "kind": "session-switch",
+  "corpusId": "opencode-completed-sessions",
+  "cases": {
+    "walk": {
+      "controlWorkspaceId": "workspace-a",
+      "passes": [
+        "cold",
+        "warm"
+      ],
+      "sessions": [
+        {
+          "sessionId": "latency-across-workspaces-warm-3-1048576",
+          "workspaceId": "workspace-b",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-across-workspaces-warm-2-1048576",
+          "workspaceId": "workspace-b",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-across-workspaces-warm-1-1048576",
+          "workspaceId": "workspace-b",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-across-workspaces-warm-0-1048576",
+          "workspaceId": "workspace-b",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-across-workspaces-cold-3-1048576",
+          "workspaceId": "workspace-b",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-across-workspaces-cold-2-1048576",
+          "workspaceId": "workspace-b",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-across-workspaces-cold-1-1048576",
+          "workspaceId": "workspace-b",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-across-workspaces-cold-0-1048576",
+          "workspaceId": "workspace-b",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "progressive-resource-8388608",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 8388608
+        },
+        {
+          "sessionId": "progressive-resource-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "size-latency-long-1-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576,
+          "rowShape": "long"
+        },
+        {
+          "sessionId": "size-latency-long-0-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576,
+          "rowShape": "long"
+        },
+        {
+          "sessionId": "size-latency-1-8388608",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 8388608
+        },
+        {
+          "sessionId": "size-latency-1-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "size-latency-0-8388608",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 8388608
+        },
+        {
+          "sessionId": "size-latency-0-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-within-workspace-warm-3-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-within-workspace-warm-2-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-within-workspace-warm-1-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-within-workspace-warm-0-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-within-workspace-cold-3-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-within-workspace-cold-2-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-within-workspace-cold-1-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        },
+        {
+          "sessionId": "latency-within-workspace-cold-0-1048576",
+          "workspaceId": "workspace-a",
+          "transcriptBytes": 1048576
+        }
+      ]
+    },
+    "workspaceRelations": [
+      "within-workspace",
+      "across-workspaces"
+    ],
+    "sessionStates": [
+      "cold",
+      "warm"
+    ],
+    "transcriptBytes": [
+      1048576,
+      8388608
+    ],
+    "standardTranscriptBytes": 1048576,
+    "resourceRuns": 1
+  },
+  "metrics": [
+    {
+      "id": "switch.duration_ms",
+      "description": "Trusted pointerdown on the next session's list entry to that session's visual settle: its latest turn painted in the transcript viewport, first fold complete, composer editable, and the first frame of a final run of 31 frames with unchanged transcript geometry and no transcript mutation.",
+      "unit": "ms"
+    },
+    {
+      "id": "memory.sampled_rss",
+      "description": "Framework-sampled summed RSS of the declared application process family in one progressive-workload process. Active means the progressive 1 and 8 MiB session-switch workload is running.",
+      "unit": "MiB"
+    }
+  ],
+  "resourceMeasurement": {
+    "processScope": "application-family",
+    "activeSampleIntervalMs": 250,
+    "idleSampleIntervalMs": 250,
+    "settleBeforeIdleMs": 500,
+    "idleWindowMs": 1500
+  },
+  "runProfiles": {
+    "smoke": 1,
+    "quick": 2,
+    "publication": 2
+  }
+}

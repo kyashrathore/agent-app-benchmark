@@ -1,0 +1,349 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/corpus.schema.json",
+  "title": "Privacy-derived OpenCode completed-session corpus definition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "generator",
+    "seed",
+    "sourceEventFormat",
+    "workspaceIds",
+    "transcriptBytes",
+    "description"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "generator": {
+      "enum": [
+        "opencode-completed-sessions",
+        "redacted-real-sessions"
+      ]
+    },
+    "seed": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "sourceEventFormat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sourceRevision",
+        "envelope",
+        "eventTypes"
+      ],
+      "properties": {
+        "id": {
+          "enum": ["opencode-event"]
+        },
+        "sourceRevision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "envelope": {
+          "const": "EventV2.SerializedEvent"
+        },
+        "eventTypes": {
+          "type": "array",
+          "const": [
+            "session.created.1",
+            "message.updated.1",
+            "message.part.updated.1"
+          ]
+        }
+      }
+    },
+    "workspaceIds": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true
+    },
+    "transcriptBytes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "integer",
+        "minimum": 4096,
+        "maximum": 268435456
+      },
+      "uniqueItems": true
+    },
+    "sessionProfiles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/sessionProfile"
+      }
+    },
+    "benchmarkTopology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "standardTranscriptBytes",
+        "latencySamplesPerProcess",
+        "sizeSamplesPerProcess"
+      ],
+      "properties": {
+        "standardTranscriptBytes": {
+          "type": "integer",
+          "minimum": 4096,
+          "maximum": 268435456
+        },
+        "latencySamplesPerProcess": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "sizeSamplesPerProcess": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "longRowTranscriptBytes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": "integer",
+            "minimum": 4096,
+            "maximum": 268435456
+          }
+        }
+      }
+    },
+    "derivation": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/syntheticDerivation"
+        },
+        {
+          "$ref": "#/$defs/realSessionDerivation"
+        }
+      ]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "sessionOrder": {
+      "enum": [
+        "role-interleaved",
+        "workspace-contiguous"
+      ]
+    },
+    "longRowProfiles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/sessionProfile"
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "required": [
+        "sessionProfiles",
+        "derivation",
+        "benchmarkTopology"
+      ],
+      "properties": {
+        "generator": {
+          "const": "opencode-completed-sessions"
+        },
+        "sourceEventFormat": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "const": "opencode-event"
+            }
+          }
+        },
+        "derivation": {
+          "$ref": "#/$defs/syntheticDerivation"
+        }
+      }
+    },
+    {
+      "required": [
+        "derivation",
+        "benchmarkTopology"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "sessionProfiles"
+            ]
+          },
+          {
+            "required": [
+              "longRowProfiles"
+            ]
+          }
+        ]
+      },
+      "properties": {
+        "generator": {
+          "const": "redacted-real-sessions"
+        },
+        "derivation": {
+          "$ref": "#/$defs/realSessionDerivation"
+        },
+        "sourceEventFormat": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "const": "opencode-event"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sessionProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transcriptBytes",
+        "userMessages",
+        "assistantMessages",
+        "toolCalls",
+        "patches",
+        "payloadPermille"
+      ],
+      "properties": {
+        "transcriptBytes": {
+          "type": "integer",
+          "minimum": 4096,
+          "maximum": 268435456
+        },
+        "userMessages": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "assistantMessages": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000
+        },
+        "toolCalls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "patches": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "payloadPermille": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "text",
+            "reasoning",
+            "toolInput",
+            "toolOutput"
+          ],
+          "properties": {
+            "text": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "reasoning": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "toolInput": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "toolOutput": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          }
+        }
+      }
+    },
+    "syntheticDerivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "sourceFamilies",
+        "privateContentCopied"
+      ],
+      "properties": {
+        "method": {
+          "const": "rounded structural distributions with entirely synthetic payloads"
+        },
+        "sourceFamilies": {
+          "type": "array",
+          "const": [
+            "opencode",
+            "claude-code",
+            "codex"
+          ]
+        },
+        "privateContentCopied": {
+          "const": false
+        }
+      }
+    },
+    "realSessionDerivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "sourceFamilies",
+        "privateContentCopied"
+      ],
+      "properties": {
+        "method": {
+          "const": "redacted real agent sessions"
+        },
+        "sourceFamilies": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "opencode",
+              "claude-code",
+              "codex"
+            ]
+          }
+        },
+        "privateContentCopied": {
+          "const": true
+        }
+      }
+    }
+  }
+}

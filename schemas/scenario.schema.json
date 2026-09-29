@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/scenario.schema.json",
+  "title": "Agent app benchmark scenario v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "description",
+    "kind",
+    "corpusId",
+    "cases",
+    "metrics",
+    "runProfiles"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "kind": {
+      "enum": [
+        "app-start",
+        "session-switch"
+      ]
+    },
+    "corpusId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "cases": {
+      "type": "object"
+    },
+    "metrics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "unit"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "unit": {
+            "enum": [
+              "ms",
+              "percent",
+              "MiB",
+              "bytes"
+            ]
+          }
+        }
+      }
+    },
+    "resourceMeasurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "processScope",
+        "activeSampleIntervalMs",
+        "idleSampleIntervalMs",
+        "settleBeforeIdleMs",
+        "idleWindowMs"
+      ],
+      "properties": {
+        "processScope": {
+          "const": "application-family"
+        },
+        "activeSampleIntervalMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 5000
+        },
+        "idleSampleIntervalMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 5000
+        },
+        "settleBeforeIdleMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "idleWindowMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 600000
+        }
+      }
+    },
+    "runProfiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "smoke",
+        "quick",
+        "publication"
+      ],
+      "properties": {
+        "smoke": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "quick": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "publication": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "app-start"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "startModes"
+            ],
+            "properties": {
+              "startModes": {
+                "const": [
+                  "new-application-state",
+                  "initialized-application-state"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "session-switch"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "resourceMeasurement"
+        ],
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "workspaceRelations",
+              "sessionStates",
+              "transcriptBytes",
+              "walk"
+            ],
+            "properties": {
+              "workspaceRelations": {
+                "const": [
+                  "within-workspace",
+                  "across-workspaces"
+                ]
+              },
+              "sessionStates": {
+                "const": [
+                  "cold",
+                  "warm"
+                ]
+              },
+              "transcriptBytes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 268435456
+                }
+              },
+              "standardTranscriptBytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 268435456
+              },
+              "resourceRuns": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "walk": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "controlWorkspaceId",
+                  "passes",
+                  "sessions"
+                ],
+                "properties": {
+                  "controlWorkspaceId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "passes": {
+                    "const": [
+                      "cold",
+                      "warm"
+                    ]
+                  },
+                  "sessions": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 64,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "sessionId",
+                        "workspaceId",
+                        "transcriptBytes"
+                      ],
+                      "properties": {
+                        "sessionId": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9-]*$"
+                        },
+                        "workspaceId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "transcriptBytes": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 268435456
+                        },
+                        "rowShape": {
+                          "const": "long"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {}
+}

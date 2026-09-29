@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "t3",
+  "name": "T3 Code",
+  "repository": "https://github.com/pingdotgg/t3code",
+  "driverOwnership": "application-repository",
+  "guiFramework": "electron",
+  "sourceEventFormats": [
+    "opencode-event"
+  ],
+  "materializationModes": [
+    "translated"
+  ],
+  "scenarios": [
+    "app-start",
+    "session-switch-walk"
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "opencode-completed-sessions",
+  "generator": "opencode-completed-sessions",
+  "seed": "agent-app-benchmark-public",
+  "sourceEventFormat": {
+    "id": "opencode-event",
+    "sourceRevision": "a9f7081d4015b0cc22ed67156e042b482a8d064a",
+    "envelope": "EventV2.SerializedEvent",
+    "eventTypes": [
+      "session.created.1",
+      "message.updated.1",
+      "message.part.updated.1"
+    ]
+  },
+  "workspaceIds": [
+    "workspace-a",
+    "workspace-b"
+  ],
+  "transcriptBytes": [
+    1048576,
+    8388608
+  ],
+  "benchmarkTopology": {
+    "standardTranscriptBytes": 1048576,
+    "latencySamplesPerProcess": 4,
+    "sizeSamplesPerProcess": 2,
+    "longRowTranscriptBytes": [
+      1048576
+    ]
+  },
+  "sessionOrder": "workspace-contiguous",
+  "sessionProfiles": [
+    {
+      "transcriptBytes": 1048576,
+      "userMessages": 20,
+      "assistantMessages": 132,
+      "toolCalls": 270,
+      "patches": 15,
+      "payloadPermille": {
+        "text": 80,
+        "reasoning": 80,
+        "toolInput": 120,
+        "toolOutput": 720
+      }
+    },
+    {
+      "transcriptBytes": 8388608,
+      "userMessages": 80,
+      "assistantMessages": 700,
+      "toolCalls": 1600,
+      "patches": 120,
+      "payloadPermille": {
+        "text": 60,
+        "reasoning": 60,
+        "toolInput": 100,
+        "toolOutput": 780
+      }
+    }
+  ],
+  "longRowProfiles": [
+    {
+      "transcriptBytes": 1048576,
+      "userMessages": 4,
+      "assistantMessages": 4,
+      "toolCalls": 0,
+      "patches": 0,
+      "payloadPermille": {
+        "text": 1000,
+        "reasoning": 0,
+        "toolInput": 0,
+        "toolOutput": 0
+      }
+    }
+  ],
+  "derivation": {
+    "method": "rounded structural distributions with entirely synthetic payloads",
+    "sourceFamilies": [
+      "opencode",
+      "claude-code",
+      "codex"
+    ],
+    "privateContentCopied": false
+  },
+  "description": "Synthetic completed coding sessions in two workspaces, every workspace-a session created before any workspace-b session, so a list grouped by workspace and a list sorted by recency show the sessions in one order: workspace-b newest first, then workspace-a newest first. Sessions of 1 MiB and 8 MiB, 1 MiB of long text rows, and a 1/8 MiB progressive memory run."
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "claxedo",
+  "name": "Claxedo",
+  "repository": "https://github.com/kyashrathore/Claxedo",
+  "driverOwnership": "application-repository",
+  "guiFramework": "electron",
+  "sourceEventFormats": [
+    "opencode-event"
+  ],
+  "materializationModes": [
+    "native-opencode"
+  ],
+  "scenarios": [
+    "app-start",
+    "session-switch-walk"
+  ]
+}
