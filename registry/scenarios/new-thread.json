@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "new-thread",
+  "title": "New thread",
+  "description": "Each process is a fresh launch of P1 on the control session. A sample is a trusted pointerdown on the app's own new-thread control, in the control session's workspace, measured to the settle of the new empty thread: the settle-31-frames rule with an empty destination, where the new-thread view shows none of the control session's rows and the composer is editable. The new thread is discarded untimed, through the app's own delete or left as a draft where the app keeps none, and the control session is shown again before the next sample.",
+  "kind": "new-thread",
+  "corpusId": "opencode-recorded-sessions",
+  "cases": {
+    "sourceSessionId": "control",
+    "profiles": {
+      "smoke": {
+        "samplesPerProcess": 4
+      },
+      "quick": {
+        "samplesPerProcess": 10
+      },
+      "publication": {
+        "samplesPerProcess": 10
+      }
+    }
+  },
+  "metrics": [
+    {
+      "id": "new-thread.duration_ms",
+      "description": "Trusted pointerdown on the new-thread control to the first frame of the first run of 31 unchanged ready frames of the empty thread.",
+      "unit": "ms"
+    }
+  ],
+  "runProfiles": {
+    "smoke": 1,
+    "quick": 2,
+    "publication": 2
+  }
+}

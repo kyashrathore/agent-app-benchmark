@@ -5,40 +5,11 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
-import { writeCorpus } from "../src/corpus.mjs";
+import { buildTestCorpus, WALK_CORPUS } from "./support/recorded-corpus.mjs";
 
 const execute = promisify(execFile);
 const CLI = path.resolve("bin/agent-app-benchmark.mjs");
 const DRIVER = path.resolve("examples/mock-driver/mock-driver.mjs");
-const SMALL = {
-  schemaVersion: 1,
-  id: "test-conformance-corpus",
-  generator: "opencode-completed-sessions",
-  seed: "conformance-test",
-  sourceEventFormat: {
-    id: "opencode-event",
-    sourceRevision: "a9f7081d4015b0cc22ed67156e042b482a8d064a",
-    envelope: "EventV2.SerializedEvent",
-    eventTypes: ["session.created.1", "message.updated.1", "message.part.updated.1"],
-  },
-  workspaceIds: ["workspace-a", "workspace-b"],
-  transcriptBytes: [4096],
-  benchmarkTopology: { standardTranscriptBytes: 4096, latencySamplesPerProcess: 1, sizeSamplesPerProcess: 1 },
-  sessionProfiles: [{
-    transcriptBytes: 4096,
-    userMessages: 1,
-    assistantMessages: 1,
-    toolCalls: 1,
-    patches: 0,
-    payloadPermille: { text: 250, reasoning: 250, toolInput: 250, toolOutput: 250 },
-  }],
-  derivation: {
-    method: "rounded structural distributions with entirely synthetic payloads",
-    sourceFamilies: ["opencode", "claude-code", "codex"],
-    privateContentCopied: false,
-  },
-  description: "Small CLI conformance corpus.",
-};
 
 async function conformance(root, corpus, frameLog) {
   return execute(process.execPath, [
@@ -54,7 +25,7 @@ async function conformance(root, corpus, frameLog) {
 test("CLI conformance passes a driver whose frame log re-derives its clock", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-conformance-"));
   try {
-    const corpus = await writeCorpus(SMALL, path.join(root, "corpus"));
+    const corpus = await buildTestCorpus(root, WALK_CORPUS);
     const { stdout } = await conformance(root, corpus, "settled");
     assert.equal(stdout.trim(), "t3\ttranslated");
   } finally {
@@ -65,9 +36,24 @@ test("CLI conformance passes a driver whose frame log re-derives its clock", asy
 test("CLI conformance rejects a driver without a frame log or whose settle differs from its clock", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-conformance-"));
   try {
-    const corpus = await writeCorpus(SMALL, path.join(root, "corpus"));
+    const corpus = await buildTestCorpus(root, WALK_CORPUS);
     await assert.rejects(conformance(root, corpus), /returned no frame log/u);
-    await assert.rejects(conformance(root, corpus, "late"), /does not follow settle-31-frames: the settle re-derives to/u);
+    await assert.rejects(conformance(root, corpus, "late"), /Driver conformance execution failed: Clock rule settle-31-frames: the settle re-derives to/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("conformance checks the new thread's empty-destination settle and refuses typing while streaming", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-conformance-"));
+  try {
+    const corpus = await buildTestCorpus(root, WALK_CORPUS);
+    const run = (scenario) => execute(process.execPath, [
+      CLI, "conformance", "--driver", process.execPath, "--driver-arg", DRIVER, "--driver-env", "BENCHMARK_MOCK_APP_ID=t3", "--driver-env", "BENCHMARK_MOCK_FRAME_LOG=settled",
+      "--app", "t3", "--scenario", scenario, "--corpus-directory", corpus.path, "--run-directory", path.join(root, "run"),
+    ]);
+    assert.equal((await run("new-thread")).stdout.trim(), "t3\ttranslated");
+    await assert.rejects(run("typing-while-streaming"), /does not cover typing-while-streaming/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

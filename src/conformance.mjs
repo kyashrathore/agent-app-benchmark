@@ -1,14 +1,17 @@
 import { DriverProcess } from "./driver-process.mjs";
-import { expandCases } from "./cases.mjs";
-import { CLOCK_RULE_ID, frameLogMismatch } from "./clock-rule.mjs";
-import { assertHello, assertLaunch, assertPrepared, assertShutdown, normalizeExecution } from "./protocol.mjs";
+import { buildGroups, expandCases } from "./cases.mjs";
+import { CLOCK_RULE_ID } from "./clock-rule.mjs";
+import { observeExecution } from "./observations.mjs";
+import { assertHello, assertLaunch, assertPrepared, assertShutdown } from "./protocol.mjs";
 
 /**
  * One pass of a driver through the whole protocol on the scenario's first
- * case: hello, prepare, launch, execute and shutdown. The execution must carry
- * a frame log that re-derives its clock under the benchmark's clock rule.
+ * action: hello, prepare, launch, execute and shutdown. The execution must
+ * carry a frame log the framework re-derives its clock from. Typing while
+ * streaming needs the replay server, so it is checked only by `run`.
  */
 export async function runDriverConformance(options) {
+  if (options.scenario.kind === "typing-while-streaming") throw new Error("Conformance does not cover typing-while-streaming, which needs the replay server; run it with `run --run-profile smoke`.");
   const driver = await DriverProcess.spawn(options.driver);
   try {
     const hello = assertHello(await driver.request("hello", { frameworkVersion: 1 }), options.expected);
@@ -17,9 +20,12 @@ export async function runDriverConformance(options) {
       eventSchemaDigestSha256: options.prepare.eventSchemaDigestSha256,
       materializationModes: hello.materializationModes,
     });
-    const benchmarkCase = expandCases(options.scenario, "smoke")[0];
+    const appStart = options.scenario.kind === "app-start";
+    const action = appStart
+      ? { request: expandCases(options.scenario, "smoke")[0], cases: [expandCases(options.scenario, "smoke")[0]] }
+      : buildGroups(options.scenario, "smoke", 1)[0].actions[0];
     let launch;
-    if (options.scenario.kind !== "app-start") {
+    if (!appStart) {
       launch = assertLaunch(await driver.request("launch", {
         scenarioId: options.scenario.id,
         stateHandle: prepared.stateHandles.P1,
@@ -29,14 +35,13 @@ export async function runDriverConformance(options) {
     }
     const response = await driver.request("execute", {
       scenarioId: options.scenario.id,
-      case: benchmarkCase,
-      ...(options.scenario.kind === "app-start" ? { stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] } : {}),
+      case: action.request,
+      ...(appStart ? { stateHandle: prepared.stateHandles[action.request.stateHandle] } : {}),
     });
-    const execution = normalizeExecution(response, benchmarkCase);
+    const frameLogs = { checked: 0, failed: 0, missing: 0 };
+    const [execution] = observeExecution(frameLogs, options.scenario, action, response);
+    if (frameLogs.missing > 0) throw new Error(`Driver returned no frame log, so its clock cannot be checked against ${CLOCK_RULE_ID}.`);
     if (execution.status !== "valid") throw new Error(`Driver conformance execution failed: ${execution.reason}`);
-    if (response.frameLog === undefined) throw new Error(`Driver returned no frame log, so its clock cannot be checked against ${CLOCK_RULE_ID}.`);
-    const mismatch = frameLogMismatch(response.frameLog, execution.clock);
-    if (mismatch) throw new Error(`Driver clock does not follow ${CLOCK_RULE_ID}: ${mismatch}.`);
     const shutdown = assertShutdown(await driver.request("shutdown", { reason: "conformance-complete" }));
     return { hello, prepared, launch, execution, shutdown };
   } finally {

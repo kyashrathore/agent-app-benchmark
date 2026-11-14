@@ -2,6 +2,7 @@ import { createInterface } from "node:readline";
 import { assertContract } from "./contracts.mjs";
 
 export { frameLogOf, settleExpression } from "./page-clock.mjs";
+export { firstWordExpression, recordingObservation, scrollExpression, typingExpression } from "./page-recorders.mjs";
 
 const METHODS = ["hello", "prepare", "launch", "execute", "shutdown"];
 

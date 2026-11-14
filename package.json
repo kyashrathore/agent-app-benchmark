@@ -30,7 +30,7 @@
     "test": "node --test",
     "test:resource-monitor-integration": "RESOURCE_MONITOR_BIN=./native/resource-monitor/target/release/agent-app-resource-monitor node --test tests/resource-monitor.integration.test.mjs",
     "validate": "node ./bin/agent-app-benchmark.mjs validate",
-    "generate:corpus": "node ./bin/agent-app-benchmark.mjs corpus generate --corpus opencode-completed-sessions --output artifacts/corpora/opencode-completed-sessions",
+    "build:corpus": "node ./bin/agent-app-benchmark.mjs corpus build --corpus opencode-recorded-sessions --output artifacts/corpora/opencode-recorded-sessions",
     "lint": "node --check bin/agent-app-benchmark.mjs && find src examples scripts tests -type f \\( -name '*.mjs' -o -name '*.js' \\) -print0 | xargs -0 -n1 node --check"
   },
   "dependencies": {

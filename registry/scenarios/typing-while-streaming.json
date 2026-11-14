@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "typing-while-streaming",
+  "title": "Typing while replies stream",
+  "description": "One process, launched on the control session, with the app's agent routed to the framework's replay server. Five new threads each get the same prompt, typed untimed; a trusted Enter keydown sends it, and the first word is measured to the first frame in which the reply's first 8 characters are painted. The five sends are 2 s apart, so all five replies stream at once. In a sixth new thread, 60 trusted key presses, 250 ms apart with a seeded 20% jitter, are each measured from the trusted keydown to the first frame, read after style and layout, whose composer text holds every key typed so far; a key not painted within 2 s is a miss.",
+  "kind": "typing-while-streaming",
+  "corpusId": "opencode-recorded-sessions",
+  "cases": {
+    "prompt": "Write the replay benchmark reply.",
+    "firstWordChars": 8,
+    "streams": {
+      "startIntervalMs": 2000
+    },
+    "keys": {
+      "sequence": "thequickbrownfoxjumpsoverthelazydogpackmyboxwithfivedozenliquorjugs",
+      "intervalMs": 250,
+      "jitter": 0.2,
+      "seed": "agent-app-benchmark-typing",
+      "missAfterMs": 2000
+    },
+    "replay": {
+      "deltaChars": 8,
+      "intervalMs": 50
+    },
+    "profiles": {
+      "smoke": {
+        "streamCount": 2,
+        "keyCount": 20,
+        "deltaCount": 400
+      },
+      "quick": {
+        "streamCount": 5,
+        "keyCount": 60,
+        "deltaCount": 1800
+      },
+      "publication": {
+        "streamCount": 5,
+        "keyCount": 60,
+        "deltaCount": 1800
+      }
+    }
+  },
+  "metrics": [
+    {
+      "id": "stream.first_word_ms",
+      "description": "Trusted Enter keydown to the first frame in which the reply's first 8 characters are painted in the transcript.",
+      "unit": "ms"
+    },
+    {
+      "id": "typing.lag_p50_ms",
+      "description": "Median of the per-key lag from the trusted keydown to the first frame whose composer text holds the key, with a missed key counted at 2,000 ms.",
+      "unit": "ms"
+    },
+    {
+      "id": "typing.lag_p95_ms",
+      "description": "Nearest-rank p95 of the same per-key lags.",
+      "unit": "ms"
+    },
+    {
+      "id": "typing.missed",
+      "description": "Keys not painted within 2 s of their keydown.",
+      "unit": "count"
+    }
+  ],
+  "runProfiles": {
+    "smoke": 1,
+    "quick": 1,
+    "publication": 1
+  }
+}

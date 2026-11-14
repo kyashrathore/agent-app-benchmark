@@ -13,7 +13,7 @@ test("boundary CPU uses cumulative CPU delta so sub-250ms actions remain measura
     caseId: "switch-1",
     workspaceRelation: "within-workspace",
     sessionState: "cold",
-    transcriptBytes: 1048576,
+    nominalBytes: 1048576,
   }, 1);
   assert.equal(point.cpuPercent, 50);
   assert.equal(point.rssBytes, 150);
@@ -52,7 +52,7 @@ test("boundary includes newly spawned descendants and tolerates exited helpers",
     caseId: "switch-2",
     workspaceRelation: "across-workspaces",
     sessionState: "warm",
-    transcriptBytes: 2097152,
+    nominalBytes: 2097152,
   }, 2, [before, intermediate, after]);
   assert.equal(point.cpuDeltaMs, 80);
   assert.equal(point.cpuPercent, 80);

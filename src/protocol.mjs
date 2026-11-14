@@ -8,11 +8,22 @@ export function assertHello(result, expected) {
   assertIdentity(result.application, ["id", "name", "version", "buildDigestSha256"], "application");
   assertIdentity(result.driver, ["name", "version", "sourceCommit", "digestSha256"], "driver");
   if (result.application.id !== expected.appId) throw new Error(`Driver application id ${result.application.id} does not match ${expected.appId}.`);
-  if (!Array.isArray(result.scenarios) || !result.scenarios.includes(expected.scenarioId)) throw new Error(`Driver does not support ${expected.scenarioId}.`);
+  if (result.unsupportedScenarios !== undefined) {
+    const entries = Object.entries(result.unsupportedScenarios ?? {});
+    if (typeof result.unsupportedScenarios !== "object" || entries.some(([, reason]) => typeof reason !== "string" || reason.trim().length === 0 || reason.length > 200 || reason.includes("\n"))) {
+      throw new Error("Driver unsupportedScenarios must map scenario ids to one-line reasons.");
+    }
+  }
+  if (!Array.isArray(result.scenarios) || (!result.scenarios.includes(expected.scenarioId) && unsupportedReason(result, expected.scenarioId) === null)) throw new Error(`Driver neither supports ${expected.scenarioId} nor declares why it cannot.`);
   if (!Array.isArray(result.sourceEventFormats) || !result.sourceEventFormats.includes(expected.sourceEventFormatId)) throw new Error(`Driver does not support ${expected.sourceEventFormatId}.`);
   if (!Array.isArray(result.materializationModes) || result.materializationModes.some((mode) => !["native-opencode", "translated"].includes(mode))) throw new Error("Driver materialization modes are invalid.");
   if (result.clockRule !== undefined && result.clockRule !== CLOCK_RULE_ID) throw new Error(`Driver implements clock rule ${result.clockRule}; this framework checks ${CLOCK_RULE_ID}.`);
   return result;
+}
+
+/** The one-line reason a driver gives for an app that cannot run the scenario the same way as the others, or null. */
+export function unsupportedReason(hello, scenarioId) {
+  return Object.hasOwn(hello.unsupportedScenarios ?? {}, scenarioId) ? hello.unsupportedScenarios[scenarioId].trim() : null;
 }
 
 export function assertPrepared(result, expected) {

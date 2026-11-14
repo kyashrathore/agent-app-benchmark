@@ -56,6 +56,16 @@ ${verdicts}
 <section><h2>Apps</h2><ul>${appLinks}</ul></section>`;
 }
 
+function summaryValue(metric) {
+  if (metric.status !== "valid") return "—";
+  return metric.missed !== undefined ? `${metric.missed} missed` : `${metric.p50} ${metric.unit}`;
+}
+
+function summarySpread(metric) {
+  if (metric.status !== "valid" || metric.missed !== undefined) return "—";
+  return p95EqualsSampledMaximum(metric.valid) ? `max ${metric.maximum} ${metric.unit}` : `${metric.p95} ${metric.unit}`;
+}
+
 function renderApp(app, logos) {
   const [first] = app.results;
   const identity = [
@@ -67,14 +77,14 @@ function renderApp(app, logos) {
     ["Host", `${first.environment.cpuModel}, ${first.environment.logicalCpuCount} CPUs, ${first.environment.platform} ${first.environment.osRelease}`],
   ].map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("");
   const scenarios = app.results.map((result) => {
-    const summaryRows = Object.entries(result.derivation.summary).map(([key, metric]) => `<tr><th scope="row">${escapeHtml(key)}</th><td>${escapeHtml(metric.status === "valid" ? `${metric.average} ms` : "—")}</td><td>${escapeHtml(metric.status !== "valid" ? "—" : p95EqualsSampledMaximum(metric.valid) ? `max ${metric.maximum} ms` : `${metric.p95} ms`)}</td><td>${metric.valid} / ${metric.attempted}</td><td>${escapeHtml(metric.reason ?? "")}</td></tr>`).join("");
+    const summaryRows = Object.entries(result.derivation.summary).map(([key, metric]) => `<tr><th scope="row">${escapeHtml(metric.title ?? key)}</th><td>${escapeHtml(summaryValue(metric))}</td><td>${escapeHtml(summarySpread(metric))}</td><td>${metric.valid} / ${metric.attempted}</td><td>${escapeHtml(metric.reason ?? "")}</td></tr>`).join("");
     const resources = result.resources
       ? result.resources.status === "valid"
         ? `<p>RSS idle after launch ${result.resources.baselineIdleAverageRssMiB} MiB, while switching p95 ${result.resources.activeP95RssMiB} MiB, idle after the workload ${result.resources.endingIdleAverageRssMiB} MiB (${result.resources.retainedRssGrowthMiB} MiB retained).</p>`
         : `<p>Memory run invalid: ${escapeHtml(result.resources.reason)}</p>`
       : "";
     const invalid = [...new Set(result.observations.filter((observation) => observation.status !== "valid").map((observation) => observation.reason))];
-    return `<section><h2>${escapeHtml(result.scenario.id)}</h2><p>${escapeHtml(result.createdAt)} · ${escapeHtml(result.runProfile)} · ${result.repetitions} repetitions · ${escapeHtml(result.scenario.status)}</p><div class="scroll"><table><thead><tr><th scope="col">Row</th><th scope="col">Average</th><th scope="col">p95 (max below 20 samples)</th><th scope="col">Valid / attempted</th><th scope="col">Reason</th></tr></thead><tbody>${summaryRows}</tbody></table></div>${resources}${invalid.length > 0 ? `<h3>Invalid observations</h3><ul>${invalid.map((reason) => `<li>${escapeHtml(reason)}</li>`).join("")}</ul>` : ""}</section>`;
+    return `<section><h2>${escapeHtml(result.scenario.id)}</h2><p>${escapeHtml(result.createdAt)} · ${escapeHtml(result.runProfile)} · ${result.repetitions} repetitions · ${escapeHtml(result.scenario.status)}</p><div class="scroll"><table><thead><tr><th scope="col">Row</th><th scope="col">Median</th><th scope="col">p95 (max below 20 samples)</th><th scope="col">Valid / attempted</th><th scope="col">Reason</th></tr></thead><tbody>${summaryRows}</tbody></table></div>${resources}${invalid.length > 0 ? `<h3>Invalid observations</h3><ul>${invalid.map((reason) => `<li>${escapeHtml(reason)}</li>`).join("")}</ul>` : ""}</section>`;
   }).join("");
   return `<header><p><a href="../../index.html">← All runs</a></p><h1>${appLabel(app.id, first.app.name, logos, "../../")}</h1><dl>${identity}</dl></header>${scenarios}`;
 }

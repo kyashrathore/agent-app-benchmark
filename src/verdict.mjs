@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { latencyRow } from "./rows.mjs";
+import { UNSUPPORTED_PREFIX, verdictRows } from "./rows.mjs";
 import { p95EqualsSampledMaximum, percentile, round } from "./statistics.mjs";
 
 const BOOTSTRAP_RESAMPLES = 4000;
@@ -31,7 +31,8 @@ export function buildVerdict(results, { appIds, expected, resourcesPending = fal
   if (!left || !right || left === right) throw new Error("A verdict compares exactly two applications.");
   const rows = [];
   for (const metric of latencyMetrics(results, expected)) {
-    rows.push(withExpectedAttempts(compareRanked({ ...metric, unit: "ms" }, left, right), metric.expectedAttempts));
+    const compare = metric.test === "fisher" ? compareFisher : compareRanked;
+    rows.push(withExpectedAttempts(compare(metric, left, right), metric.expectedAttempts));
   }
   if (resourcesPending) {
     for (const metric of RESOURCE_METRICS) {
@@ -66,17 +67,18 @@ function withExpectedAttempts(row, expectedAttempts) {
 function latencyMetrics(results, expected) {
   const metrics = new Map();
   for (const row of expected?.values() ?? []) {
-    metrics.set(row.id, { id: row.id, order: row.order, title: row.title, values: new Map(), attempted: new Map(), failures: new Map(), expectedAttempts: row.attempts });
+    metrics.set(row.id, { unit: "ms", test: "rank", ...row, values: new Map(), attempted: new Map(), failures: new Map(), unsupported: new Map(), expectedAttempts: row.attempts });
   }
   for (const result of results) {
+    const appId = result.app.id;
     for (const observation of result.observations) {
-      const key = latencyRow(result.scenario.kind, observation.case);
-      if (!key) continue;
-      const metric = metrics.get(key.id) ?? { ...key, values: new Map(), attempted: new Map(), failures: new Map() };
-      const appId = result.app.id;
-      metric.attempted.set(appId, (metric.attempted.get(appId) ?? 0) + 1);
-      if (observation.status === "valid") metric.values.set(appId, [...(metric.values.get(appId) ?? []), observation.durationMs]);
-      metrics.set(key.id, metric);
+      for (const row of verdictRows(result.scenario.kind, observation.case)) {
+        const metric = metrics.get(row.id) ?? { ...row, values: new Map(), attempted: new Map(), failures: new Map(), unsupported: new Map() };
+        metric.attempted.set(appId, (metric.attempted.get(appId) ?? 0) + 1);
+        if (observation.status === "valid") metric.values.set(appId, [...(metric.values.get(appId) ?? []), row.read(observation)]);
+        if (observation.reason?.startsWith(UNSUPPORTED_PREFIX)) metric.unsupported.set(appId, observation.reason.slice(UNSUPPORTED_PREFIX.length));
+        metrics.set(row.id, metric);
+      }
     }
   }
   return [...metrics.values()].toSorted((a, b) => a.order - b.order);
@@ -95,16 +97,15 @@ function compareRanked(metric, left, right) {
       [right]: describe(rightValues, metric.attempted.get(right) ?? 0),
     },
   };
-  const failed = [left, right].find((appId) => metric.failures.has(appId));
-  if (failed) return { ...row, verdict: "withheld", reason: `${failed}: ${metric.failures.get(failed)}` };
-  const incomplete = [left, right].find((appId) => row.apps[appId].valid !== row.apps[appId].attempted || row.apps[appId].valid === 0);
-  if (incomplete) return { ...row, verdict: "withheld", reason: `${incomplete} has ${row.apps[incomplete].attempted - row.apps[incomplete].valid} invalid observations` };
+  const withheld = withheldReason(metric, row, left, right);
+  if (withheld) return withheld;
   if (leftValues.length < MINIMUM_SAMPLES || rightValues.length < MINIMUM_SAMPLES) {
     return { ...row, verdict: "insufficient", reason: `needs at least ${MINIMUM_SAMPLES} samples per application` };
   }
   const faster = median(leftValues) <= median(rightValues) ? left : right;
   const fasterValues = faster === left ? leftValues : rightValues;
   const slowerValues = faster === left ? rightValues : leftValues;
+  if (median(slowerValues) === 0) return { ...row, verdict: "within-practical-margin", winner: null, leader: faster, ratio: 1, ratioInterval95: { low: 1, high: 1 }, pValue: 1 };
   const ratio = median(slowerValues) / median(fasterValues);
   const interval = bootstrapMedianRatio(slowerValues, fasterValues, metric.id);
   const pValue = mannWhitneyTwoSided(fasterValues, slowerValues);
@@ -118,6 +119,63 @@ function compareRanked(metric, left, right) {
     ratioInterval95: { low: round(interval.low), high: round(interval.high) },
     pValue: round(pValue),
   };
+}
+
+/** A row is withheld when either app cannot run it the same way, failed it, or has an invalid observation in it. */
+function withheldReason(metric, row, left, right) {
+  const unsupported = [left, right].find((appId) => metric.unsupported?.has(appId));
+  if (unsupported) {
+    return { ...row, apps: { ...row.apps, [unsupported]: { ...row.apps[unsupported], unsupported: metric.unsupported.get(unsupported) } }, verdict: "withheld", reason: `${unsupported} cannot run it the same way: ${metric.unsupported.get(unsupported)}` };
+  }
+  const failed = [left, right].find((appId) => metric.failures.has(appId));
+  if (failed) return { ...row, verdict: "withheld", reason: `${failed}: ${metric.failures.get(failed)}` };
+  const incomplete = [left, right].find((appId) => row.apps[appId].valid !== row.apps[appId].attempted || row.apps[appId].valid === 0);
+  if (incomplete) return { ...row, verdict: "withheld", reason: `${incomplete} has ${row.apps[incomplete].attempted - row.apps[incomplete].valid} invalid observations` };
+  return null;
+}
+
+/**
+ * Misses are per-sample yes/no outcomes, so the row compares miss rates with
+ * an exact two-sided Fisher test on the two apps' missed and painted counts.
+ */
+function compareFisher(metric, left, right) {
+  const leftValues = metric.values.get(left) ?? [];
+  const rightValues = metric.values.get(right) ?? [];
+  const count = (values, attempted) => ({ ...(values.length ? { missed: values.reduce((total, value) => total + value, 0) } : {}), valid: values.length, attempted });
+  const row = {
+    id: metric.id,
+    title: metric.title,
+    unit: metric.unit,
+    kind: "fisher",
+    apps: { [left]: count(leftValues, metric.attempted.get(left) ?? 0), [right]: count(rightValues, metric.attempted.get(right) ?? 0) },
+  };
+  const withheld = withheldReason(metric, row, left, right);
+  if (withheld) return withheld;
+  const rate = (appId) => row.apps[appId].missed / row.apps[appId].valid;
+  const lower = rate(left) <= rate(right) ? left : right;
+  const higher = lower === left ? right : left;
+  const pValue = fisherExactTwoSided(row.apps[lower].missed, row.apps[lower].valid, row.apps[higher].missed, row.apps[higher].valid);
+  return { ...row, verdict: pValue < SIGNIFICANCE ? "lower" : "no-reliable-difference", winner: pValue < SIGNIFICANCE ? lower : null, leader: lower, pValue: round(pValue) };
+}
+
+/** Sum of the hypergeometric probabilities of every table with the same margins no more likely than the observed one. */
+export function fisherExactTwoSided(firstHits, firstTotal, secondHits, secondTotal) {
+  const hits = firstHits + secondHits;
+  const total = firstTotal + secondTotal;
+  const logFactorial = (n) => {
+    let sum = 0;
+    for (let value = 2; value <= n; value += 1) sum += Math.log(value);
+    return sum;
+  };
+  const logChoose = (n, k) => logFactorial(n) - logFactorial(k) - logFactorial(n - k);
+  const probability = (k) => Math.exp(logChoose(firstTotal, k) + logChoose(secondTotal, hits - k) - logChoose(total, hits));
+  const observed = probability(firstHits);
+  let p = 0;
+  for (let k = Math.max(0, hits - secondTotal); k <= Math.min(hits, firstTotal); k += 1) {
+    const value = probability(k);
+    if (value <= observed * (1 + 1e-7)) p += value;
+  }
+  return Math.min(1, p);
 }
 
 function describe(values, attempted) {
@@ -290,9 +348,11 @@ export function verdictCells(verdict, names = {}) {
   const label = (appId) => names[appId] ?? appId;
   const format = (summary, unit) => {
     const of = summary.expected !== undefined && summary.attempted < summary.expected ? ` of ${summary.expected}` : "";
+    if (summary.unsupported) return "—";
     if (summary.attempted === 0) return `not measured${of ? ` (0${of})` : ""}`;
     if (summary.valid === 0) return `invalid (0/${summary.attempted}${of})`;
-    if (unit !== "ms") return formatNumber(summary.median, unit);
+    if (summary.missed !== undefined) return `${summary.missed} of ${summary.valid} ${unit}${summary.valid < summary.attempted ? ` (${summary.attempted - summary.valid} invalid)` : ""}`;
+    if (!["ms", "frames"].includes(unit)) return formatNumber(summary.median, unit);
     const spread = p95EqualsSampledMaximum(summary.valid)
       ? `max ${formatNumber(summary.maximum, unit)}`
       : `p95 ${formatNumber(summary.p95, unit)}`;
@@ -317,7 +377,7 @@ export function verdictCells(verdict, names = {}) {
 function timesText(row, left, right, label) {
   const ours = row.apps[left];
   const theirs = row.apps[right];
-  if (!ours?.valid || !theirs?.valid) return "—";
+  if (!ours?.valid || !theirs?.valid || row.kind === "fisher") return "—";
   if (ours.median === 0 || theirs.median === 0) {
     return `— (${label(left)} ${formatNumber(ours.median, row.unit)}, ${label(right)} ${formatNumber(theirs.median, row.unit)})`;
   }
@@ -328,6 +388,10 @@ function timesText(row, left, right, label) {
 
 function verdictText(row, label) {
   if (["withheld", "insufficient", "incomplete"].includes(row.verdict)) return `${row.verdict}: ${row.reason}`;
+  if (row.kind === "fisher") {
+    const p = `p${row.pValue < 0.001 ? "<0.001" : `=${row.pValue}`}`;
+    return row.winner ? `${label(row.winner)} misses fewer (${p})` : `no reliable difference (${p})`;
+  }
   const better = row.unit === "ms" ? "faster" : "lower";
   const detail = row.kind === "ranked"
     ? `${row.ratio}x, 95% CI ${row.ratioInterval95.low}-${row.ratioInterval95.high}x, p${row.pValue < 0.001 ? "<0.001" : `=${row.pValue}`}`
@@ -339,6 +403,7 @@ function verdictText(row, label) {
 
 function formatNumber(value, unit) {
   if (unit === "ms") return value >= 1000 ? `${round(value / 1000).toFixed(2)} s` : `${value.toFixed(1)} ms`;
+  if (unit === "frames") return `${Number.isInteger(value) ? value : value.toFixed(1)} frames`;
   if (unit === "MiB") return `${value.toFixed(0)} MiB`;
   return `${value.toFixed(1)}${unit}`;
 }

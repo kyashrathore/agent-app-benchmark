@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "session-switch-walk",
   "title": "Historical session switching, walking the session list",
-  "description": "Two processes each walk the session list consecutively, top to bottom, twice: the first pass opens every session for the first time and the second pass returns to each in the same order. The list is the corpus's own recency order, workspace-b newest first and then workspace-a newest first, which the workspace-contiguous corpus makes identical in lists grouped by workspace and lists sorted by recency; the control session the app launches on is not walked. One separate process runs the 1/8 MiB progressive memory workload sampled by the framework.",
+  "description": "Two processes each walk the session list consecutively, top to bottom, twice: the first pass opens every session for the first time and the second pass returns to each in the same order. The list is the corpus's own recency order, workspace-b newest first and then workspace-a newest first, which the corpus's creation order makes identical in lists grouped by workspace and lists sorted by recency; the control session the app launches on and the long thread below it are not walked. Each session is a whole-turn prefix of one recorded session, labeled by its nominal size. One separate process runs the 1/8 MiB progressive memory workload sampled by the framework.",
   "kind": "session-switch",
-  "corpusId": "opencode-completed-sessions",
+  "corpusId": "opencode-recorded-sessions",
   "cases": {
     "walk": {
       "controlWorkspaceId": "workspace-a",
@@ -16,124 +16,112 @@
         {
           "sessionId": "latency-across-workspaces-warm-3-1048576",
           "workspaceId": "workspace-b",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-across-workspaces-warm-2-1048576",
           "workspaceId": "workspace-b",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-across-workspaces-warm-1-1048576",
           "workspaceId": "workspace-b",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-across-workspaces-warm-0-1048576",
           "workspaceId": "workspace-b",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-across-workspaces-cold-3-1048576",
           "workspaceId": "workspace-b",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-across-workspaces-cold-2-1048576",
           "workspaceId": "workspace-b",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-across-workspaces-cold-1-1048576",
           "workspaceId": "workspace-b",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-across-workspaces-cold-0-1048576",
           "workspaceId": "workspace-b",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "progressive-resource-8388608",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 8388608
+          "nominalBytes": 8388608
         },
         {
           "sessionId": "progressive-resource-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
-        },
-        {
-          "sessionId": "size-latency-long-1-1048576",
-          "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576,
-          "rowShape": "long"
-        },
-        {
-          "sessionId": "size-latency-long-0-1048576",
-          "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576,
-          "rowShape": "long"
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "size-latency-1-8388608",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 8388608
+          "nominalBytes": 8388608
         },
         {
           "sessionId": "size-latency-1-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "size-latency-0-8388608",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 8388608
+          "nominalBytes": 8388608
         },
         {
           "sessionId": "size-latency-0-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-within-workspace-warm-3-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-within-workspace-warm-2-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-within-workspace-warm-1-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-within-workspace-warm-0-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-within-workspace-cold-3-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-within-workspace-cold-2-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-within-workspace-cold-1-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         },
         {
           "sessionId": "latency-within-workspace-cold-0-1048576",
           "workspaceId": "workspace-a",
-          "transcriptBytes": 1048576
+          "nominalBytes": 1048576
         }
       ]
     },
@@ -145,11 +133,10 @@
       "cold",
       "warm"
     ],
-    "transcriptBytes": [
+    "nominalBytes": [
       1048576,
       8388608
     ],
-    "standardTranscriptBytes": 1048576,
     "resourceRuns": 1
   },
   "metrics": [

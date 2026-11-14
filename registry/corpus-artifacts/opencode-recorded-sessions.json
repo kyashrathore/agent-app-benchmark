@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "opencode-recorded-sessions",
+  "corpusId": "opencode-recorded-sessions",
+  "definitionDigestSha256": "a7e84477453f098ea27a80b35e3f9adfb9f507422e3618e39292e48e3e6a6677",
+  "eventSchemaDigestSha256": "00fbc1158da6274c1712b4e6aebc4c27d0bd6870c4edb45a2014119a2d0cc8cb",
+  "recordingDigestSha256": "2102caf19d236fca615bad0a1a9cb5f3f0eb31dcd996917c93a397b0b59cbc64",
+  "corpusDigestSha256": "5d0db896c45fbd9be7279d20b30e4b94baff4a257235fb1c4044b7cc4766af93"
+}

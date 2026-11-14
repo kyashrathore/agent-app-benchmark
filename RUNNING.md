@@ -8,10 +8,10 @@ Requirements: Node.js 22 or newer and Rust 1.88 or newer.
 npm ci
 npm test
 cargo build --release --manifest-path native/resource-monitor/Cargo.toml
-npm run generate:corpus
+npm run build:corpus
 ```
 
-`generate:corpus` writes the public synthetic corpus to `artifacts/corpora/opencode-completed-sessions`.
+`build:corpus` builds the public corpus from its committed recording (`registry/recorded-sessions/opencode-recorded-sessions.ndjson`) into `artifacts/corpora/opencode-recorded-sessions`; `run` builds it on first use if it is missing. A run refuses a corpus whose digests differ from `registry/corpus-artifacts/opencode-recorded-sessions.json`.
 
 ## Run one app
 
@@ -19,7 +19,7 @@ npm run generate:corpus
 node bin/agent-app-benchmark.mjs run --app <claxedo|t3|opencode> [--output <dir>]
 ```
 
-`run` prepares the app's state from the corpus, runs app start and then the list walk, and writes `app-start/result.json`, `session-switch-walk/result.json` and `host-conditions.jsonl` (load, power and the busiest processes every 10 s). One app's run takes up to 4 minutes; run the apps one after another.
+`run` prepares the app's state from the corpus and runs app start, the list walk, new thread, long thread and typing while streaming, writing `<scenario>/result.json` for each, `typing-while-streaming/replay-requests.jsonl` (every request the replay server served, without bodies) and `host-conditions.jsonl` (load, power and the busiest processes every 10 s). One app's run must take at most 4 minutes; run the apps one after another.
 
 Each app is found from its environment, or from `--root`, `--executable` and `--runtime`:
 
@@ -31,7 +31,13 @@ Each app is found from its environment, or from `--root`, `--executable` and `--
 
 `--dry-run` prints the resolved plan. `--corpus-definition <file> --corpus-directory <dir>` runs your own corpus instead; its results are marked `custom/non-comparable`.
 
-By default each app starts 4 times per start mode and walks the list in two processes (38, 6 and 4 samples per switch row). The published run used 12 starts and five processes.
+By default (`--run-profile publication`) each app starts 4 times per start mode, walks the list in two processes, takes 10 new threads in each of two processes, visits the long thread twice in each of two processes, and starts 5 streams and types 60 keys in one process. `--run-profile smoke` cuts the new-thread samples to 4, the streams to 2, the keys to 20 and the reply to 400 deltas (20 s); `--repetitions` sets the process count. If an app runs over 4 minutes, shorten the stream before cutting samples.
+
+## Replay server and routing
+
+For `typing-while-streaming`, `run` starts an OpenAI-compatible chat-completions server on 127.0.0.1 at a random port and passes it to the driver in `prepare` as `replay` (see [docs/driver-protocol.md](docs/driver-protocol.md)). A streamed request whose last user message holds the benchmark prompt gets the replay reply; any other streamed request (a title, a summary) gets a one-delta reply, and a request without `stream: true` a one-message JSON reply. No network or model is involved.
+
+Each driver must route its app's agent to it through an OpenCode-engine custom provider (`@ai-sdk/openai-compatible`, model `replay/stream`) written into the sealed state: OpenCode by its config, T3 Code by its `opencode` provider pointed at the pinned OpenCode 2.3.0 CLI, Claxedo by its harness provider definition. A driver that cannot route its app's agent there, or has no new-thread control in the session view, declares the scenario in `unsupportedScenarios` with a one-line reason; its cells stay empty with that reason.
 
 ## Compare
 
@@ -70,6 +76,14 @@ A driver's in-page clock comes from the driver SDK (`settleExpression`); the dri
 
 ## Corpus
 
-`opencode-completed-sessions` is deterministic and synthetic: 25 sessions in two workspaces, with 1 MiB and 8 MiB sessions, 1 MiB of long text rows and a progressive memory run. Every prompt, response, path, title and identifier in it is generated.
+`opencode-recorded-sessions` is built from one real recorded OpenCode 2.3.0 session (model `opencode/big-pickle`, ademark's Ledger arena, Apache-2.0): 24 sessions in two workspaces, each the recording's turns repeated to a whole turn at or above its size, labeled by nominal size (1 MiB, 8 MiB), plus the control session (the first turn), a progressive memory run and a long thread of at least 2,000 messages listed below the control. The README credits the source.
 
-The benchmark does not measure Web Vitals, streaming output, live agents, terminals or a composite score. Contributions go through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md).
+To import a new recording, export it with OpenCode 2.3 (`opencode session export <id>`, run in the session's directory) and run:
+
+```bash
+node scripts/import-opencode-export.mjs --input session-export.json [--replace <from>=<to>]...
+```
+
+It converts the export into the corpus event format, redacts the session directory and home directory to `/benchmark/workspace-a` and the user name and git identity everywhere, fails on any email outside the reserved example domains, credential or home-directory path left over, writes the recording, builds the corpus and registers its digests. 2.x idle, system and switch markers have no history event and are dropped (the import prints their counts).
+
+The benchmark does not measure Web Vitals, live models, terminals or a composite score. Contributions go through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md).

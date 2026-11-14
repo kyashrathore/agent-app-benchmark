@@ -1,18 +1,20 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { resolveAppBinding, resolveResourceMonitor } from "./app-bindings.mjs";
 import { startHostConditions } from "./host-conditions.mjs";
 import { REPOSITORY_ROOT } from "./paths.mjs";
-import { readDefinition, readRegistered } from "./registry.mjs";
+import { buildCorpus } from "./corpus.mjs";
+import { readDefinition, readRegistered, recordingFileOf } from "./registry.mjs";
 import { runBenchmark } from "./runner.mjs";
 
 const execute = promisify(execFile);
 
-/** The benchmark: app start, then the list walk with its memory and idle windows, on the public corpus. */
-export const BENCHMARK_SCENARIO_IDS = Object.freeze(["app-start", "session-switch-walk"]);
+/** The benchmark, in run order, on the public corpus. */
+export const BENCHMARK_SCENARIO_IDS = Object.freeze(["app-start", "session-switch-walk", "new-thread", "long-thread", "typing-while-streaming"]);
+const KIND_ORDER = ["app-start", "session-switch", "new-thread", "long-thread", "typing-while-streaming"];
 
 export async function planAppRun(options) {
   const appId = options.app;
@@ -55,9 +57,10 @@ export async function planAppRun(options) {
 /**
  * Runs each scenario in order in its own sealed result directory, with host
  * conditions logged beside them. The driver may materialize the corpus once in
- * AGENT_APP_BENCHMARK_STATE_CACHE and reuse it for the second scenario.
+ * AGENT_APP_BENCHMARK_STATE_CACHE and reuse it for the later scenarios.
  */
 export async function runApp(plan) {
+  if (plan.corpus.status === "public-comparable") await buildRegisteredCorpusOnce(plan.corpus, plan.corpusDirectory);
   await mkdir(plan.outputRoot, { recursive: true, mode: 0o700 });
   const host = await startHostConditions(plan.outputRoot, { applicationPaths: applicationPaths(plan.driver) });
   const stateCache = await mkdtemp(path.join(os.tmpdir(), "agent-app-benchmark-state-cache-"));
@@ -89,18 +92,24 @@ export async function runApp(plan) {
   return results;
 }
 
-/** A private corpus keeps its app-start and session-switch scenario files beside its definition. */
+/** The registered corpus is built from its committed recording the first time a run needs it; the runner verifies it against the registered digests. */
+async function buildRegisteredCorpusOnce(corpus, directory) {
+  if (await stat(path.join(directory, "manifest.json")).then(() => true, () => false)) return;
+  await buildCorpus(corpus.value, recordingFileOf(corpus.value.id), directory);
+}
+
+/** A private corpus keeps its scenario files, at most one of each kind, beside its definition. */
 async function privateCorpusScenarios(folder, corpusId) {
   const scenarios = [];
   for (const file of (await readdir(folder)).filter((name) => name.endsWith(".json")).toSorted()) {
     const value = JSON.parse(await readFile(path.join(folder, file), "utf8"));
     if (value.corpusId === corpusId && value.kind) scenarios.push(await readDefinition("scenario", path.join(folder, file)));
   }
-  const byKind = (kind) => scenarios.filter((scenario) => scenario.value.kind === kind);
-  if (byKind("app-start").length !== 1 || byKind("session-switch").length !== 1) {
-    throw new Error(`Corpus ${corpusId} needs exactly one app-start and one session-switch scenario beside its definition in ${folder}; found ${scenarios.map((scenario) => scenario.value.id).join(", ") || "none"}.`);
+  const kinds = scenarios.map((scenario) => scenario.value.kind);
+  if (scenarios.length === 0 || new Set(kinds).size !== kinds.length) {
+    throw new Error(`Corpus ${corpusId} needs at most one scenario of each kind, and at least one, beside its definition in ${folder}; found ${scenarios.map((scenario) => scenario.value.id).join(", ") || "none"}.`);
   }
-  return [byKind("app-start")[0], byKind("session-switch")[0]];
+  return scenarios.toSorted((left, right) => KIND_ORDER.indexOf(left.value.kind) - KIND_ORDER.indexOf(right.value.kind));
 }
 
 function spawnOptions(binding, extraEnv = {}) {

@@ -3,38 +3,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { writeCorpus } from "../src/corpus.mjs";
+import { buildTestCorpus, WALK_CORPUS } from "./support/recorded-corpus.mjs";
 import { DriverProcess } from "../src/driver-process.mjs";
 import { assertHello, assertPrepared, assertShutdown, normalizeExecution } from "../src/protocol.mjs";
 
 const DRIVER = path.resolve("examples/mock-driver/mock-driver.mjs");
-const SMALL = {
-  schemaVersion: 1,
-  id: "test-corpus",
-  generator: "opencode-completed-sessions",
-  seed: "driver-test",
-  sourceEventFormat: { id: "opencode-event", sourceRevision: "a9f7081d4015b0cc22ed67156e042b482a8d064a", envelope: "EventV2.SerializedEvent", eventTypes: ["session.created.1", "message.updated.1", "message.part.updated.1"] },
-  workspaceIds: ["workspace-a", "workspace-b"],
-  transcriptBytes: [4096],
-  sessionProfiles: [{
-    transcriptBytes: 4096,
-    userMessages: 1,
-    assistantMessages: 1,
-    toolCalls: 1,
-    patches: 0,
-    payloadPermille: { text: 250, reasoning: 250, toolInput: 250, toolOutput: 250 },
-  }],
-  derivation: {
-    method: "rounded structural distributions with entirely synthetic payloads",
-    sourceFamilies: ["opencode", "claude-code", "codex"],
-    privateContentCopied: false,
-  },
-  description: "driver test",
-};
 
 test("mock non-Electron driver completes the public lifecycle", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "agent-app-driver-"));
-  const generated = await writeCorpus(SMALL, path.join(root, "corpus"));
+  const generated = await buildTestCorpus(root, WALK_CORPUS);
   const driver = await DriverProcess.spawn({ executable: process.execPath, args: [DRIVER], cwd: root });
   try {
     assertHello(await driver.request("hello", { frameworkVersion: 1 }), { appId: "mock-native", scenarioId: "test-session-switch", sourceEventFormatId: "opencode-event" });
@@ -51,7 +28,7 @@ test("mock non-Electron driver completes the public lifecycle", async () => {
     assert.equal(prepared.materializationMode, "translated");
     const launched = await driver.request("launch", { scenarioId: "test-session-switch", stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: "driver-test" });
     assert.equal(launched.ready, true);
-    const benchmarkCase = { caseId: "case-1", workload: "list-walk", transcriptBytes: 16, workspaceRelation: "within-workspace", sessionState: "cold" };
+    const benchmarkCase = { caseId: "case-1", workload: "list-walk", nominalBytes: 4096, workspaceRelation: "within-workspace", sessionState: "cold" };
     const observation = normalizeExecution(await driver.request("execute", { scenarioId: "test-session-switch", case: benchmarkCase }), benchmarkCase);
     assert.equal(observation.status, "valid");
     assertShutdown(await driver.request("shutdown", { reason: "test" }));

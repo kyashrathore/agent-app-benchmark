@@ -3,8 +3,8 @@ import path from "node:path";
 import process from "node:process";
 import { digestBytes } from "../src/canonical-json.mjs";
 import { runDriverConformance } from "../src/conformance.mjs";
-import { verifyCorpus, writeCorpus } from "../src/corpus.mjs";
-import { readDefinition, readRegistered, validateRegistry } from "../src/registry.mjs";
+import { buildCorpus, verifyCorpus } from "../src/corpus.mjs";
+import { readDefinition, readRegistered, recordingFileOf, validateRegistry } from "../src/registry.mjs";
 import { planAppRun, runApp } from "../src/run-app.mjs";
 import { validateResultFile } from "../src/runner.mjs";
 import { buildSite } from "../src/site.mjs";
@@ -24,15 +24,17 @@ try {
     const paths = [...options.all("result"), ...options.all("results").flatMap((value) => value.split(","))];
     if (paths.length < 2) throw new Error("verdict needs --result for at least two runs.");
     process.stdout.write(`${await renderComparison(await readResultFiles(paths))}\n`);
-  } else if (command === "corpus" && subcommand === "generate") {
+  } else if (command === "corpus" && subcommand === "build") {
     const corpus = await readDefinition("corpus", required(options, "corpus"));
-    const generated = await writeCorpus(corpus.value, path.resolve(required(options, "output")));
-    process.stdout.write(`${generated.digestSha256}\n`);
+    const recording = options.first("recording") ? path.resolve(options.first("recording")) : recordingFileOf(corpus.value.id);
+    const built = await buildCorpus(corpus.value, recording, path.resolve(required(options, "output")));
+    process.stdout.write(`${built.digestSha256}\n`);
   } else if (command === "corpus" && subcommand === "verify") {
     const verified = await verifyCorpus(path.resolve(required(options, "input")));
     try {
       const artifact = await readRegistered("corpusArtifact", verified.manifest.corpusId);
       if (artifact.value.corpusDigestSha256 !== verified.digestSha256
+        || artifact.value.recordingDigestSha256 !== verified.manifest.recording.digestSha256
         || artifact.value.definitionDigestSha256 !== verified.manifest.definitionDigestSha256
         || artifact.value.eventSchemaDigestSha256 !== verified.manifest.sourceEventFormat.schemaDigestSha256) throw new Error("Corpus does not match its registered canonical artifact identity.");
     } catch (error) {
@@ -145,9 +147,9 @@ function driverEnvironment(options) {
 
 function usage() {
   return [
-    "Usage: agent-app-benchmark <run|verdict|site build|conformance|validate|corpus generate|corpus verify|result validate|publication validate-append-only> [options]",
+    "Usage: agent-app-benchmark <run|verdict|site build|conformance|validate|corpus build|corpus verify|result validate|publication validate-append-only> [options]",
     "",
-    "Run the benchmark for one app (app start, then the list walk and its idle windows):",
+    "Run the benchmark for one app (app start, the list walk and its idle windows, new thread, long thread, typing while streaming):",
     "  agent-app-benchmark run --app claxedo|t3|opencode [--output <dir>]",
     "Compare two or more runs:",
     "  agent-app-benchmark verdict --result <run-dir-or-result.json> --result <run-dir-or-result.json> [...]",

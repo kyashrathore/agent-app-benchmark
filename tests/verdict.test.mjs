@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bootstrapMedianRatio, buildVerdict, mannWhitneyTwoSided, median, renderVerdict } from "../src/verdict.mjs";
+import { bootstrapMedianRatio, buildVerdict, fisherExactTwoSided, mannWhitneyTwoSided, median, renderVerdict } from "../src/verdict.mjs";
 
 test("exact Mann-Whitney p matches the complete-separation table values", () => {
   assert.equal(mannWhitneyTwoSided([1, 2, 3], [4, 5, 6]), 0.1);
@@ -16,7 +16,7 @@ test("bootstrap interval of the median ratio brackets the observed ratio and is 
   assert.deepEqual(bootstrapMedianRatio(slow, fast, "lane"), interval);
 });
 
-const switchCase = (sample) => ({ workload: "list-walk", sessionState: "cold", transcriptBytes: 1024 * 1024, sample });
+const switchCase = (sample) => ({ workload: "list-walk", sessionState: "cold", nominalBytes: 1024 * 1024, sample });
 const result = (appId, durations, invalidAt = -1) => ({
   app: { id: appId },
   scenario: { kind: "session-switch" },
@@ -49,7 +49,7 @@ test("fewer than four samples a side never names a winner", () => {
   assert.equal(row.verdict, "insufficient");
 });
 
-test("first visits and returns at each size and row shape get their own rows, and memory-run steps are not scored", () => {
+test("first visits and returns at each size get their own rows, and memory-run steps are not scored", () => {
   const MIB = 1024 * 1024;
   const observations = (cases, durations) => cases.flatMap((benchmarkCase) =>
     durations.map((durationMs, sample) => ({ case: { ...benchmarkCase, sample }, status: "valid", durationMs })));
@@ -57,17 +57,15 @@ test("first visits and returns at each size and row shape get their own rows, an
     app: { id: appId },
     scenario: { kind: "session-switch" },
     observations: observations([
-      { workload: "list-walk", sessionState: "cold", transcriptBytes: MIB, rowShape: "long" },
-      { workload: "list-walk", sessionState: "warm", transcriptBytes: 8 * MIB },
-      { workload: "list-walk", sessionState: "cold", transcriptBytes: MIB },
-      { workload: "progressive-resource", sessionState: "cold", transcriptBytes: 8 * MIB },
+      { workload: "list-walk", sessionState: "warm", nominalBytes: 8 * MIB },
+      { workload: "list-walk", sessionState: "cold", nominalBytes: MIB },
+      { workload: "progressive-resource", sessionState: "cold", nominalBytes: 8 * MIB },
     ], durations),
   });
   const verdict = buildVerdict([walk("a", [40, 41, 42, 43]), walk("b", [200, 201, 202, 203])]);
-  assert.deepEqual(verdict.rows.map((row) => row.id), ["walk-cold-1", "walk-cold-long-1", "walk-warm-8"]);
+  assert.deepEqual(verdict.rows.map((row) => row.id), ["walk-cold-1", "walk-warm-8"]);
   assert.deepEqual(verdict.rows.map((row) => row.title), [
     "Next session down the list, first visit: 1 MiB session",
-    "Next session down the list, first visit: 1 MiB of long text rows",
     "Next session down the list, return: 8 MiB session",
   ]);
   assert.ok(verdict.rows.every((row) => row.winner === "a"));
@@ -119,4 +117,45 @@ test("below twenty valid samples a row names its maximum, not a p95 that is only
   const twenty = Array.from({ length: 20 }, (_, index) => 100 + index);
   const large = cells(buildVerdict([latency("a", twenty), latency("b", twenty.map((value) => value * 2))]));
   assert.equal(large[2], "109.5 ms (p95 118.0 ms, n=20/20)");
+});
+
+test("exact Fisher p matches the table values", () => {
+  assert.equal(Math.round(fisherExactTwoSided(0, 60, 10, 60) * 1e6) / 1e6, 0.001299);
+  assert.equal(fisherExactTwoSided(1, 60, 1, 60), 1);
+});
+
+const typingResult = (appId, lags, missed) => ({
+  app: { id: appId },
+  scenario: { kind: "typing-while-streaming" },
+  observations: lags.map((durationMs, sample) => ({ case: { workload: "typing-key", sample }, status: "valid", durationMs, measures: { "typing.missed": sample < missed ? 1 : 0 } })),
+});
+
+test("typing lag is a ranked row and misses a Fisher row, named by miss counts", () => {
+  const verdict = buildVerdict([typingResult("a", Array.from({ length: 60 }, () => 16), 0), typingResult("b", Array.from({ length: 60 }, (_, index) => (index < 10 ? 2000 : 40)), 10)]);
+  const [lag, missed] = verdict.rows;
+  assert.deepEqual([lag.id, lag.winner], ["typing-lag", "a"]);
+  assert.deepEqual([missed.id, missed.kind, missed.winner, missed.apps.a.missed, missed.apps.b.missed], ["typing-missed", "fisher", "a", 0, 10]);
+  const table = renderVerdict(verdict, { a: "Claxedo", b: "OpenCode" });
+  assert.match(table, /\| Typing while replies stream: keys not painted within 2 s \| 0 of 60 keys +\| 10 of 60 keys +\| — +\| Claxedo misses fewer \(p=0\.001\)/u);
+});
+
+test("frame counts compare by rank, and two zero medians are a tie rather than an infinite ratio", () => {
+  const scroll = (appId, counts) => ({
+    app: { id: appId },
+    scenario: { kind: "long-thread" },
+    observations: counts.map((count, sample) => ({ case: { workload: "long-thread-scroll", sample }, status: "valid", durationMs: 1500, measures: { "long-thread.scroll_long_frames": count, "long-thread.scroll_p95_frame_ms": 8.3 } })),
+  });
+  const [longFrames, p95] = buildVerdict([scroll("a", [0, 0, 0, 0]), scroll("b", [0, 0, 0, 0])]).rows;
+  assert.equal(longFrames.verdict, "within-practical-margin");
+  assert.equal(p95.verdict, "within-practical-margin");
+  assert.match(renderVerdict(buildVerdict([scroll("a", [0, 0, 1, 0]), scroll("b", [9, 12, 10, 14])])), /\| 0 frames \(max 1 frames, n=4\/4\) +\| 11 frames/u);
+});
+
+test("an app that cannot run a row the same way leaves its cell empty with the reason", () => {
+  const unsupported = { app: { id: "b" }, scenario: { kind: "new-thread" }, observations: [0, 1, 2, 3].map((sample) => ({ case: { workload: "new-thread", sample }, status: "invalid", reason: "Unsupported: no new-thread control in the session view" })) };
+  const supported = { app: { id: "a" }, scenario: { kind: "new-thread" }, observations: [0, 1, 2, 3].map((sample) => ({ case: { workload: "new-thread", sample }, status: "valid", durationMs: 100 + sample })) };
+  const verdict = buildVerdict([supported, unsupported]);
+  assert.equal(verdict.rows[0].verdict, "withheld");
+  const cells = renderVerdict(verdict).split("\n")[2].split("|").map((cell) => cell.trim());
+  assert.deepEqual(cells.slice(1, 6), ["New thread", "101.5 ms (max 103.0 ms, n=4/4)", "—", "—", "withheld: b cannot run it the same way: no new-thread control in the session view"]);
 });

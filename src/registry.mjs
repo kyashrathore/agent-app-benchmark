@@ -3,6 +3,7 @@ import path from "node:path";
 import { digest } from "./canonical-json.mjs";
 import { assertContract } from "./contracts.mjs";
 import { REPOSITORY_ROOT } from "./paths.mjs";
+import { replyOpening } from "./replay-reply.mjs";
 
 const REGISTRY_DIRECTORIES = { app: "apps", corpus: "corpora", corpusArtifact: "corpus-artifacts", scenario: "scenarios" };
 const CONTRACT_KINDS = { app: "app", corpus: "corpus", corpusArtifact: "corpusArtifact", scenario: "scenario" };
@@ -50,7 +51,7 @@ export async function validateRegistry() {
   const identities = new Set();
   for (const kind of ["scenario", "corpus", "corpusArtifact", "app"]) {
     const directory = path.join(REPOSITORY_ROOT, "registry", REGISTRY_DIRECTORIES[kind]);
-    const files = (await readdir(directory)).filter((file) => file.endsWith(".json")).toSorted();
+    const files = (await readdir(directory).catch((error) => (error?.code === "ENOENT" ? [] : Promise.reject(error)))).filter((file) => file.endsWith(".json")).toSorted();
     for (const file of files) {
       const filePath = path.join(directory, file);
       const stat = await lstat(filePath);
@@ -68,6 +69,7 @@ export async function validateRegistry() {
   for (const scenarioId of scenarios) {
     const scenario = await readRegistered("scenario", scenarioId);
     if (!corpora.has(scenario.value.corpusId)) throw new Error(`${scenarioId} references unknown corpus ${scenario.value.corpusId}.`);
+    assertScenarioSessions(scenario.value, (await readRegistered("corpus", scenario.value.corpusId)).value);
   }
   for (const artifactId of entries.filter((entry) => entry.kind === "corpusArtifact").map((entry) => entry.id)) {
     const artifact = await readRegistered("corpusArtifact", artifactId);
@@ -96,6 +98,11 @@ async function readJsonFile(file, label) {
   }
 }
 
+export function recordingFileOf(corpusId) {
+  validateId("corpus", corpusId);
+  return path.join(REPOSITORY_ROOT, "registry", "recorded-sessions", `${corpusId}.ndjson`);
+}
+
 // A real-session corpus is always private: it runs only as a custom definition
 // and never becomes a registered, publishable identity.
 export function copiesPrivateContent(corpus) {
@@ -110,40 +117,37 @@ function validateScenario(value) {
   if (!(value.runProfiles.smoke <= value.runProfiles.quick && value.runProfiles.quick <= value.runProfiles.publication)) {
     throw new Error("Scenario run profiles must satisfy smoke <= quick <= publication.");
   }
-  if (value.kind === "app-start") {
-    const expected = ["new-application-state", "initialized-application-state"];
-    if (JSON.stringify(value.cases.startModes) !== JSON.stringify(expected)) throw new Error("App-start modes are not canonical.");
+  if (value.kind === "session-switch") assertAscendingIntegers(value.cases.nominalBytes, "Scenario nominal sizes");
+  if (value.kind === "typing-while-streaming") {
+    const longest = Math.max(...Object.values(value.cases.profiles).map((profile) => profile.keyCount));
+    if (longest > value.cases.keys.sequence.length) throw new Error(`The key sequence holds ${value.cases.keys.sequence.length} keys; a profile types ${longest}.`);
+    if (value.cases.prompt.includes(replyOpening(value.cases.firstWordChars))) throw new Error("The typing prompt must not contain the reply's opening characters.");
   }
-  if (value.kind === "session-switch") {
-    const expectedRelations = ["within-workspace", "across-workspaces"];
-    const expectedStates = ["cold", "warm"];
-    if (JSON.stringify(value.cases.workspaceRelations) !== JSON.stringify(expectedRelations)) throw new Error("Session workspace relations are not canonical.");
-    if (JSON.stringify(value.cases.sessionStates) !== JSON.stringify(expectedStates)) throw new Error("Session cache states are not canonical.");
-    assertAscendingIntegers(value.cases.transcriptBytes, "Scenario transcript sizes");
+}
+
+/** Every session a scenario opens is in its corpus, in the workspace and size class the scenario names. */
+function assertScenarioSessions(scenario, corpus) {
+  const sessions = new Map(corpus.sessions.map((session) => [session.logicalSessionId, session]));
+  const opened = scenario.kind === "session-switch"
+    ? scenario.cases.walk.sessions.map((session) => ({ id: session.sessionId, workspaceId: session.workspaceId, nominalBytes: session.nominalBytes }))
+    : scenario.kind === "long-thread" ? [{ id: scenario.cases.sessionId }] : [];
+  for (const session of opened) {
+    const defined = sessions.get(session.id);
+    if (!defined) throw new Error(`${scenario.id} opens ${session.id}, which corpus ${corpus.id} does not hold.`);
+    if (session.workspaceId !== undefined && defined.workspaceId !== session.workspaceId) throw new Error(`${scenario.id} places ${session.id} in the wrong workspace.`);
+    if (session.nominalBytes !== undefined && defined.cut.transcriptBytes !== session.nominalBytes) throw new Error(`${scenario.id} labels ${session.id} with the wrong size class.`);
   }
 }
 
 function validateCorpus(value) {
-  assertAscendingIntegers(value.transcriptBytes, "Corpus transcript sizes");
-  if (value.workspaceIds.length !== 2) throw new Error("A corpus requires exactly two logical workspaces.");
-  const canonicalBytes = value.transcriptBytes.reduce((total, bytes) => total + bytes * 4, value.transcriptBytes[0]);
-  if (canonicalBytes > 1024 * 1024 * 1024) throw new Error("Corpus definition exceeds the byte budget.");
-  const longRowSizes = value.benchmarkTopology?.longRowTranscriptBytes ?? [];
-  if (longRowSizes.length > 0) assertAscendingIntegers(longRowSizes, "Corpus long-row transcript sizes");
-  if (copiesPrivateContent(value)) return;
-  if (JSON.stringify(value.sessionProfiles.map((profile) => profile.transcriptBytes)) !== JSON.stringify(value.transcriptBytes)) {
-    throw new Error("Corpus session profiles must match transcriptBytes in order.");
+  const ids = new Set();
+  for (const session of value.sessions) {
+    if (ids.has(session.logicalSessionId)) throw new Error(`Corpus session ${session.logicalSessionId} is defined twice.`);
+    ids.add(session.logicalSessionId);
+    if (!value.workspaceIds.includes(session.workspaceId)) throw new Error(`Corpus session ${session.logicalSessionId} is in an undeclared workspace.`);
   }
-  if (JSON.stringify((value.longRowProfiles ?? []).map((profile) => profile.transcriptBytes)) !== JSON.stringify(longRowSizes)) {
-    throw new Error("Corpus long-row profiles must match benchmarkTopology.longRowTranscriptBytes in order.");
-  }
-  for (const profile of [...value.sessionProfiles, ...(value.longRowProfiles ?? [])]) {
-    const weight = Object.values(profile.payloadPermille).reduce((sum, value) => sum + value, 0);
-    if (weight !== 1000) throw new Error(`Corpus profile ${profile.transcriptBytes} payloadPermille must total 1000.`);
-    if (profile.patches > profile.toolCalls) throw new Error(`Corpus profile ${profile.transcriptBytes} has more patches than tool calls.`);
-    const estimatedEvents = 1 + profile.userMessages * 2 + profile.assistantMessages * 5 + profile.toolCalls + profile.patches;
-    if (estimatedEvents > 250_000) throw new Error(`Corpus profile ${profile.transcriptBytes} exceeds the per-session event budget.`);
-  }
+  const control = value.sessions.find((session) => session.logicalSessionId === "control");
+  if (!control || control.role !== "control") throw new Error("A corpus needs a control session.");
 }
 
 function assertAscendingIntegers(values, label) {

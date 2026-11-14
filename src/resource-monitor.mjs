@@ -231,7 +231,7 @@ export function deriveBoundaryPoint(before, after, benchmarkCase, switchSequence
     caseId: benchmarkCase.caseId,
     switchSequence,
     lane: `${benchmarkCase.workspaceRelation}-${benchmarkCase.sessionState}`,
-    transcriptBytes: benchmarkCase.transcriptBytes,
+    nominalBytes: benchmarkCase.nominalBytes,
     atMs: after.atMs,
     rssBytes: after.rssBytes,
     cpuPercent: (cpuDeltaMs / wallMs) * 100,

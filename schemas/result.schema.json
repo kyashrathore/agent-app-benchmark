@@ -275,7 +275,9 @@
             "type": "object",
             "properties": {
               "kind": {
-                "const": "app-start"
+                "not": {
+                  "const": "session-switch"
+                }
               }
             },
             "required": [
@@ -403,7 +405,9 @@
       ],
       "properties": {
         "id": {
-          "enum": ["opencode-event"]
+          "enum": [
+            "opencode-event"
+          ]
         },
         "sourceRevision": {
           "$ref": "#/$defs/commit"
@@ -453,7 +457,10 @@
         "kind": {
           "enum": [
             "app-start",
-            "session-switch"
+            "session-switch",
+            "new-thread",
+            "long-thread",
+            "typing-while-streaming"
           ]
         },
         "digestSha256": {
@@ -538,7 +545,12 @@
           "enum": [
             "progressive-resource",
             "resource-control",
-            "list-walk"
+            "list-walk",
+            "new-thread",
+            "long-thread-open",
+            "long-thread-scroll",
+            "stream-first-word",
+            "typing-key"
           ]
         },
         "walkPass": {
@@ -563,11 +575,6 @@
             "warm"
           ]
         },
-        "transcriptBytes": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 268435456
-        },
         "sourceSessionId": {
           "type": "string",
           "minLength": 1,
@@ -578,10 +585,56 @@
           "minLength": 1,
           "maxLength": 240
         },
-        "rowShape": {
-          "enum": [
-            "long"
-          ]
+        "nominalBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 268435456
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z]$"
+        },
+        "delayMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000
+        },
+        "startIntervalMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000
+        },
+        "scroll": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "wheelCount",
+            "deltaY",
+            "intervalMs",
+            "tailMs"
+          ],
+          "properties": {
+            "wheelCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "deltaY": {
+              "type": "integer",
+              "minimum": -5000,
+              "maximum": -1
+            },
+            "intervalMs": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "tailMs": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
         }
       }
     },
@@ -752,6 +805,26 @@
             },
             "clock": {
               "$ref": "#/$defs/clock"
+            },
+            "measures": {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
+              "properties": {
+                "long-thread.scroll_long_frames": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "long-thread.scroll_p95_frame_ms": {
+                  "$ref": "#/$defs/nonnegative"
+                },
+                "typing.missed": {
+                  "enum": [
+                    0,
+                    1
+                  ]
+                }
+              }
             }
           }
         },
@@ -1027,7 +1100,7 @@
         "caseId",
         "switchSequence",
         "lane",
-        "transcriptBytes",
+        "nominalBytes",
         "atMs",
         "rssBytes",
         "cpuPercent",
@@ -1048,10 +1121,6 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 120
-        },
-        "transcriptBytes": {
-          "type": "integer",
-          "minimum": 1
         },
         "atMs": {
           "$ref": "#/$defs/nonnegative"
@@ -1076,6 +1145,10 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 100
+        },
+        "nominalBytes": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },

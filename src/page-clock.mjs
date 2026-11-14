@@ -6,13 +6,16 @@ import { deriveSettle, frameReady, READY_GATES, SETTLE_RUN_FRAMES } from "./cloc
  * renderer, and returns the resolved frames as the observation's frame log.
  * The driver supplies only facts about its app; the gates, the signature, the
  * mutation count and the settle are computed here, with the same `deriveSettle`
- * the framework re-derives every observation with.
+ * the framework re-derives every observation with. With `destination:
+ * "empty"` the destination is a new thread: its latest turn and first fold
+ * count as painted when no transcript row is mounted.
  */
-export function settleExpression({ facts, target, timeoutMs, start }) {
+export function settleExpression({ facts, target, timeoutMs, start, destination = "transcript" }) {
   if (typeof facts !== "function") throw new Error("settleExpression needs a facts function.");
   if (start !== "trusted-pointerdown" && start !== "now") throw new Error(`Unknown settle start ${start}.`);
+  if (destination !== "transcript" && destination !== "empty") throw new Error(`Unknown settle destination ${destination}.`);
   const rule = `const READY_GATES = ${JSON.stringify(READY_GATES)}; const SETTLE_RUN_FRAMES = ${SETTLE_RUN_FRAMES}; ${frameReady.toString()} ${deriveSettle.toString()}`;
-  return `(() => { ${rule}; return (${observeSettle.toString()})((${facts.toString()})(${JSON.stringify(target)}), ${JSON.stringify({ timeoutMs, start })}, deriveSettle); })()`;
+  return `(() => { ${rule}; return (${observeSettle.toString()})((${facts.toString()})(${JSON.stringify(target)}), ${JSON.stringify({ timeoutMs, start, destination })}, deriveSettle, ${afterLayoutEachFrame.toString()}); })()`;
 }
 
 /** The frames a resolved settle was derived from, in the frame-log shape the framework re-checks. */
@@ -21,30 +24,47 @@ export function frameLogOf(settle, { startAt = settle.startAt, offsetMs = 0 } = 
 }
 
 /**
- * Serialized into the renderer, so it references nothing outside itself but
- * its arguments and `deriveSettle`.
- *
- * Each frame is sampled in its own rendering step after style and layout,
- * where a ResizeObserver on a 1 px sentinel is delivered, so a sample reads
- * what that frame paints. The sentinel's observer is created in the frame's
- * requestAnimationFrame callback, so it runs after every app observer created
- * earlier. Chromium limits each further observer pass to elements deeper than
- * the shallowest one the previous pass delivered; the sentinel sits 256
- * elements deep so that it is never that element.
+ * Serialized into the renderer, so it references nothing outside itself.
+ * Calls `onSample` once per frame in that frame's rendering step after style
+ * and layout, where a ResizeObserver on a 1 px sentinel is delivered, so a
+ * sample reads what that frame paints. The sentinel's observer is created in
+ * the frame's requestAnimationFrame callback, so it runs after every app
+ * observer created earlier. Chromium limits each further observer pass to
+ * elements deeper than the shallowest one the previous pass delivered; the
+ * sentinel sits 256 elements deep so that it is never that element. Returns
+ * the function that stops sampling.
  */
-function observeSettle(facts, options, settle) {
-  return new Promise((resolve, reject) => {
-    const sentinel = document.createElement("div");
-    sentinel.style.cssText = "width:1px;height:1px";
-    let sentinelRoot = sentinel;
-    for (let depth = 1; depth < 256; depth += 1) {
-      const parent = document.createElement("div");
-      parent.append(sentinelRoot);
-      sentinelRoot = parent;
-    }
-    sentinelRoot.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;visibility:hidden;pointer-events:none;contain:strict";
-    document.documentElement.append(sentinelRoot);
+export function afterLayoutEachFrame(onSample) {
+  const sentinel = document.createElement("div");
+  sentinel.style.cssText = "width:1px;height:1px";
+  let sentinelRoot = sentinel;
+  for (let depth = 1; depth < 256; depth += 1) {
+    const parent = document.createElement("div");
+    parent.append(sentinelRoot);
+    sentinelRoot = parent;
+  }
+  sentinelRoot.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;visibility:hidden;pointer-events:none;contain:strict";
+  document.documentElement.append(sentinelRoot);
+  let stopped = false;
+  const onFrame = () => {
+    if (stopped) return;
+    requestAnimationFrame(onFrame);
+    const observer = new ResizeObserver(() => {
+      observer.disconnect();
+      if (!stopped) onSample();
+    });
+    observer.observe(sentinel);
+  };
+  requestAnimationFrame(onFrame);
+  return () => {
+    stopped = true;
+    sentinelRoot.remove();
+  };
+}
 
+/** Serialized into the renderer, so it references nothing outside itself but its arguments. */
+function observeSettle(facts, options, settle, afterLayoutEachFrame) {
+  return new Promise((resolve, reject) => {
     let startAt = options.start === "now" ? performance.now() : undefined;
     const onPointerDown = (event) => {
       if (event.isTrusted && startAt === undefined) startAt = performance.now();
@@ -100,6 +120,15 @@ function observeSettle(facts, options, settle) {
         windowVisibleFocused: document.visibilityState === "visible" && document.hasFocus(),
       };
       const transcript = facts.transcript();
+      if (options.destination === "empty") {
+        const mounted = transcript ? facts.rows().length : 0;
+        gates.latestTurnPainted = mounted === 0;
+        gates.firstFoldComplete = mounted === 0;
+        diagnostic = { ...gates, transcript: !!transcript, mountedRows: mounted };
+        if (!Object.values(gates).every(Boolean)) return { gates, signature: null };
+        const bounds = composer.getBoundingClientRect();
+        return { gates, signature: JSON.stringify({ empty: true, transcriptHeight: transcript ? transcript.scrollHeight : null, composer: [Math.round(bounds.top * 10) / 10, Math.round(bounds.height * 10) / 10] }) };
+      }
       diagnostic = { ...gates, transcript: !!transcript };
       if (!transcript) return { gates, signature: null };
       const view = transcript.getBoundingClientRect();
@@ -138,13 +167,12 @@ function observeSettle(facts, options, settle) {
     };
 
     const frames = [];
-    let stopped = false;
+    let stopSampling = () => {};
     const finish = (error, value) => {
-      stopped = true;
+      stopSampling();
       clearTimeout(guard);
       mutations.disconnect();
       window.removeEventListener("pointerdown", onPointerDown, { capture: true });
-      sentinelRoot.remove();
       if (error) reject(error);
       else resolve(value);
     };
@@ -153,30 +181,22 @@ function observeSettle(facts, options, settle) {
     const guard = setTimeout(() => {
       finish(new Error(`No settle within ${options.timeoutMs} ms (document ${document.visibilityState}, ${frames.length} frames): ${JSON.stringify(diagnostic)}`));
     }, options.timeoutMs);
-    const onFrame = () => {
-      if (stopped) return;
-      requestAnimationFrame(onFrame);
-      const observer = new ResizeObserver(() => {
-        observer.disconnect();
-        if (stopped) return;
-        if (startAt === undefined) {
-          takeMutations();
-          return;
-        }
-        let sampled;
-        try {
-          sampled = sample();
-        } catch (error) {
-          finish(error instanceof Error ? error : new Error(String(error)));
-          return;
-        }
-        const at = performance.now();
-        frames.push({ at, gates: sampled.gates, signature: sampled.signature, mutated: takeMutations() > 0 });
-        const settled = settle(frames.slice(-SETTLE_RUN_FRAMES));
-        if (settled) finish(undefined, { startAt, settledAt: settled.settledAt, timeOrigin: performance.timeOrigin, frames });
-      });
-      observer.observe(sentinel);
-    };
-    requestAnimationFrame(onFrame);
+    stopSampling = afterLayoutEachFrame(() => {
+      if (startAt === undefined) {
+        takeMutations();
+        return;
+      }
+      let sampled;
+      try {
+        sampled = sample();
+      } catch (error) {
+        finish(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
+      const at = performance.now();
+      frames.push({ at, gates: sampled.gates, signature: sampled.signature, mutated: takeMutations() > 0 });
+      const settled = settle(frames.slice(-SETTLE_RUN_FRAMES));
+      if (settled) finish(undefined, { startAt, settledAt: settled.settledAt, timeOrigin: performance.timeOrigin, frames });
+    });
   });
 }

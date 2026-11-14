@@ -1,17 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/corpus.schema.json",
-  "title": "Privacy-derived OpenCode completed-session corpus definition v1",
+  "title": "Agent app benchmark corpus definition v1",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schemaVersion",
     "id",
-    "generator",
-    "seed",
     "sourceEventFormat",
     "workspaceIds",
-    "transcriptBytes",
+    "recording",
+    "sessions",
+    "derivation",
     "description"
   ],
   "properties": {
@@ -21,17 +21,6 @@
     "id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*$"
-    },
-    "generator": {
-      "enum": [
-        "opencode-completed-sessions",
-        "redacted-real-sessions"
-      ]
-    },
-    "seed": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 256
     },
     "sourceEventFormat": {
       "type": "object",
@@ -44,7 +33,7 @@
       ],
       "properties": {
         "id": {
-          "enum": ["opencode-event"]
+          "const": "opencode-event"
         },
         "sourceRevision": {
           "type": "string",
@@ -54,7 +43,6 @@
           "const": "EventV2.SerializedEvent"
         },
         "eventTypes": {
-          "type": "array",
           "const": [
             "session.created.1",
             "message.updated.1",
@@ -67,231 +55,168 @@
       "type": "array",
       "minItems": 2,
       "maxItems": 2,
+      "uniqueItems": true,
       "items": {
         "type": "string",
-        "pattern": "^[a-z][a-z0-9-]*$"
-      },
-      "uniqueItems": true
-    },
-    "transcriptBytes": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 8,
-      "items": {
-        "type": "integer",
-        "minimum": 4096,
-        "maximum": 268435456
-      },
-      "uniqueItems": true
-    },
-    "sessionProfiles": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 8,
-      "items": {
-        "$ref": "#/$defs/sessionProfile"
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
       }
     },
-    "benchmarkTopology": {
+    "recording": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "standardTranscriptBytes",
-        "latencySamplesPerProcess",
-        "sizeSamplesPerProcess"
+        "application",
+        "version",
+        "model",
+        "project",
+        "repository",
+        "revision",
+        "license"
       ],
       "properties": {
-        "standardTranscriptBytes": {
-          "type": "integer",
-          "minimum": 4096,
-          "maximum": 268435456
+        "application": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
         },
-        "latencySamplesPerProcess": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 20
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
         },
-        "sizeSamplesPerProcess": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
         },
-        "longRowTranscriptBytes": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 8,
-          "items": {
-            "type": "integer",
-            "minimum": 4096,
-            "maximum": 268435456
-          }
+        "project": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
         }
       }
     },
+    "sessions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/session"
+      }
+    },
     "derivation": {
-      "oneOf": [
-        {
-          "$ref": "#/$defs/syntheticDerivation"
-        },
-        {
-          "$ref": "#/$defs/realSessionDerivation"
-        }
-      ]
+      "$ref": "#/$defs/derivation"
     },
     "description": {
       "type": "string",
       "minLength": 1,
       "maxLength": 2000
-    },
-    "sessionOrder": {
-      "enum": [
-        "role-interleaved",
-        "workspace-contiguous"
-      ]
-    },
-    "longRowProfiles": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 8,
-      "items": {
-        "$ref": "#/$defs/sessionProfile"
-      }
     }
   },
-  "oneOf": [
-    {
-      "required": [
-        "sessionProfiles",
-        "derivation",
-        "benchmarkTopology"
-      ],
-      "properties": {
-        "generator": {
-          "const": "opencode-completed-sessions"
-        },
-        "sourceEventFormat": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "const": "opencode-event"
-            }
-          }
-        },
-        "derivation": {
-          "$ref": "#/$defs/syntheticDerivation"
-        }
-      }
-    },
-    {
-      "required": [
-        "derivation",
-        "benchmarkTopology"
-      ],
-      "not": {
-        "anyOf": [
-          {
-            "required": [
-              "sessionProfiles"
-            ]
-          },
-          {
-            "required": [
-              "longRowProfiles"
-            ]
-          }
-        ]
-      },
-      "properties": {
-        "generator": {
-          "const": "redacted-real-sessions"
-        },
-        "derivation": {
-          "$ref": "#/$defs/realSessionDerivation"
-        },
-        "sourceEventFormat": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "const": "opencode-event"
-            }
-          }
-        }
-      }
-    }
-  ],
   "$defs": {
-    "sessionProfile": {
+    "session": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "transcriptBytes",
-        "userMessages",
-        "assistantMessages",
-        "toolCalls",
-        "patches",
-        "payloadPermille"
+        "logicalSessionId",
+        "workspaceId",
+        "role",
+        "cut"
       ],
       "properties": {
-        "transcriptBytes": {
-          "type": "integer",
-          "minimum": 4096,
-          "maximum": 268435456
+        "logicalSessionId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "maxLength": 160
         },
-        "userMessages": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10000
+        "workspaceId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
         },
-        "assistantMessages": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50000
+        "role": {
+          "enum": [
+            "control",
+            "within-workspace-cold",
+            "within-workspace-warm",
+            "across-workspaces-cold",
+            "across-workspaces-warm",
+            "size-latency",
+            "progressive-resource",
+            "long-thread"
+          ]
         },
-        "toolCalls": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 100000
-        },
-        "patches": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 10000
-        },
-        "payloadPermille": {
+        "cut": {
+          "$ref": "#/$defs/cut"
+        }
+      }
+    },
+    "cut": {
+      "oneOf": [
+        {
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "text",
-            "reasoning",
-            "toolInput",
-            "toolOutput"
+            "turns"
           ],
           "properties": {
-            "text": {
+            "turns": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 1000
-            },
-            "reasoning": {
+              "maximum": 100000
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "transcriptBytes"
+          ],
+          "properties": {
+            "transcriptBytes": {
               "type": "integer",
-              "minimum": 0,
-              "maximum": 1000
-            },
-            "toolInput": {
+              "minimum": 1,
+              "maximum": 268435456
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "messages"
+          ],
+          "properties": {
+            "messages": {
               "type": "integer",
-              "minimum": 0,
-              "maximum": 1000
-            },
-            "toolOutput": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 1000
+              "minimum": 2,
+              "maximum": 60000
             }
           }
         }
-      }
+      ]
     },
-    "syntheticDerivation": {
+    "derivation": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -301,32 +226,7 @@
       ],
       "properties": {
         "method": {
-          "const": "rounded structural distributions with entirely synthetic payloads"
-        },
-        "sourceFamilies": {
-          "type": "array",
-          "const": [
-            "opencode",
-            "claude-code",
-            "codex"
-          ]
-        },
-        "privateContentCopied": {
-          "const": false
-        }
-      }
-    },
-    "realSessionDerivation": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "method",
-        "sourceFamilies",
-        "privateContentCopied"
-      ],
-      "properties": {
-        "method": {
-          "const": "redacted real agent sessions"
+          "const": "redacted recorded agent session"
         },
         "sourceFamilies": {
           "type": "array",
@@ -341,7 +241,7 @@
           }
         },
         "privateContentCopied": {
-          "const": true
+          "type": "boolean"
         }
       }
     }

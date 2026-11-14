@@ -13,6 +13,9 @@
   ],
   "scenarios": [
     "app-start",
-    "session-switch-walk"
+    "session-switch-walk",
+    "new-thread",
+    "long-thread",
+    "typing-while-streaming"
   ]
 }

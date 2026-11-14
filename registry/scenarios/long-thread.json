@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "long-thread",
+  "title": "Long thread: open and scroll",
+  "description": "Each process is a fresh launch of P1 on the control session and visits the long thread twice: a first visit and a return, each a list-walk step from the control session to the long thread, the next row down. After each open settles, 20 trusted wheel events of -480 CSS px, 50 ms apart, over the transcript's centre scroll toward older content while an in-page recorder logs every animation frame from the first wheel to 500 ms after the last. The framework re-derives the long-frame count and the p95 frame interval from that log.",
+  "kind": "long-thread",
+  "corpusId": "opencode-recorded-sessions",
+  "cases": {
+    "sourceSessionId": "control",
+    "sessionId": "long-thread-2000",
+    "visits": [
+      "cold",
+      "warm"
+    ],
+    "scroll": {
+      "wheelCount": 20,
+      "deltaY": -480,
+      "intervalMs": 50,
+      "tailMs": 500,
+      "longFrameMs": 33.4
+    }
+  },
+  "metrics": [
+    {
+      "id": "long-thread.open_ms",
+      "description": "Trusted pointerdown on the long thread's list entry to its settle under settle-31-frames.",
+      "unit": "ms"
+    },
+    {
+      "id": "long-thread.scroll_long_frames",
+      "description": "Animation-frame intervals longer than 33.4 ms, two missed 60 Hz frames, from the first trusted wheel event to 500 ms after the last.",
+      "unit": "count"
+    },
+    {
+      "id": "long-thread.scroll_p95_frame_ms",
+      "description": "Nearest-rank p95 of the animation-frame intervals in the same window.",
+      "unit": "ms"
+    }
+  ],
+  "runProfiles": {
+    "smoke": 1,
+    "quick": 2,
+    "publication": 2
+  }
+}

@@ -2,112 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { deriveSettle, frameLogMismatch, SETTLE_RUN_FRAMES } from "../src/clock-rule.mjs";
 import { frameLogOf, settleExpression } from "../src/page-clock.mjs";
-
-function element({ top = 0, height = 20, text = "", key = "", editable = false } = {}) {
-  return {
-    style: {},
-    key,
-    top,
-    height,
-    innerText: text,
-    isContentEditable: editable,
-    scrollTop: 0,
-    scrollHeight: 400,
-    clientHeight: 400,
-    children: [],
-    append(child) {
-      this.children.push(child);
-    },
-    remove() {},
-    contains(other) {
-      return other === this || this.children.includes(other);
-    },
-    getAttribute() {
-      return null;
-    },
-    getBoundingClientRect() {
-      return { top: this.top, bottom: this.top + this.height, width: 100, height: this.height };
-    },
-  };
-}
-
-/** A renderer stand-in: frames advance only when the test steps them. */
-function fakeRenderer() {
-  const saved = new Map();
-  const replace = (name, value) => {
-    saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
-    Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
-  };
-  let now = 1_000;
-  Object.defineProperty(performance, "now", { configurable: true, value: () => now });
-  let animationFrames = [];
-  let resizeObservers = [];
-  let pendingMutations = [];
-  const listeners = new Set();
-  const transcript = element({ height: 400 });
-  const rows = [element({ top: 10, text: "question", key: "user" }), element({ top: 40, text: "answer", key: "assistant" })];
-  for (const row of rows) transcript.append(row);
-  const fixture = { displayed: false, transcript, rows, composer: element({ editable: true }), placeholder: false };
-  replace("__fixture", fixture);
-  replace("document", {
-    visibilityState: "visible",
-    hasFocus: () => true,
-    createElement: () => element(),
-    documentElement: element(),
-  });
-  replace("window", {
-    addEventListener: (_type, listener) => listeners.add(listener),
-    removeEventListener: (_type, listener) => listeners.delete(listener),
-  });
-  replace("getComputedStyle", () => ({ display: "block", visibility: "visible", opacity: "1" }));
-  replace("requestAnimationFrame", (callback) => animationFrames.push(callback));
-  replace("ResizeObserver", class {
-    constructor(callback) {
-      this.callback = callback;
-    }
-    observe() {
-      resizeObservers.push(this);
-    }
-    disconnect() {}
-  });
-  replace("MutationObserver", class {
-    observe() {}
-    takeRecords() {
-      return pendingMutations.splice(0);
-    }
-    disconnect() {}
-  });
-  replace("HTMLTextAreaElement", class {});
-  replace("HTMLInputElement", class {});
-  replace("Element", Object);
-  return {
-    fixture,
-    frame() {
-      now += 8;
-      const callbacks = animationFrames;
-      animationFrames = [];
-      for (const callback of callbacks) callback(now);
-      const observers = resizeObservers;
-      resizeObservers = [];
-      now += 0.5;
-      for (const observer of observers) observer.callback();
-    },
-    pointerdown() {
-      now += 1;
-      for (const listener of listeners) listener({ isTrusted: true });
-    },
-    mutate() {
-      pendingMutations.push({ target: fixture.rows[1] });
-    },
-    restore() {
-      delete performance.now;
-      for (const [name, descriptor] of saved) {
-        if (descriptor) Object.defineProperty(globalThis, name, descriptor);
-        else delete globalThis[name];
-      }
-    },
-  };
-}
+import { fakeRenderer } from "./support/fake-renderer.mjs";
 
 const facts = () => ({
   displayed: () => globalThis.__fixture.displayed,
@@ -184,4 +79,23 @@ test("a frame log keeps only frames after its start and carries the offset", () 
 test("an expression needs a facts function and a known start", () => {
   assert.throws(() => settleExpression({ facts: {}, target: {}, timeoutMs: 1, start: "now" }), /facts function/u);
   assert.throws(() => settleExpression({ facts, target: {}, timeoutMs: 1, start: "click" }), /Unknown settle start/u);
+});
+
+test("an empty destination settles once the new thread is shown with no transcript row mounted", async () => {
+  const renderer = fakeRenderer();
+  try {
+    const settling = (0, eval)(settleExpression({ facts, target: {}, timeoutMs: 60_000, start: "trusted-pointerdown", destination: "empty" }));
+    renderer.pointerdown();
+    renderer.fixture.displayed = true;
+    for (let index = 0; index < 3; index += 1) renderer.frame();
+    renderer.fixture.rows = [];
+    for (let index = 0; index < SETTLE_RUN_FRAMES; index += 1) renderer.frame();
+    const settle = await settling;
+    assert.deepEqual(settle.frames.slice(0, 3).map((frame) => frame.gates.latestTurnPainted), [false, false, false]);
+    assert.equal(settle.settledAt, settle.frames[3].at);
+    assert.equal(frameLogMismatch(frameLogOf(settle), { start: settle.startAt, end: settle.settledAt }), null);
+    assert.throws(() => settleExpression({ facts, target: {}, timeoutMs: 1, start: "now", destination: "list" }), /Unknown settle destination/u);
+  } finally {
+    renderer.restore();
+  }
 });

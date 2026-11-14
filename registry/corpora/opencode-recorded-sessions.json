@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "id": "opencode-recorded-sessions",
+  "sourceEventFormat": {
+    "id": "opencode-event",
+    "sourceRevision": "a9f7081d4015b0cc22ed67156e042b482a8d064a",
+    "envelope": "EventV2.SerializedEvent",
+    "eventTypes": [
+      "session.created.1",
+      "message.updated.1",
+      "message.part.updated.1"
+    ]
+  },
+  "workspaceIds": [
+    "workspace-a",
+    "workspace-b"
+  ],
+  "recording": {
+    "application": "OpenCode",
+    "version": "2.3.0",
+    "model": "opencode/big-pickle",
+    "project": "Ledger, the arena project of ademark",
+    "repository": "https://github.com/zqkra/ademark",
+    "revision": "31e2814",
+    "path": "arena/",
+    "license": "Apache-2.0"
+  },
+  "sessions": [
+    {
+      "logicalSessionId": "long-thread-2000",
+      "workspaceId": "workspace-a",
+      "role": "long-thread",
+      "cut": {
+        "messages": 2000
+      }
+    },
+    {
+      "logicalSessionId": "control",
+      "workspaceId": "workspace-a",
+      "role": "control",
+      "cut": {
+        "turns": 1
+      }
+    },
+    {
+      "logicalSessionId": "latency-within-workspace-cold-0-1048576",
+      "workspaceId": "workspace-a",
+      "role": "within-workspace-cold",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-within-workspace-cold-1-1048576",
+      "workspaceId": "workspace-a",
+      "role": "within-workspace-cold",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-within-workspace-cold-2-1048576",
+      "workspaceId": "workspace-a",
+      "role": "within-workspace-cold",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-within-workspace-cold-3-1048576",
+      "workspaceId": "workspace-a",
+      "role": "within-workspace-cold",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-within-workspace-warm-0-1048576",
+      "workspaceId": "workspace-a",
+      "role": "within-workspace-warm",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-within-workspace-warm-1-1048576",
+      "workspaceId": "workspace-a",
+      "role": "within-workspace-warm",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-within-workspace-warm-2-1048576",
+      "workspaceId": "workspace-a",
+      "role": "within-workspace-warm",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-within-workspace-warm-3-1048576",
+      "workspaceId": "workspace-a",
+      "role": "within-workspace-warm",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "size-latency-0-1048576",
+      "workspaceId": "workspace-a",
+      "role": "size-latency",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "size-latency-0-8388608",
+      "workspaceId": "workspace-a",
+      "role": "size-latency",
+      "cut": {
+        "transcriptBytes": 8388608
+      }
+    },
+    {
+      "logicalSessionId": "size-latency-1-1048576",
+      "workspaceId": "workspace-a",
+      "role": "size-latency",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "size-latency-1-8388608",
+      "workspaceId": "workspace-a",
+      "role": "size-latency",
+      "cut": {
+        "transcriptBytes": 8388608
+      }
+    },
+    {
+      "logicalSessionId": "progressive-resource-1048576",
+      "workspaceId": "workspace-a",
+      "role": "progressive-resource",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "progressive-resource-8388608",
+      "workspaceId": "workspace-a",
+      "role": "progressive-resource",
+      "cut": {
+        "transcriptBytes": 8388608
+      }
+    },
+    {
+      "logicalSessionId": "latency-across-workspaces-cold-0-1048576",
+      "workspaceId": "workspace-b",
+      "role": "across-workspaces-cold",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-across-workspaces-cold-1-1048576",
+      "workspaceId": "workspace-b",
+      "role": "across-workspaces-cold",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-across-workspaces-cold-2-1048576",
+      "workspaceId": "workspace-b",
+      "role": "across-workspaces-cold",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-across-workspaces-cold-3-1048576",
+      "workspaceId": "workspace-b",
+      "role": "across-workspaces-cold",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-across-workspaces-warm-0-1048576",
+      "workspaceId": "workspace-b",
+      "role": "across-workspaces-warm",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-across-workspaces-warm-1-1048576",
+      "workspaceId": "workspace-b",
+      "role": "across-workspaces-warm",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-across-workspaces-warm-2-1048576",
+      "workspaceId": "workspace-b",
+      "role": "across-workspaces-warm",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    },
+    {
+      "logicalSessionId": "latency-across-workspaces-warm-3-1048576",
+      "workspaceId": "workspace-b",
+      "role": "across-workspaces-warm",
+      "cut": {
+        "transcriptBytes": 1048576
+      }
+    }
+  ],
+  "derivation": {
+    "method": "redacted recorded agent session",
+    "sourceFamilies": [
+      "opencode"
+    ],
+    "privateContentCopied": false
+  },
+  "description": "One real OpenCode 2.3.0 session, recorded with opencode/big-pickle on the Ledger arena project of ademark, working through ademark's task prompts (B3, C1 W1-W4, C2 F1-F3) and one follow-on prompt, redacted. Every session holds that recording's turns in order, repeated end to end with fresh ids and later times until it reaches its cut at a whole turn: the control is the first turn, each sized session the fewest turns at or above its nominal size, and long-thread-2000 the fewest turns holding at least 2,000 messages. Sessions are created in the listed order, so a list grouped by workspace and a list sorted by recency show them in one order: workspace-b newest first, then workspace-a newest first, with the long thread below the control."
+}

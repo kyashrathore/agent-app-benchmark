@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/kyashrathore/agent-app-benchmark/schemas/corpus-manifest.schema.json",
-  "title": "Generated agent app benchmark corpus manifest v1",
+  "title": "Built agent app benchmark corpus manifest v1",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,7 +9,7 @@
     "corpusId",
     "definitionDigestSha256",
     "sourceEventFormat",
-    "seed",
+    "recording",
     "transcriptByteDefinition",
     "derivation",
     "topology",
@@ -68,23 +68,11 @@
         }
       }
     },
-    "seed": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 200
-    },
     "transcriptByteDefinition": {
       "const": "UTF-8 bytes of completed text, reasoning, serialized tool input, and tool output payloads"
     },
     "derivation": {
-      "oneOf": [
-        {
-          "$ref": "#/$defs/syntheticDerivation"
-        },
-        {
-          "$ref": "#/$defs/realSessionDerivation"
-        }
-      ]
+      "$ref": "#/$defs/derivation"
     },
     "topology": {
       "type": "object",
@@ -92,8 +80,7 @@
       "required": [
         "workspaceCount",
         "sessionCount",
-        "controlSessionId",
-        "transcriptBytes"
+        "controlSessionId"
       ],
       "properties": {
         "workspaceCount": {
@@ -101,70 +88,98 @@
         },
         "sessionCount": {
           "type": "integer",
-          "minimum": 5,
-          "maximum": 65
+          "minimum": 2,
+          "maximum": 64
         },
         "controlSessionId": {
           "const": "control"
-        },
-        "transcriptBytes": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 16,
-          "items": {
-            "type": "integer",
-            "minimum": 4096,
-            "maximum": 268435456
-          }
-        },
-        "benchmarkTopology": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "standardTranscriptBytes",
-            "latencySamplesPerProcess",
-            "sizeSamplesPerProcess"
-          ],
-          "properties": {
-            "standardTranscriptBytes": {
-              "type": "integer",
-              "minimum": 4096,
-              "maximum": 268435456
-            },
-            "latencySamplesPerProcess": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 20
-            },
-            "sizeSamplesPerProcess": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 10
-            },
-            "longRowTranscriptBytes": {
-              "type": "array",
-              "minItems": 1,
-              "maxItems": 8,
-              "items": {
-                "type": "integer",
-                "minimum": 4096,
-                "maximum": 268435456
-              }
-            }
-          }
         }
       }
     },
     "sessions": {
       "type": "array",
-      "minItems": 5,
-      "maxItems": 65,
+      "minItems": 2,
+      "maxItems": 64,
       "items": {
         "$ref": "#/$defs/session"
       }
     },
     "corpusDigestSha256": {
       "$ref": "#/$defs/sha256"
+    },
+    "recording": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application",
+        "version",
+        "model",
+        "project",
+        "repository",
+        "revision",
+        "license",
+        "digestSha256",
+        "messageCount",
+        "transcriptBytes",
+        "turns"
+      ],
+      "properties": {
+        "application": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "digestSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "messageCount": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "transcriptBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "turns": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     }
   },
   "$defs": {
@@ -184,6 +199,7 @@
         "nativeSessionId",
         "workspaceId",
         "role",
+        "cut",
         "transcriptBytes",
         "messageCount",
         "partCount",
@@ -195,7 +211,9 @@
         "patchCount",
         "eventCount",
         "file",
-        "fileDigestSha256"
+        "fileDigestSha256",
+        "turns",
+        "copies"
       ],
       "properties": {
         "logicalSessionId": {
@@ -221,12 +239,12 @@
             "across-workspaces-warm",
             "size-latency",
             "progressive-resource",
-            "size-latency-long"
+            "long-thread"
           ]
         },
         "transcriptBytes": {
           "type": "integer",
-          "minimum": 4096,
+          "minimum": 1,
           "maximum": 268435456
         },
         "messageCount": {
@@ -241,7 +259,7 @@
         },
         "textBytes": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 0,
           "maximum": 268435456
         },
         "reasoningBytes": {
@@ -280,10 +298,23 @@
         },
         "fileDigestSha256": {
           "$ref": "#/$defs/sha256"
+        },
+        "cut": {
+          "$ref": "#/$defs/cut"
+        },
+        "turns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "copies": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
         }
       }
     },
-    "syntheticDerivation": {
+    "derivation": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -293,32 +324,7 @@
       ],
       "properties": {
         "method": {
-          "const": "rounded structural distributions with entirely synthetic payloads"
-        },
-        "sourceFamilies": {
-          "type": "array",
-          "const": [
-            "opencode",
-            "claude-code",
-            "codex"
-          ]
-        },
-        "privateContentCopied": {
-          "const": false
-        }
-      }
-    },
-    "realSessionDerivation": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "method",
-        "sourceFamilies",
-        "privateContentCopied"
-      ],
-      "properties": {
-        "method": {
-          "const": "redacted real agent sessions"
+          "const": "redacted recorded agent session"
         },
         "sourceFamilies": {
           "type": "array",
@@ -333,9 +339,55 @@
           }
         },
         "privateContentCopied": {
-          "const": true
+          "type": "boolean"
         }
       }
+    },
+    "cut": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "turns"
+          ],
+          "properties": {
+            "turns": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "transcriptBytes"
+          ],
+          "properties": {
+            "transcriptBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 268435456
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "messages"
+          ],
+          "properties": {
+            "messages": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 60000
+            }
+          }
+        }
+      ]
     }
   }
 }

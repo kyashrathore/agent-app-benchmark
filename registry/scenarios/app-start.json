@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "app-start",
   "title": "Application start (fast)",
-  "description": "Process spawn to a correctly painted, trusted-input-ready 1 MiB historical coding session. New state uses a freshly created application data directory; initialized state uses an app data directory produced only by the benchmark preparation step and never launched before the timed start. Four launches per start mode, the fewest at which an exact two-sided rank test can reach p < 0.05.",
+  "description": "Process spawn to a correctly painted, trusted-input-ready control session, the recording's first turn. New state uses a freshly created application data directory; initialized state uses an app data directory produced only by the benchmark preparation step and never launched before the timed start. Four launches per start mode, the fewest at which an exact two-sided rank test can reach p < 0.05.",
   "kind": "app-start",
-  "corpusId": "opencode-completed-sessions",
+  "corpusId": "opencode-recorded-sessions",
   "cases": {
     "startModes": [
       "new-application-state",

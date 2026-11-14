@@ -304,6 +304,64 @@
         "runDirectory": {
           "type": "string",
           "minLength": 1
+        },
+        "replay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "baseUrl",
+            "npm",
+            "providerId",
+            "modelId",
+            "apiKey",
+            "prompt",
+            "replyOpening",
+            "deltaCount",
+            "deltaChars",
+            "intervalMs"
+          ],
+          "properties": {
+            "baseUrl": {
+              "type": "string",
+              "pattern": "^http://127\\.0\\.0\\.1:[0-9]+/v1$"
+            },
+            "npm": {
+              "const": "@ai-sdk/openai-compatible"
+            },
+            "providerId": {
+              "const": "replay"
+            },
+            "modelId": {
+              "const": "stream"
+            },
+            "apiKey": {
+              "type": "string",
+              "minLength": 1
+            },
+            "prompt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "replyOpening": {
+              "type": "string",
+              "minLength": 1
+            },
+            "deltaCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "deltaChars": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "intervalMs": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            }
+          }
         }
       }
     },

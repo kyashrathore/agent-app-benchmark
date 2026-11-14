@@ -36,7 +36,10 @@
     "kind": {
       "enum": [
         "app-start",
-        "session-switch"
+        "session-switch",
+        "new-thread",
+        "long-thread",
+        "typing-while-streaming"
       ]
     },
     "corpusId": {
@@ -72,7 +75,8 @@
               "ms",
               "percent",
               "MiB",
-              "bytes"
+              "bytes",
+              "count"
             ]
           }
         }
@@ -195,7 +199,7 @@
             "required": [
               "workspaceRelations",
               "sessionStates",
-              "transcriptBytes",
+              "nominalBytes",
               "walk"
             ],
             "properties": {
@@ -210,22 +214,6 @@
                   "cold",
                   "warm"
                 ]
-              },
-              "transcriptBytes": {
-                "type": "array",
-                "minItems": 1,
-                "maxItems": 16,
-                "uniqueItems": true,
-                "items": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 268435456
-                }
-              },
-              "standardTranscriptBytes": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 268435456
               },
               "resourceRuns": {
                 "type": "integer",
@@ -261,7 +249,7 @@
                       "required": [
                         "sessionId",
                         "workspaceId",
-                        "transcriptBytes"
+                        "nominalBytes"
                       ],
                       "properties": {
                         "sessionId": {
@@ -272,14 +260,386 @@
                           "type": "string",
                           "minLength": 1
                         },
-                        "transcriptBytes": {
+                        "nominalBytes": {
                           "type": "integer",
                           "minimum": 1,
                           "maximum": 268435456
-                        },
-                        "rowShape": {
-                          "const": "long"
                         }
+                      }
+                    }
+                  }
+                }
+              },
+              "nominalBytes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 268435456
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "new-thread"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceSessionId",
+              "profiles"
+            ],
+            "properties": {
+              "sourceSessionId": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "profiles": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "smoke",
+                  "quick",
+                  "publication"
+                ],
+                "properties": {
+                  "smoke": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "samplesPerProcess"
+                    ],
+                    "properties": {
+                      "samplesPerProcess": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      }
+                    }
+                  },
+                  "quick": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "samplesPerProcess"
+                    ],
+                    "properties": {
+                      "samplesPerProcess": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      }
+                    }
+                  },
+                  "publication": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "samplesPerProcess"
+                    ],
+                    "properties": {
+                      "samplesPerProcess": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "long-thread"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceSessionId",
+              "sessionId",
+              "visits",
+              "scroll"
+            ],
+            "properties": {
+              "sourceSessionId": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "sessionId": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "visits": {
+                "const": [
+                  "cold",
+                  "warm"
+                ]
+              },
+              "scroll": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "wheelCount",
+                  "deltaY",
+                  "intervalMs",
+                  "tailMs",
+                  "longFrameMs"
+                ],
+                "properties": {
+                  "wheelCount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200
+                  },
+                  "deltaY": {
+                    "type": "integer",
+                    "minimum": -5000,
+                    "maximum": -1
+                  },
+                  "intervalMs": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000
+                  },
+                  "tailMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5000
+                  },
+                  "longFrameMs": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 1000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "typing-while-streaming"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "prompt",
+              "firstWordChars",
+              "streams",
+              "keys",
+              "replay",
+              "profiles"
+            ],
+            "properties": {
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "firstWordChars": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 64
+              },
+              "streams": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "startIntervalMs"
+                ],
+                "properties": {
+                  "startIntervalMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 60000
+                  }
+                }
+              },
+              "keys": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "sequence",
+                  "intervalMs",
+                  "jitter",
+                  "seed",
+                  "missAfterMs"
+                ],
+                "properties": {
+                  "sequence": {
+                    "type": "string",
+                    "pattern": "^[a-z]+$",
+                    "maxLength": 500
+                  },
+                  "intervalMs": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5000
+                  },
+                  "jitter": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.9
+                  },
+                  "seed": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "missAfterMs": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 60000
+                  }
+                }
+              },
+              "replay": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "deltaChars",
+                  "intervalMs"
+                ],
+                "properties": {
+                  "deltaChars": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000
+                  },
+                  "intervalMs": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                }
+              },
+              "profiles": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "smoke",
+                  "quick",
+                  "publication"
+                ],
+                "properties": {
+                  "smoke": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "streamCount",
+                      "keyCount",
+                      "deltaCount"
+                    ],
+                    "properties": {
+                      "streamCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 20
+                      },
+                      "keyCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 500
+                      },
+                      "deltaCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000
+                      }
+                    }
+                  },
+                  "quick": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "streamCount",
+                      "keyCount",
+                      "deltaCount"
+                    ],
+                    "properties": {
+                      "streamCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 20
+                      },
+                      "keyCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 500
+                      },
+                      "deltaCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000
+                      }
+                    }
+                  },
+                  "publication": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "streamCount",
+                      "keyCount",
+                      "deltaCount"
+                    ],
+                    "properties": {
+                      "streamCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 20
+                      },
+                      "keyCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 500
+                      },
+                      "deltaCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000
                       }
                     }
                   }

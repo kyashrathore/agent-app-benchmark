@@ -1,24 +1,28 @@
-import { lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { appendFile, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { digest } from "./canonical-json.mjs";
-import { buildResourceSequence, buildWalkGroups, expandCases, repetitionsFor } from "./cases.mjs";
+import { buildGroups, buildResourceSequence, expandCases, profileOf, repetitionsFor } from "./cases.mjs";
 import { assertContract } from "./contracts.mjs";
-import { verifyCorpus, writeCorpus } from "./corpus.mjs";
+import { verifyCorpus } from "./corpus.mjs";
 import { DriverProcess } from "./driver-process.mjs";
-import { assertHello, assertLaunch, assertPrepared, assertShutdown, normalizeExecution } from "./protocol.mjs";
-import { CLOCK_RULE_ID, frameLogMismatch } from "./clock-rule.mjs";
+import { checkStreamSpacing, invalidObservation, observeExecution, publicError } from "./observations.mjs";
+import { assertHello, assertLaunch, assertPrepared, assertShutdown, unsupportedReason } from "./protocol.mjs";
+import { CLOCK_RULE_ID } from "./clock-rule.mjs";
+import { REPLAY_MODEL_ID, REPLAY_PROVIDER_ID, replyOpening } from "./replay-reply.mjs";
+import { startReplayServer } from "./replay-server.mjs";
 import { renderReport } from "./report.mjs";
-import { latencyRow } from "./rows.mjs";
 import { deriveBoundaryPoint, ResourceMonitor, validateCadence } from "./resource-monitor.mjs";
 import { summarizeObservations, summarizeResources } from "./summarize.mjs";
+import { UNSUPPORTED_PREFIX, verdictRows } from "./rows.mjs";
 
 const MAX_RESULT_BYTES = 64 * 1024 * 1024;
-const MAX_PUBLIC_ERROR_LENGTH = 512;
+const RESOURCE_CONTROL_CASE = Object.freeze({ caseId: "progressive-resource-return-control", repetition: 0, workload: "resource-control", destinationSessionId: "control" });
 
 export async function runBenchmark(input, dependencies = {}) {
-  const repetitions = repetitionsFor(input.scenario.value, input.runProfile, input.repetitions);
+  const scenario = input.scenario.value;
+  const repetitions = repetitionsFor(scenario, input.runProfile, input.repetitions);
   const environment = input.environment ?? collectEnvironment();
   const output = path.resolve(input.output);
   await mkdir(path.dirname(output), { recursive: true, mode: 0o700 });
@@ -34,22 +38,22 @@ export async function runBenchmark(input, dependencies = {}) {
   let prepared;
   let corpus;
   let driver;
+  let replay;
   let resources = null;
   let resourceTrace = null;
   try {
-    corpus = input.corpusDirectory
-      ? await verifyCorpus(input.corpusDirectory)
-      : await writeCorpus(input.corpus.value, path.join(privateRunDirectory, "corpus"));
+    corpus = await verifyCorpus(input.corpusDirectory);
     assertCorpusIdentity(corpus, input.corpus);
     if (input.corpus.status === "public-comparable") await assertPublicCorpusArtifact(corpus, input.corpus.value.id);
+    if (scenario.kind === "typing-while-streaming") replay = await startReplay(scenario, input.runProfile, path.join(output, "replay-requests.jsonl"));
     driver = await spawnDriver({ ...input.driver, cwd: input.driver.cwd ?? privateRunDirectory });
     hello = assertHello(await driver.request("hello", { frameworkVersion: 1 }), {
       appId: input.app.id,
-      scenarioId: input.scenario.value.id,
+      scenarioId: scenario.id,
       sourceEventFormatId: input.corpus.value.sourceEventFormat.id,
     });
     prepared = assertPrepared(await driver.request("prepare", {
-      scenarioId: input.scenario.value.id,
+      scenarioId: scenario.id,
       scenarioDigestSha256: input.scenario.digest,
       corpusDirectory: corpus.path,
       corpusManifestPath: path.join(corpus.path, "manifest.json"),
@@ -57,40 +61,36 @@ export async function runBenchmark(input, dependencies = {}) {
       corpusDefinitionDigestSha256: input.corpus.digest,
       eventSchemaDigestSha256: corpus.manifest.sourceEventFormat.schemaDigestSha256,
       runDirectory: privateRunDirectory,
+      ...(replay ? { replay: replay.params } : {}),
     }, 10 * 60_000), {
       corpusDigestSha256: corpus.digestSha256,
       eventSchemaDigestSha256: corpus.manifest.sourceEventFormat.schemaDigestSha256,
       materializationModes: hello.materializationModes,
     });
     if (!input.app.materializationModes.includes(prepared.materializationMode)) throw new Error(`${input.app.id} is not registered for ${prepared.materializationMode} materialization.`);
-    if (input.scenario.value.kind === "app-start") {
-      await runAppStart({ driver, scenario: input.scenario.value, runProfile: input.runProfile, repetitions, prepared, observations, frameLogs });
-    } else if (input.scenario.value.kind === "session-switch") {
-      await runListWalk({ driver, scenario: input.scenario.value, runProfile: input.runProfile, repetitions, prepared, observations, frameLogs });
-      const resourceRun = await runResourceWorkload({
-        driver,
-        scenario: input.scenario.value,
-        prepared,
-        observations,
-        frameLogs,
-        resourceMonitor: input.resourceMonitor,
-        startMonitor,
-        delay,
-        now,
-      });
-      resources = resourceRun.resources;
-      resourceTrace = resourceRun.trace;
+    const unsupported = unsupportedReason(hello, scenario.id);
+    const run = { driver, scenario, runProfile: input.runProfile, repetitions, prepared, observations, frameLogs };
+    if (unsupported !== null) {
+      recordUnsupported(run, unsupported);
+    } else if (scenario.kind === "app-start") {
+      await runAppStart(run);
     } else {
-      throw new Error(`Unsupported scenario kind ${input.scenario.value.kind}.`);
+      await runGroups(run);
+      if (scenario.kind === "session-switch") {
+        const resourceRun = await runResourceWorkload({ ...run, resourceMonitor: input.resourceMonitor, startMonitor, delay, now });
+        resources = resourceRun.resources;
+        resourceTrace = resourceRun.trace;
+      }
     }
   } finally {
     if (driver) await driver.close();
+    if (replay) await replay.close();
     await rm(privateRunDirectory, { recursive: true, force: true });
   }
-  const summary = summarizeObservations(input.scenario.value, observations);
+  const summary = summarizeObservations(scenario, observations);
   const result = {
     schemaVersion: 1,
-    runId: input.runId ?? `${input.app.id}-${input.scenario.value.id}-${Date.now()}`,
+    runId: input.runId ?? `${input.app.id}-${scenario.id}-${Date.now()}`,
     createdAt: new Date().toISOString(),
     provenance: {
       kind: input.provenance ?? "community-self-attested",
@@ -110,7 +110,7 @@ export async function runBenchmark(input, dependencies = {}) {
       corpusDigestSha256: prepared.corpusDigestSha256,
       mappingDigestSha256: prepared.mappingDigestSha256,
     },
-    scenario: { id: input.scenario.value.id, kind: input.scenario.value.kind, digestSha256: input.scenario.digest, status: input.scenario.status },
+    scenario: { id: scenario.id, kind: scenario.kind, digestSha256: input.scenario.digest, status: input.scenario.status },
     corpus: { id: input.corpus.value.id, definitionDigestSha256: input.corpus.digest, digestSha256: corpus.digestSha256, status: input.corpus.status },
     runProfile: input.runProfile,
     repetitions,
@@ -127,6 +127,42 @@ export async function runBenchmark(input, dependencies = {}) {
   return result;
 }
 
+/**
+ * The replay server for the scenario's run profile. Its `params` go to the
+ * driver in `prepare`; every request it serves is appended to `logFile`.
+ */
+async function startReplay(scenario, runProfile, logFile) {
+  const { deltaCount } = profileOf(scenario, runProfile);
+  const server = await startReplayServer({
+    deltaCount,
+    deltaChars: scenario.cases.replay.deltaChars,
+    intervalMs: scenario.cases.replay.intervalMs,
+    prompt: scenario.cases.prompt,
+    onRequest: (entry) => appendFile(logFile, `${JSON.stringify(entry)}\n`, { mode: 0o600 }).catch(() => {}),
+  });
+  return {
+    close: () => server.close(),
+    params: {
+      baseUrl: server.baseUrl,
+      npm: "@ai-sdk/openai-compatible",
+      providerId: REPLAY_PROVIDER_ID,
+      modelId: REPLAY_MODEL_ID,
+      apiKey: "agent-app-benchmark-replay",
+      prompt: scenario.cases.prompt,
+      replyOpening: replyOpening(scenario.cases.firstWordChars),
+      deltaCount,
+      deltaChars: scenario.cases.replay.deltaChars,
+      intervalMs: scenario.cases.replay.intervalMs,
+    },
+  };
+}
+
+function recordUnsupported({ scenario, runProfile, repetitions, observations }, reason) {
+  const cases = expandCases(scenario, runProfile, repetitions);
+  if (scenario.kind === "session-switch") cases.push(...resourceCases(scenario));
+  for (const benchmarkCase of cases) observations.push(invalidObservation(benchmarkCase, `${UNSUPPORTED_PREFIX}${reason}`));
+}
+
 function assertCorpusIdentity(generated, definition) {
   if (generated.manifest.corpusId !== definition.value.id
     || generated.manifest.definitionDigestSha256 !== definition.digest
@@ -136,13 +172,14 @@ function assertCorpusIdentity(generated, definition) {
   }
 }
 
-async function assertPublicCorpusArtifact(generated, corpusId) {
+async function assertPublicCorpusArtifact(built, corpusId) {
   const { readRegistered } = await import("./registry.mjs");
   const artifact = await readRegistered("corpusArtifact", corpusId);
-  if (artifact.value.corpusDigestSha256 !== generated.digestSha256
-    || artifact.value.definitionDigestSha256 !== generated.manifest.definitionDigestSha256
-    || artifact.value.eventSchemaDigestSha256 !== generated.manifest.sourceEventFormat.schemaDigestSha256) {
-    throw new Error("Generated public corpus does not match its registered canonical artifact identity.");
+  if (artifact.value.corpusDigestSha256 !== built.digestSha256
+    || artifact.value.definitionDigestSha256 !== built.manifest.definitionDigestSha256
+    || artifact.value.recordingDigestSha256 !== built.manifest.recording.digestSha256
+    || artifact.value.eventSchemaDigestSha256 !== built.manifest.sourceEventFormat.schemaDigestSha256) {
+    throw new Error("Built public corpus does not match its registered canonical artifact identity.");
   }
 }
 
@@ -153,30 +190,32 @@ async function runAppStart({ driver, scenario, runProfile, repetitions, prepared
       observations.push(invalidObservation(benchmarkCase, withheld));
       continue;
     }
-    const index = observations.push(await executeSafely(driver, scenario.id, benchmarkCase, { frameLogs, stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] })) - 1;
+    const action = { request: benchmarkCase, cases: [benchmarkCase] };
+    const index = observations.push(...await executeSafely(driver, scenario, action, { frameLogs, stateHandle: prepared.stateHandles[benchmarkCase.stateHandle] })) - 1;
     const cleanup = await shutdownSafely(driver, benchmarkCase.caseId);
     if (!cleanup.valid) observations[index] = invalidateForCleanup(observations[index], cleanup.reason);
   }
 }
 
-async function runListWalk({ driver, scenario, runProfile, repetitions, prepared, observations, frameLogs }) {
-  for (const group of buildWalkGroups(scenario, runProfile, repetitions)) {
+/** One launched process per group, each action one `execute`, in order; a failure invalidates the rest of the group. */
+async function runGroups({ driver, scenario, runProfile, repetitions, prepared, observations, frameLogs }) {
+  for (const group of buildGroups(scenario, runProfile, repetitions)) {
     if (skipWithheldGroup(scenario.kind, observations, group)) continue;
     let launchAttempted = false;
-    let completed = 0;
     const firstObservation = observations.length;
     try {
       launchAttempted = true;
       assertLaunch(await driver.request("launch", { scenarioId: scenario.id, stateHandle: prepared.stateHandles.P1, initialSessionId: "control", groupId: group.groupId }, 5 * 60_000), { requireProcessRoles: true });
-      for (const benchmarkCase of group.cases) {
-        const withheld = withheldRowReason(scenario.kind, observations, benchmarkCase);
-        observations.push(withheld ? invalidObservation(benchmarkCase, withheld) : await executeSafely(driver, scenario.id, benchmarkCase, { frameLogs }));
-        completed += 1;
+      for (const action of group.actions) {
+        const withheld = action.cases.map((benchmarkCase) => withheldRowReason(scenario.kind, observations, benchmarkCase));
+        if (withheld.every(Boolean)) {
+          action.cases.forEach((benchmarkCase, index) => observations.push(invalidObservation(benchmarkCase, withheld[index])));
+          continue;
+        }
+        observations.push(...await executeSafely(driver, scenario, action, { frameLogs }));
       }
     } catch (error) {
-      for (const benchmarkCase of group.cases.slice(completed)) {
-        observations.push(invalidObservation(benchmarkCase, error));
-      }
+      for (const benchmarkCase of group.cases.slice(observations.length - firstObservation)) observations.push(invalidObservation(benchmarkCase, error));
     } finally {
       if (launchAttempted) {
         const cleanup = await shutdownSafely(driver, group.groupId);
@@ -185,11 +224,17 @@ async function runListWalk({ driver, scenario, runProfile, repetitions, prepared
         }
       }
     }
+    if (scenario.kind === "typing-while-streaming") observations.splice(firstObservation, Infinity, ...checkStreamSpacing(observations.slice(firstObservation), scenario));
   }
 }
 
 async function runResourceWorkload(input) {
   return runResourceWorkloadOnce({ ...input, group: { groupId: "progressive-resource", repetition: 0, cases: buildResourceSequence(input.scenario) } });
+}
+
+/** The memory run's steps: the progressive sequence, then the return to the control session. */
+function resourceCases(scenario) {
+  return [...buildResourceSequence(scenario), RESOURCE_CONTROL_CASE];
 }
 
 async function runResourceWorkloadOnce({ driver, scenario, prepared, observations, frameLogs, resourceMonitor, startMonitor, delay, now, group }) {
@@ -214,8 +259,7 @@ async function runResourceWorkloadOnce({ driver, scenario, prepared, observation
     windows.active = { startMs: now(), endMs: 0 };
     for (const benchmarkCase of sequence) {
       const before = await monitor.sampleNow("before-switch");
-      const observation = await executeSafely(driver, scenario.id, benchmarkCase, { frameLogs });
-      observations.push(observation);
+      observations.push(...await executeSafely(driver, scenario, { request: benchmarkCase, cases: [benchmarkCase] }, { frameLogs }));
       const after = await monitor.sampleNow("after-switch");
       boundaries.push({
         case: benchmarkCase,
@@ -224,9 +268,7 @@ async function runResourceWorkloadOnce({ driver, scenario, prepared, observation
         afterSampleIndex: monitor.samples.indexOf(after),
       });
     }
-    const controlCase = { caseId: "progressive-resource-return-control", repetition: group.repetition, workload: "resource-control", destinationSessionId: "control" };
-    const controlObservation = await executeSafely(driver, scenario.id, controlCase, { frameLogs });
-    observations.push(controlObservation);
+    observations.push(...await executeSafely(driver, scenario, { request: RESOURCE_CONTROL_CASE, cases: [RESOURCE_CONTROL_CASE] }, { frameLogs }));
     windows.active.endMs = now();
     monitor.setSampleInterval(resource.idleSampleIntervalMs);
     await delay(resource.settleBeforeIdleMs);
@@ -302,15 +344,16 @@ export function deriveResourcesFromTrace(trace, scenario, observations) {
 }
 
 /**
- * Any invalid observation withholds its whole verdict row, so a later attempt
- * at that row cannot change what is reported; it only costs the driver's
- * failure timeout again. The skipped case stays in the result as invalid.
+ * Any invalid observation withholds every verdict row it belongs to, so a
+ * later attempt at that row cannot change what is reported; it only costs the
+ * driver's failure timeout again. The skipped case stays in the result as invalid.
  */
 function withheldRowReason(kind, observations, benchmarkCase) {
-  const row = latencyRow(kind, benchmarkCase);
-  if (!row) return null;
-  const earlier = observations.find((observation) => observation.status !== "valid" && latencyRow(kind, observation.case)?.id === row.id);
-  return earlier ? `Not attempted: ${row.title} already has an invalid observation (${earlier.case.caseId}), so the row is withheld.` : null;
+  for (const row of verdictRows(kind, benchmarkCase)) {
+    const earlier = observations.find((observation) => observation.status !== "valid" && verdictRows(kind, observation.case).some((other) => other.id === row.id));
+    if (earlier) return `Not attempted: ${row.title} already has an invalid observation (${earlier.case.caseId}), so the row is withheld.`;
+  }
+  return null;
 }
 
 function skipWithheldGroup(kind, observations, group) {
@@ -320,29 +363,14 @@ function skipWithheldGroup(kind, observations, group) {
   return true;
 }
 
-async function executeSafely(driver, scenarioId, benchmarkCase, extra) {
+async function executeSafely(driver, scenario, action, extra) {
   try {
     const { frameLogs, ...requestExtra } = extra;
-    const result = await driver.request("execute", { scenarioId, case: benchmarkCase, ...requestExtra }, 5 * 60_000);
-    const observation = normalizeExecution(result, benchmarkCase);
-    return checkFrameLog(frameLogs, result, observation);
+    const result = await driver.request("execute", { scenarioId: scenario.id, case: action.request, ...requestExtra }, 5 * 60_000);
+    return observeExecution(frameLogs, scenario, action, result);
   } catch (error) {
-    return invalidObservation(benchmarkCase, error);
+    return action.cases.map((benchmarkCase) => invalidObservation(benchmarkCase, error));
   }
-}
-
-/** Re-derives a valid observation's clock from the driver's frame log and invalidates it on any mismatch. */
-function checkFrameLog(frameLogs, result, observation) {
-  if (result?.frameLog === undefined) {
-    frameLogs.missing += 1;
-    return observation;
-  }
-  frameLogs.checked += 1;
-  if (observation.status !== "valid") return observation;
-  const mismatch = frameLogMismatch(result.frameLog, observation.clock);
-  if (!mismatch) return observation;
-  frameLogs.failed += 1;
-  return { ...observation, status: "invalid", reason: `Clock rule ${CLOCK_RULE_ID}: ${mismatch}.` };
 }
 
 async function shutdownSafely(driver, context) {
@@ -356,10 +384,6 @@ async function shutdownSafely(driver, context) {
 
 function invalidateForCleanup(observation, reason) {
   return { ...observation, status: "invalid", reason: `Application cleanup failed: ${reason}` };
-}
-
-function invalidObservation(benchmarkCase, error) {
-  return { case: benchmarkCase, status: "invalid", reason: publicError(error), receivedAt: new Date().toISOString() };
 }
 
 function collectEnvironment() {
@@ -409,16 +433,6 @@ function assertShareable(serialized) {
       throw new Error("Public result contains a credential-like value.");
     }
   });
-}
-
-function publicError(error) {
-  let message = error instanceof Error ? error.message : String(error);
-  message = message.replace(/\s+stderr:[\s\S]*$/i, "");
-  message = message.replace(/\b[A-Za-z]:[\\/][^\s"'`]+/g, "[path]");
-  message = message.replace(/(^|[\s("'`=:])\/(?:[^\s/"'`]+\/)*[^\s,"'`;)]*/gm, "$1[path]");
-  message = message.replace(/\bBearer\s+[A-Za-z0-9._~+\/-]{8,}/gi, "Bearer [credential]");
-  message = message.replace(/\b(token|secret|password|authorization|api[-_]?key)\s*[=:]\s*[^\s,;}]{8,}/gi, "[credential redacted]");
-  return (message.trim() || "Driver operation failed.").slice(0, MAX_PUBLIC_ERROR_LENGTH);
 }
 
 function hasAbsolutePath(value) {
@@ -509,10 +523,7 @@ async function registeredContextFromResult(result) {
 
 function validateObservationSchedule(scenario, runProfile, repetitions, observations) {
   const expected = expandCases(scenario, runProfile, repetitions);
-  if (scenario.kind === "session-switch") {
-    expected.push(...buildResourceSequence(scenario));
-    expected.push({ caseId: "progressive-resource-return-control", repetition: 0, workload: "resource-control", destinationSessionId: "control" });
-  }
+  if (scenario.kind === "session-switch") expected.push(...resourceCases(scenario));
   if (observations.length !== expected.length) throw new Error(`Result contains ${observations.length} observations; ${expected.length} are required.`);
   for (let index = 0; index < expected.length; index += 1) {
     if (digest(observations[index]?.case) !== digest(expected[index])) throw new Error(`Result observation ${index} does not match the required schedule.`);

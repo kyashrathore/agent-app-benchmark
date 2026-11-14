@@ -1,34 +1,28 @@
+import { UNSUPPORTED_PREFIX, verdictRows } from "./rows.mjs";
 import { average, maximum, percentile, round, summaryOrUnavailable } from "./statistics.mjs";
 
+/** One summary per verdict row, keyed by row id, in row order. */
 export function summarizeObservations(scenario, observations) {
-  if (scenario.kind === "app-start") {
-    return Object.fromEntries(scenario.cases.startModes.map((startMode) => {
-      const attempted = observations.filter((item) => item.case?.startMode === startMode);
-      const valid = attempted.filter(isValid).map((item) => item.durationMs);
-      return [startMode, summaryOrUnavailable(valid, attempted.length, "No valid observations.")];
-    }));
+  const rows = new Map();
+  for (const observation of observations) {
+    for (const row of verdictRows(scenario.kind, observation.case)) {
+      const entry = rows.get(row.id) ?? { row, attempted: [] };
+      entry.attempted.push(observation);
+      rows.set(row.id, entry);
+    }
   }
-  return summarizeWalk(scenario, observations);
+  return Object.fromEntries([...rows.values()].toSorted((left, right) => left.row.order - right.row.order).map(({ row, attempted }) => [row.id, summarizeRow(row, attempted)]));
 }
 
-/** One summary per list-walk pass and destination shape, keyed like its verdict row. */
-function summarizeWalk(scenario, observations) {
-  const steps = observations.filter((item) => item.case?.workload === "list-walk");
-  const shapes = [...new Map(scenario.cases.walk.sessions.map((session) => [
-    `${session.rowShape === "long" ? "long-" : ""}${session.transcriptBytes}`,
-    { transcriptBytes: session.transcriptBytes, rowShape: session.rowShape },
-  ])).entries()];
-  return Object.fromEntries(scenario.cases.walk.passes.flatMap((sessionState) => shapes.map(([key, shape]) => {
-    const attempted = steps.filter((item) => item.case.sessionState === sessionState
-      && item.case.transcriptBytes === shape.transcriptBytes && item.case.rowShape === shape.rowShape);
-    return [`${sessionState}-${key}`, {
-      transcriptBytes: shape.transcriptBytes,
-      ...(shape.rowShape ? { rowShape: shape.rowShape } : {}),
-      ...(attempted.length === 0
-        ? { status: "invalid", valid: 0, attempted: 0, reason: "No steps were attempted." }
-        : summaryOrUnavailable(attempted.filter(isValid).map((item) => item.durationMs), attempted.length, "No valid observations.")),
-    }];
-  })));
+function summarizeRow(row, attempted) {
+  const label = { title: row.title, unit: row.unit };
+  if (attempted.every((observation) => observation.reason?.startsWith(UNSUPPORTED_PREFIX))) {
+    return { ...label, status: "unsupported", valid: 0, attempted: attempted.length, reason: attempted[0].reason.slice(UNSUPPORTED_PREFIX.length) };
+  }
+  const values = attempted.filter((observation) => observation.status === "valid").map(row.read).filter((value) => Number.isFinite(value) && value >= 0);
+  const summary = summaryOrUnavailable(values, attempted.length, "No valid observations.", { includeP50: true });
+  if (row.test !== "fisher" || summary.status !== "valid") return { ...label, ...summary };
+  return { ...label, ...summary, missed: values.reduce((total, value) => total + value, 0) };
 }
 
 export function summarizeResources(samples, windows, boundaryPoints) {
@@ -63,5 +57,4 @@ export function summarizeResources(samples, windows, boundaryPoints) {
 export const PROCESS_FAMILY_CPU_DEFINITION = "sampled cumulative CPU delta for descendants observed inside each boundary, divided by wall time; newborn descendants count from birth and exited descendants through their final sample; 100% equals one logical core";
 
 const MIB = 1024 * 1024;
-const isValid = (observation) => observation.status === "valid" && Number.isFinite(observation.durationMs) && observation.durationMs >= 0;
 const within = (samples, window) => samples.filter((sample) => sample.atMs >= window.startMs && sample.atMs <= window.endMs);
