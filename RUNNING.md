@@ -54,11 +54,11 @@ Each driver lives with its app, on a branch that carries only the driver and a f
 | App | Repository and branch | Base | Driver |
 |---|---|---|---|
 | `claxedo` | [kyashrathore/Claxedo](https://github.com/kyashrathore/Claxedo) | the build under test | `packages/claxedo-app/perf-harness/src/public-agent-app-driver.ts` |
-| `t3` | [kyashrathore/t3code](https://github.com/kyashrathore/t3code) `agent-app-benchmark` | tag `v0.0.42` | `scripts/lib/agent-app-benchmark/drivers/t3.ts` |
-| `opencode` | [kyashrathore/opencode](https://github.com/kyashrathore/opencode) `agent-app-benchmark` | tag `v1.18.32` | `packages/desktop/benchmark/agent-app-driver.ts` |
+| `t3` | [kyashrathore/t3code](https://github.com/kyashrathore/t3code) `agent-app-benchmark` | tag `v0.1.7` | `scripts/lib/agent-app-benchmark/drivers/t3.ts` |
+| `opencode` | [kyashrathore/opencode](https://github.com/kyashrathore/opencode) `agent-app-benchmark` | tag `v2.3.0` | `packages/desktop/benchmark/agent-app-driver.ts` |
 
 - **T3:** `CI=true corepack pnpm install --frozen-lockfile`, then `corepack pnpm dist:desktop:artifact --platform mac --target zip --arch arm64 --build-version <version>` (the resource monitor needs rustc 1.95). The driver accepts only a build of its own commit, or of an ancestor that differs from it only in the driver.
-- **OpenCode:** clone this repository next to the OpenCode checkout as `agent-app-benchmark` (or set `AGENT_APP_BENCHMARK_ROOT`). `bun install`, then in `packages/desktop`, with `OPENCODE_CHANNEL=prod OPENCODE_VERSION=<version>` exported: `bun ./scripts/prepare.ts`, `bun run build`, `bun run package:mac -- --dir --publish never`.
+- **OpenCode:** clone this repository next to the OpenCode checkout as `agent-app-benchmark` (or set `AGENT_APP_BENCHMARK_ROOT`). With the bun the repository pins (1.4.4), `bun install`, then with `OPENCODE_CHANNEL=latest OPENCODE_VERSION=<version>` exported: `bun run build --single` in `packages/cli`, then `bun run build` and `bun run pack` in `packages/desktop`. The app is `packages/desktop/dist/mac-arm64/OpenCode.app`. The channel must be `latest`, as in a release: a CLI built for another channel registers its background service where the desktop app does not look, and the app never connects. Each launch pins the sealed app's background service to a free port through its service port setting, so an OpenCode service already on the default 127.0.0.1:49374 does not collide with it.
 - **New upstream release:** rebase the branch onto the new tag, rebuild the app, run it once and check that every observation is valid before comparing.
 
 A driver's in-page clock comes from the driver SDK (`settleExpression`); the driver supplies only facts about its app. See [docs/driver-protocol.md](docs/driver-protocol.md).
@@ -71,8 +71,12 @@ A driver's in-page clock comes from the driver SDK (`settleExpression`); the dri
 
 ## Differences between the apps
 
-- OpenCode 1.18.32 has no session sidebar: a first visit starts from its Home page and a return clicks the session's tab. Its fresh-profile app start includes going through Home.
+- OpenCode 2.3.0 lists every session in a sidebar only with Settings > General > Interface mode "Side" and the experimental Settings > Experimental > Sidebar organize "Customize"; its default layout is a tab strip. The driver's sealed profile carries those settings and the sidebar's ungrouped list, and walks the sidebar: a click previews a recent session in place, so first visits and returns both click the same row. The sidebar shows 10 recent sessions before "Show more", which the driver presses, untimed, before the step that needs it. The control is the oldest session, so app start opens it from the Home page the app starts on, and a fresh-profile app start includes going through Home.
+- OpenCode 2.x reads the corpus's 1.x history only through its V1 migration: the driver writes it as a 1.x database and the app's own CLI migrates it. Because the recording's tools already carry 2.x names, the migration takes `read`, `edit` and `write` for 1.x tools and appends a notice that they "now take `path` instead of `filePath`" to the end of every session.
+- OpenCode's new thread is the draft its sidebar's New session opens in the shown session's workspace; the driver discards it through the draft row's close button. Its long thread is the least recently updated session, so its sidebar row is the last recent row, behind two untimed "Show more" presses, not directly below the open control row.
+- OpenCode's agent reaches the replay server through a custom provider in the sealed state's global config (`provider.replay`, `model` and `small_model` set to `replay/stream`, `enabled_providers: ["replay"]`); each reply starts with a trusted Enter in a new thread, and typing goes into a sixth new thread.
 - T3 Code stores history translated from the OpenCode event stream, with tool calls and reasoning flattened into message text; Claxedo and OpenCode import the native parts.
+- T3 Code 0.1 opens a new thread in the current project from a Shift+click on its sidebar's New thread button (a plain click opens a project picker when more than one project is open). It reopens a thread where it was left, so after each long-thread scroll the driver presses T3's own Scroll to end, untimed. Its agent reaches the replay server through T3's `opencode` provider running the OpenCode 2.3.0 CLI from `PATH`; T3's own thread titles stay on its default text-generation provider (Codex).
 
 ## Corpus
 
