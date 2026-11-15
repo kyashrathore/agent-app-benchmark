@@ -8,8 +8,8 @@ How fast coding-agent desktop apps start, open sessions, open a new thread, scro
 
 | Metric | Claxedo | T3 Code | OpenCode | × vs T3 Code | × vs OpenCode |
 |---|---|---|---|---|---|
-| App start, fresh profile | | 1.64 s | | | |
-| App start, existing profile | | 1.49 s | | | |
+| App start, fresh profile | 831 ms | 1.64 s | | 1.97× | |
+| App start, existing profile | 829 ms | 1.49 s | | 1.80× | |
 | First visit, 1 MiB session | 39.7 ms | 122.0 ms | 259.8 ms | 3.07× | 6.54× |
 | First visit, 8 MiB session | 83.8 ms | 104.5 ms | 74.8 ms | 1.25× | 0.89× |
 | Return, 1 MiB session | 20.6 ms | 43.1 ms | 258.4 ms | 2.09× | 12.55× |
@@ -26,10 +26,9 @@ How fast coding-agent desktop apps start, open sessions, open a new thread, scro
 
 Each value is a median. × is the other app's median over Claxedo's: above 1, Claxedo is faster or uses less. Every row not marked "not significant" or "tie" is a statistically significant difference.
 
-Empty cells are steps an app does not run the same way as the others:
+Claxedo's app start is measured on the no-login build, which skips the signed desktop pass check (an offline signature check of a stored pass) that a released Claxedo runs before its first window.
 
-- Claxedo's app start: the no-login build skips the signed desktop pass check that a released Claxedo runs before its first window.
-- OpenCode's app start: its control session is behind the sidebar's "Show more", so the start goes through its Home page.
+Empty cells are steps an app does not run the same way as the others: OpenCode's app start, because its control session is behind the sidebar's "Show more", so the start goes through its Home page.
 
 Other differences in this run:
 
